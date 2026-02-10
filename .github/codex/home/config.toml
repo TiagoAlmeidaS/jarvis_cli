@@ -1,0 +1,16 @@
+model = "gpt-5.1"
+
+# Consider setting [mcp_servers] here!
+
+# GitHub Integration Configuration
+[github]
+# Name of the secret in jarvis-secrets where the GitHub PAT is stored.
+# Defaults to "GITHUB_PAT" if not specified.
+# This is only used if GITHUB_PAT or JARVIS_GITHUB_PAT environment variables are not set.
+# IMPORTANT: This is the NAME of the secret, NOT the token value itself!
+pat_secret_name = "GITHUB_PAT"
+
+# Base URL for GitHub API. Defaults to "https://api.github.com" if not specified.
+# Use this for GitHub Enterprise Server:
+# api_base_url = "https://github.example.com/api/v3"
+api_base_url = "https://api.github.com"

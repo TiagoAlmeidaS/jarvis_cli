@@ -1,0 +1,20 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "tui",
+    crate_name = "jarvis_tui",
+    compile_data = glob(
+        include = ["**"],
+        exclude = [
+            "**/* *",
+            "BUILD.bazel",
+            "Cargo.toml",
+        ],
+        allow_empty = True,
+    ),
+    test_data_extra = glob(["src/**/snapshots/**"]),
+    integration_compile_data_extra = ["src/test_backend.rs"],
+    extra_binaries = [
+        "//jarvis-rs/cli:jarvis",
+    ],
+)

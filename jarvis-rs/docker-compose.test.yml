@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  # SQL Server for integration tests
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: jarvis-test-sqlserver
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=YourPassword123!
+      - MSSQL_PID=Developer
+    ports:
+      - "1433:1433"
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P YourPassword123! -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - jarvis-test-network
+
+  # Redis for cache integration tests
+  redis:
+    image: redis:7-alpine
+    container_name: jarvis-test-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - jarvis-test-network
+
+  # Qdrant for vector store integration tests
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: jarvis-test-qdrant
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6333/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - jarvis-test-network
+
+networks:
+  jarvis-test-network:
+    driver: bridge
+
+# Volume persistence (optional, can be commented out for faster tests)
+# volumes:
+#   sqlserver-data:
+#   redis-data:
+#   qdrant-data:

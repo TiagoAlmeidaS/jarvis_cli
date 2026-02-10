@@ -1,0 +1,6 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "readiness",
+    crate_name = "codex_utils_readiness",
+)

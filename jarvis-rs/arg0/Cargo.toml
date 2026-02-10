@@ -1,0 +1,21 @@
+[package]
+name = "jarvis-arg0"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "jarvis_arg0"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+jarvis-apply-patch = { workspace = true }
+jarvis-core = { workspace = true }
+jarvis-linux-sandbox = { workspace = true }
+dotenvy = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread"] }

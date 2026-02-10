@@ -1,0 +1,7 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "exec",
+    crate_name = "codex_exec",
+    test_tags = ["no-sandbox"],
+)

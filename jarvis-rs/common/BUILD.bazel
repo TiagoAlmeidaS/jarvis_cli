@@ -1,0 +1,11 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "common",
+    crate_name = "codex_common",
+    crate_features = [
+        "cli",
+        "elapsed",
+        "sandbox_summary",
+    ],
+)

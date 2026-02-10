@@ -1,0 +1,6 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "jarvis-client",
+    crate_name = "jarvis_client",
+)

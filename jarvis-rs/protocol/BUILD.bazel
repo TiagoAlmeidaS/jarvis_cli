@@ -1,0 +1,7 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "protocol",
+    crate_name = "codex_protocol",
+    compile_data = glob(["src/prompts/**/*.md"]),
+)

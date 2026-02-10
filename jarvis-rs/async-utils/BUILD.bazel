@@ -1,0 +1,6 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "async-utils",
+    crate_name = "codex_async_utils",
+)

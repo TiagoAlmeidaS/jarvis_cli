@@ -1,0 +1,6 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "file-search",
+    crate_name = "codex_file_search",
+)

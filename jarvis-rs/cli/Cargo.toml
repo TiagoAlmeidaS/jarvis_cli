@@ -1,0 +1,63 @@
+[package]
+name = "jarvis-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "jarvis"
+path = "src/main.rs"
+
+[lib]
+name = "jarvis_cli"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+clap_complete = { workspace = true }
+jarvis-app-server = { workspace = true }
+jarvis-app-server-protocol = { workspace = true }
+jarvis-app-server-test-client = { workspace = true }
+jarvis-arg0 = { workspace = true }
+jarvis-chatgpt = { workspace = true }
+jarvis-cloud-tasks = { path = "../cloud-tasks" }
+jarvis-common = { workspace = true, features = ["cli"] }
+jarvis-core = { workspace = true }
+jarvis-exec = { workspace = true }
+jarvis-execpolicy = { workspace = true }
+jarvis-login = { workspace = true }
+jarvis-mcp-server = { workspace = true }
+jarvis-protocol = { workspace = true }
+jarvis-responses-api-proxy = { workspace = true }
+jarvis-rmcp-client = { workspace = true }
+jarvis-stdio-to-uds = { workspace = true }
+jarvis-tui = { workspace = true }
+libc = { workspace = true }
+owo-colors = { workspace = true }
+regex-lite = { workspace = true }
+serde_json = { workspace = true }
+supports-color = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "signal",
+] }
+toml = { workspace = true }
+tracing = { workspace = true }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+jarvis_windows_sandbox = { package = "jarvis-windows-sandbox", path = "../windows-sandbox-rs" }
+
+[dev-dependencies]
+assert_cmd = { workspace = true }
+assert_matches = { workspace = true }
+jarvis-utils-cargo-bin = { workspace = true }
+predicates = { workspace = true }
+pretty_assertions = { workspace = true }

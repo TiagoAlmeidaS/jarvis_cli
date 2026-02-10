@@ -1,0 +1,6 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "ansi-escape",
+    crate_name = "codex_ansi_escape",
+)

@@ -1,0 +1,7 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "execpolicy-legacy",
+    crate_name = "codex_execpolicy_legacy",
+    compile_data = ["src/default.policy"],
+)

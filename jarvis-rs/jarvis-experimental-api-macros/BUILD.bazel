@@ -1,0 +1,7 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "jarvis-experimental-api-macros",
+    crate_name = "jarvis_experimental_api_macros",
+    proc_macro = True,
+)

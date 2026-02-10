@@ -1,0 +1,10 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "cloud-tasks-client",
+    crate_name = "codex_cloud_tasks_client",
+    crate_features = [
+        "mock",
+        "online",
+    ],
+)

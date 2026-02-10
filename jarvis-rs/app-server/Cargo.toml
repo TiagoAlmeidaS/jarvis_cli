@@ -1,0 +1,70 @@
+[package]
+name = "jarvis-app-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "jarvis-app-server"
+path = "src/main.rs"
+
+[lib]
+name = "jarvis_app_server"
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+jarvis-arg0 = { workspace = true }
+jarvis-cloud-requirements = { workspace = true }
+jarvis-common = { workspace = true, features = ["cli"] }
+jarvis-core = { workspace = true }
+jarvis-backend-client = { workspace = true }
+jarvis-file-search = { workspace = true }
+jarvis-chatgpt = { workspace = true }
+jarvis-login = { workspace = true }
+jarvis-protocol = { workspace = true }
+jarvis-app-server-protocol = { workspace = true }
+jarvis-feedback = { workspace = true }
+jarvis-rmcp-client = { workspace = true }
+jarvis-utils-absolute-path = { workspace = true }
+jarvis-utils-json-to-toml = { workspace = true }
+chrono = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+tempfile = { workspace = true }
+time = { workspace = true }
+toml = { workspace = true }
+tokio = { workspace = true, features = [
+    "io-std",
+    "macros",
+    "process",
+    "rt-multi-thread",
+    "signal",
+] }
+tracing = { workspace = true, features = ["log"] }
+tracing-subscriber = { workspace = true, features = ["env-filter", "fmt"] }
+uuid = { workspace = true, features = ["serde", "v7"] }
+
+[dev-dependencies]
+app_test_support = { workspace = true }
+axum = { workspace = true, default-features = false, features = [
+    "http1",
+    "json",
+    "tokio",
+] }
+base64 = { workspace = true }
+jarvis-execpolicy = { workspace = true }
+core_test_support = { workspace = true }
+os_info = { workspace = true }
+pretty_assertions = { workspace = true }
+rmcp = { workspace = true, default-features = false, features = [
+    "server",
+    "transport-streamable-http-server",
+] }
+serial_test = { workspace = true }
+wiremock = { workspace = true }
+shlex = { workspace = true }

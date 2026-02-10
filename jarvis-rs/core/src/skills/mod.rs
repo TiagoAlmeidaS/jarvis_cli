@@ -1,0 +1,24 @@
+﻿mod env_var_dependencies;
+pub mod development;
+pub mod evaluator;
+pub mod injection;
+pub mod loader;
+pub mod manager;
+pub mod model;
+pub mod remote;
+pub mod render;
+pub mod system;
+
+pub(crate) use env_var_dependencies::collect_env_var_dependencies;
+pub(crate) use env_var_dependencies::resolve_skill_dependencies_for_turn;
+pub(crate) use injection::SkillInjections;
+pub(crate) use injection::build_skill_injections;
+pub(crate) use injection::collect_explicit_skill_mentions;
+pub use development::{SkillDefinition, SkillDevelopmentResult, SkillDevelopmentService, LLMSkillDevelopmentService};
+pub use evaluator::{SkillEvaluator, SkillEvaluationResult, SkillQualityMetrics, RuleBasedSkillEvaluator};
+pub use loader::load_skills;
+pub use manager::SkillsManager;
+pub use model::SkillError;
+pub use model::SkillLoadOutcome;
+pub use model::SkillMetadata;
+pub use render::render_skills_section;

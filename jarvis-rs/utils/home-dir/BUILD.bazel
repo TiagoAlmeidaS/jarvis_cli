@@ -1,0 +1,6 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "home-dir",
+    crate_name = "codex_utils_home_dir",
+)

@@ -1,0 +1,151 @@
+# Exemplo de configuração do Jarvis CLI (Rust)
+# Baseado no appsettings.json do projeto .NET
+# 
+# Este arquivo deve ser copiado para ~/.jarvis/config.toml
+# ou configurado no diretório do projeto como .jarvis/config.toml
+
+# ============================================================================
+# PROVEDORES DE MODELOS (LLM Providers)
+# ============================================================================
+
+# Provedor OpenAI
+[model_providers.openai]
+name = "OpenAI"
+base_url = "https://api.openai.com/v1"
+env_key = "OPENAI_API_KEY"
+wire_api = "responses"
+request_max_retries = 4
+stream_max_retries = 10
+stream_idle_timeout_ms = 300000
+
+# Provedor OpenAI Custom (para uso com proxies ou endpoints customizados)
+[model_providers.openai-custom]
+name = "OpenAI Custom"
+base_url = "https://api.openai.com/v1"
+env_key = "OPENAI_API_KEY"
+wire_api = "responses"
+request_max_retries = 4
+stream_max_retries = 10
+stream_idle_timeout_ms = 300000
+
+# Provedor Azure OpenAI
+[model_providers.azure-openai]
+name = "Azure OpenAI"
+base_url = "https://your-resource.openai.azure.com/openai"
+env_key = "AZURE_OPENAI_API_KEY"
+wire_api = "responses"
+query_params = { "api-version" = "2024-02-15-preview" }
+request_max_retries = 4
+stream_max_retries = 10
+stream_idle_timeout_ms = 300000
+
+# Provedor Databricks
+[model_providers.databricks]
+name = "Databricks"
+base_url = "https://adb-926216925051160.0.azuredatabricks.net/serving-endpoints"
+env_key = "DATABRICKS_API_KEY"
+wire_api = "responses"
+http_headers = { "Content-Type" = "application/json" }
+request_max_retries = 4
+stream_max_retries = 10
+stream_idle_timeout_ms = 300000
+
+# Provedor OpenRouter
+[model_providers.openrouter]
+name = "OpenRouter"
+base_url = "https://openrouter.ai/api/v1"
+env_key = "OPENROUTER_API_KEY"
+wire_api = "responses"
+request_max_retries = 4
+stream_max_retries = 10
+stream_idle_timeout_ms = 300000
+
+# Provedor Anthropic
+[model_providers.anthropic]
+name = "Anthropic"
+base_url = "https://api.anthropic.com/v1"
+env_key = "ANTHROPIC_API_KEY"
+wire_api = "responses"
+request_max_retries = 4
+stream_max_retries = 10
+stream_idle_timeout_ms = 300000
+
+# Provedor Ollama (local)
+[model_providers.ollama]
+name = "Ollama"
+base_url = "http://100.98.213.86:11434/v1"
+env_key = null
+wire_api = "responses"
+request_max_retries = 2
+stream_max_retries = 5
+stream_idle_timeout_ms = 60000
+
+# ============================================================================
+# PERFIS DE CONFIGURAÇÃO (Profiles)
+# ============================================================================
+
+# Perfil padrão usando Databricks (conforme seu appsettings.json)
+[profiles.default]
+model_provider = "databricks"
+model = "databricks-claude-opus-4-5"
+
+# Perfil para Planejamento (Planner)
+[profiles.planner]
+model_provider = "databricks"
+model = "databricks-claude-opus-4-5"
+
+# Perfil para Desenvolvimento (Developer)
+[profiles.developer]
+model_provider = "databricks"
+model = "databricks-meta-llama-3-1-405b"
+
+# Perfil para Revisão (Reviewer)
+[profiles.reviewer]
+model_provider = "databricks"
+model = "databricks-meta-llama-3-1-405b"
+
+# Perfil para Chat Rápido (FastChat)
+[profiles.fastchat]
+model_provider = "databricks"
+model = "databricks-claude-haiku-4-5"
+
+# Perfil usando OpenAI
+[profiles.openai]
+model_provider = "openai"
+model = "gpt-4o"
+
+# Perfil usando Azure OpenAI
+[profiles.azure]
+model_provider = "azure-openai"
+model = "gpt-4"
+
+# Perfil usando OpenRouter
+[profiles.openrouter]
+model_provider = "openrouter"
+model = "anthropic/claude-3.5-sonnet"
+
+# Perfil usando Ollama local
+[profiles.ollama]
+model_provider = "ollama"
+model = "llama3.2"
+
+# ============================================================================
+# CONFIGURAÇÃO GLOBAL
+# ============================================================================
+
+# Provedor padrão a ser usado
+model_provider = "databricks"
+
+# Perfil padrão
+profile = "default"
+
+# Configurações do GitHub (se necessário)
+[github]
+token = "your_github_pat_here"
+user_agent = "JarvisAI"
+username = "your_github_username"
+
+# Configurações de busca (Search)
+[search]
+provider = "searxng"
+searxng_url = "http://100.98.213.86:8888"

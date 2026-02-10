@@ -1,0 +1,7 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "login",
+    crate_name = "codex_login",
+    compile_data = ["src/assets/success.html"],
+)

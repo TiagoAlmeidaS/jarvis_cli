@@ -1,0 +1,6 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "jarvis-backend-openapi-models",
+    crate_name = "jarvis_backend_openapi_models",
+)

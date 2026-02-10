@@ -1,0 +1,7 @@
+﻿load("//:defs.bzl", "jarvis_rust_crate")
+
+jarvis_rust_crate(
+    name = "state",
+    crate_name = "codex_state",
+    compile_data = glob(["migrations/**"]),
+)
