@@ -1,0 +1,95 @@
+# Configuração Jarvis CLI com serviços na VPS via Tailscale
+# Adicione estas linhas ao seu ~/.jarvis/config.toml
+
+# ============================================================================
+# RAG Configuration (Qdrant na VPS)
+# ============================================================================
+[rag]
+enabled = true
+vector_store = "qdrant"
+chunk_size = 512
+chunk_overlap = 50
+max_results = 10
+
+[rag.qdrant]
+url = "http://100.98.213.86:6333"  # VPS via Tailscale
+collection_name = "jarvis_knowledge"
+# api_key = ""  # Opcional - deixe vazio se não configurar autenticação
+
+# Configurações de embeddings
+[rag.embeddings]
+provider = "ollama"  # Usar Ollama na VPS para gerar embeddings
+model = "nomic-embed-text"  # Modelo de embeddings
+base_url = "http://100.98.213.86:11434"  # Ollama na VPS
+
+# ============================================================================
+# Database Configuration (PostgreSQL na VPS)
+# ============================================================================
+[database]
+provider = "postgres"
+host = "100.98.213.86"
+port = 5432
+database = "jarvis"
+username = "jarvis"
+password = "jarvis_secure_password_2026"  # Mesmo do .env na VPS
+ssl_mode = "disable"  # Não precisa SSL via Tailscale (já é VPN)
+
+# ============================================================================
+# Cache Configuration (Redis na VPS)
+# ============================================================================
+[cache]
+enabled = true
+provider = "redis"
+host = "100.98.213.86"
+port = 6379
+# password = ""  # Deixe vazio se não configurar senha
+database = 0
+ttl_seconds = 3600
+
+# ============================================================================
+# Model Provider (Ollama na VPS - já configurado)
+# ============================================================================
+[model_providers.ollama]
+name = "Ollama VPS"
+base_url = "http://100.98.213.86:11434/v1"
+
+[model_providers.ollama.models]
+planner = "qwen2.5:7b"
+developer = "deepseek-coder:6.7b"
+reviewer = "codellama:7b"
+fast_chat = "gemma2:2b"
+general = "llama3.2:3b"
+advanced = "llama3.1:8b"
+safety = "phi3:mini"
+embeddings = "nomic-embed-text"  # Para RAG
+
+# ============================================================================
+# Session Storage (PostgreSQL)
+# ============================================================================
+[sessions]
+storage = "postgres"  # Usar PostgreSQL ao invés de arquivos locais
+retention_days = 30
+
+# ============================================================================
+# Knowledge Base (persistir na VPS)
+# ============================================================================
+[knowledge]
+enabled = true
+storage = "postgres"  # Usar PostgreSQL
+auto_learn = true
+sync_interval_minutes = 5
+
+# ============================================================================
+# Performance e Timeouts
+# ============================================================================
+[performance]
+# Timeouts maiores porque estamos acessando via Tailscale
+http_timeout_seconds = 60
+embedding_timeout_seconds = 120
+vector_search_timeout_seconds = 30
+
+# Pool de conexões
+[connection_pool]
+max_connections = 10
+min_connections = 2
+connection_timeout_seconds = 30
