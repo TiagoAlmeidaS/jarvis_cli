@@ -3,6 +3,7 @@
 use anyhow::Result;
 use clap::{Args, Subcommand};
 use jarvis_common::CliConfigOverrides;
+use jarvis_core::config::find_jarvis_home;
 use jarvis_core::rag::{
     ChunkingConfig, DocumentIndexer, DocumentMetadata, InMemoryDocumentIndexer,
     InMemoryVectorStore, KnowledgeRetriever, SimpleKnowledgeRetriever,
@@ -192,9 +193,9 @@ async fn create_document_store() -> Arc<dyn DocumentStore> {
     }
 
     // Fallback to JSON file store
-    let json_path = jarvis_utils_home_dir::find_jarvis_home()
+    let json_path = find_jarvis_home()
         .ok()
-        .map(|h| h.join("documents.json"))
+        .map(|h: PathBuf| h.join("documents.json"))
         .unwrap_or_else(|| PathBuf::from(".jarvis/documents.json"));
 
     if let Ok(store) = JsonFileDocumentStore::new(&json_path).await {
