@@ -61,6 +61,9 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::prelude::*;
 use uuid::Uuid;
 
+// RAG integration imports
+use jarvis_core::rag::{create_rag_injector, inject_rag_context, is_rag_ready, RagContextConfig};
+
 use crate::cli::Command as ExecCommand;
 use crate::event_processor::CodexStatus;
 use crate::event_processor::EventProcessor;
@@ -370,6 +373,22 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
     } else {
         thread_manager.start_thread(config.clone()).await?
     };
+
+    // Initialize RAG context injector
+    let rag_injector = create_rag_injector().await;
+
+    // Show RAG status to user (only in non-JSON mode)
+    if !json_mode && is_rag_ready(&rag_injector).await {
+        if let Ok(stats) = rag_injector.get_context_stats().await {
+            if stats.total_documents > 0 {
+                eprintln!(
+                    "🔮 RAG Context: {} documents, {} chunks",
+                    stats.total_documents, stats.total_chunks
+                );
+            }
+        }
+    }
+
     let (initial_operation, prompt_summary) = match (command, prompt, images) {
         (Some(ExecCommand::Review(review_cli)), _, _) => {
             let review_request = build_review_request(review_cli)?;
@@ -394,8 +413,23 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
                 .chain(args.images.into_iter())
                 .map(|path| UserInput::LocalImage { path })
                 .collect();
+
+            // Inject RAG context for resume command
+            let rag_config = RagContextConfig {
+                max_chunks: 5,
+                min_score: 0.7,
+                enabled: true,
+            };
+
+            let enhanced_text = inject_rag_context(&prompt_text, &rag_injector, &rag_config)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to inject RAG context: {}", e);
+                    prompt_text.clone()
+                });
+
             items.push(UserInput::Text {
-                text: prompt_text.clone(),
+                text: enhanced_text,
                 // CLI input doesn't track UI element ranges, so none are available here.
                 text_elements: Vec::new(),
             });
@@ -414,8 +448,19 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
                 .into_iter()
                 .map(|path| UserInput::LocalImage { path })
                 .collect();
+
+            // Inject RAG context for normal prompt
+            let rag_config = RagContextConfig::default();
+
+            let enhanced_text = inject_rag_context(&prompt_text, &rag_injector, &rag_config)
+                .await
+                .unwrap_or_else(|e| {
+                    tracing::warn!("Failed to inject RAG context: {}", e);
+                    prompt_text.clone()
+                });
+
             items.push(UserInput::Text {
-                text: prompt_text.clone(),
+                text: enhanced_text,
                 // CLI input doesn't track UI element ranges, so none are available here.
                 text_elements: Vec::new(),
             });

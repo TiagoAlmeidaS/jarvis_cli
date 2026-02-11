@@ -170,6 +170,21 @@ pub mod qdrant {
     }
 
     impl QdrantVectorStore {
+        /// Creates a new Qdrant vector store from default configuration.
+        ///
+        /// Uses hardcoded values for VPS Qdrant instance:
+        /// - URL: http://100.98.213.86:6333
+        /// - Collection: jarvis_knowledge
+        /// - Dimension: 768 (nomic-embed-text)
+        pub async fn from_config() -> Result<Self> {
+            Self::new(
+                "http://100.98.213.86:6333",
+                "jarvis_knowledge".to_string(),
+                768,
+            )
+            .await
+        }
+
         /// Creates a new Qdrant vector store.
         ///
         /// # Arguments

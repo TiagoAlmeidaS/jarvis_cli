@@ -6,11 +6,20 @@ use jarvis_common::CliConfigOverrides;
 use jarvis_core::rag::{
     ChunkingConfig, DocumentIndexer, DocumentMetadata, InMemoryDocumentIndexer,
     InMemoryVectorStore, KnowledgeRetriever, SimpleKnowledgeRetriever,
+    EmbeddingGenerator, OllamaEmbeddingGenerator, Embedding, EmbeddingMetadata, VectorStore,
+    DocumentStore, JsonFileDocumentStore,
 };
 use owo_colors::OwoColorize;
 use serde_json;
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+#[cfg(feature = "qdrant")]
+use jarvis_core::rag::QdrantVectorStore;
+
+#[cfg(feature = "postgres")]
+use jarvis_core::rag::PostgresDocumentStore;
 
 /// Context management commands for RAG
 #[derive(Debug, Args)]
@@ -172,6 +181,30 @@ impl ContextCli {
     }
 }
 
+/// Create a document store with fallback strategy.
+async fn create_document_store() -> Arc<dyn DocumentStore> {
+    // Try PostgreSQL first (if feature enabled)
+    #[cfg(feature = "postgres")]
+    {
+        if let Ok(store) = PostgresDocumentStore::from_config().await {
+            return Arc::new(store);
+        }
+    }
+
+    // Fallback to JSON file store
+    let json_path = jarvis_utils_home_dir::find_jarvis_home()
+        .ok()
+        .map(|h| h.join("documents.json"))
+        .unwrap_or_else(|| PathBuf::from(".jarvis/documents.json"));
+
+    if let Ok(store) = JsonFileDocumentStore::new(&json_path).await {
+        Arc::new(store)
+    } else {
+        // Last resort: in-memory (not persistent)
+        Arc::new(jarvis_core::rag::InMemoryDocumentStore::new())
+    }
+}
+
 /// Add a document to the context
 async fn add_context(args: AddArgs) -> Result<()> {
     let config = ChunkingConfig::default();
@@ -205,6 +238,71 @@ async fn add_context(args: AddArgs) -> Result<()> {
         ));
     };
 
+    // Generate embeddings and store in vector database
+    if args.output == OutputFormat::Human {
+        println!("{}", "🔮 Generating embeddings...".cyan());
+    }
+
+    let embedding_gen = OllamaEmbeddingGenerator::from_config()?;
+
+    #[cfg(feature = "qdrant")]
+    let vector_store: Arc<dyn VectorStore> = Arc::new(
+        QdrantVectorStore::from_config().await
+            .map_err(|e| {
+                if args.output == OutputFormat::Human {
+                    eprintln!("{}", "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow());
+                    eprintln!("   {}", format!("Error: {}", e).dimmed());
+                }
+                e
+            })
+            .unwrap_or_else(|_| {
+                // Fallback to in-memory if Qdrant fails
+                InMemoryVectorStore::new()
+            })
+    );
+
+    #[cfg(not(feature = "qdrant"))]
+    let vector_store: Arc<dyn VectorStore> = Arc::new(InMemoryVectorStore::new());
+
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    // Process each chunk
+    for (i, chunk) in doc.chunks.iter().enumerate() {
+        if args.output == OutputFormat::Human {
+            print!("\r  Processing chunk {}/{}...", i + 1, doc.chunks.len());
+            std::io::Write::flush(&mut std::io::stdout())?;
+        }
+
+        // Generate embedding
+        let embedding_vec = embedding_gen.generate_embedding(&chunk.text).await?;
+
+        // Create embedding with metadata
+        let embedding = Embedding {
+            vector: embedding_vec,
+            chunk_id: chunk.id.clone(),
+            metadata: EmbeddingMetadata {
+                source: doc.path.to_string_lossy().to_string(),
+                chunk_index: chunk.chunk_index,
+                created_at: timestamp,
+            },
+        };
+
+        // Store in vector database
+        vector_store.add_embedding(embedding).await?;
+    }
+
+    if args.output == OutputFormat::Human {
+        println!(); // New line after progress
+        println!("{}", "💾 Saving document metadata...".dimmed());
+    }
+
+    // Save document to document store
+    let doc_store = create_document_store().await;
+    doc_store.save_document(&doc).await?;
+
     match args.output {
         OutputFormat::Json => {
             let json = serde_json::json!({
@@ -214,6 +312,7 @@ async fn add_context(args: AddArgs) -> Result<()> {
                 "title": doc.title,
                 "chunks": doc.chunks.len(),
                 "size": doc.content.len(),
+                "storage": if cfg!(feature = "qdrant") { "qdrant" } else { "in-memory" },
             });
             println!("{}", serde_json::to_string_pretty(&json)?);
         }
@@ -228,6 +327,11 @@ async fn add_context(args: AddArgs) -> Result<()> {
                 "Size:".bold(),
                 doc.content.len().to_string().cyan()
             );
+            println!(
+                "  {} {}",
+                "Storage:".bold(),
+                if cfg!(feature = "qdrant") { "Qdrant (VPS)" } else { "In-Memory" }
+            );
             println!();
         }
     }
@@ -237,16 +341,6 @@ async fn add_context(args: AddArgs) -> Result<()> {
 
 /// Search for knowledge in the context
 async fn search_context(args: SearchArgs) -> Result<()> {
-    let config = ChunkingConfig::default();
-    let indexer: Arc<dyn DocumentIndexer> = Arc::new(InMemoryDocumentIndexer::new(config));
-    let vector_store = Arc::new(InMemoryVectorStore::new());
-
-    let retriever = SimpleKnowledgeRetriever::new(
-        Box::new(InMemoryDocumentIndexer::new(ChunkingConfig::default())),
-        Box::new(InMemoryVectorStore::new()),
-        args.min_score,
-    );
-
     if args.output == OutputFormat::Human {
         println!("\n{}", "🔍 Searching context...".bold().cyan());
         println!("{}", "─".repeat(50).dimmed());
@@ -260,31 +354,77 @@ async fn search_context(args: SearchArgs) -> Result<()> {
         println!();
     }
 
-    // Retrieve knowledge
-    let result = retriever.retrieve(&args.query, args.limit).await?;
+    // Create embedding generator
+    if args.output == OutputFormat::Human {
+        println!("{}", "🔮 Generating query embedding...".dimmed());
+    }
+
+    let embedding_gen = OllamaEmbeddingGenerator::from_config()?;
+    let query_embedding = embedding_gen.generate_embedding(&args.query).await?;
+
+    // Create vector store
+    #[cfg(feature = "qdrant")]
+    let vector_store: Arc<dyn VectorStore> = Arc::new(
+        QdrantVectorStore::from_config().await
+            .map_err(|e| {
+                if args.output == OutputFormat::Human {
+                    eprintln!("{}", "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow());
+                    eprintln!("   {}", format!("Error: {}", e).dimmed());
+                }
+                e
+            })
+            .unwrap_or_else(|_| InMemoryVectorStore::new())
+    );
+
+    #[cfg(not(feature = "qdrant"))]
+    let vector_store: Arc<dyn VectorStore> = Arc::new(InMemoryVectorStore::new());
+
+    // Search in vector store
+    let search_results = vector_store.search(&query_embedding, args.limit).await?;
+
+    // Filter by minimum score
+    let filtered_results: Vec<_> = search_results
+        .into_iter()
+        .filter(|r| r.similarity >= args.min_score)
+        .collect();
 
     match args.output {
         OutputFormat::Json => {
-            let json = serde_json::to_string_pretty(&result)?;
-            println!("{}", json);
+            let json = serde_json::json!({
+                "query": args.query,
+                "count": filtered_results.len(),
+                "results": filtered_results.iter().map(|r| {
+                    serde_json::json!({
+                        "similarity": r.similarity,
+                        "source": r.embedding.metadata.source,
+                        "chunk_id": r.embedding.chunk_id,
+                        "chunk_index": r.embedding.metadata.chunk_index,
+                    })
+                }).collect::<Vec<_>>(),
+            });
+            println!("{}", serde_json::to_string_pretty(&json)?);
         }
         OutputFormat::Human => {
-            if result.chunks.is_empty() {
+            if filtered_results.is_empty() {
                 println!("{}", "No results found.".yellow());
+                println!();
+                println!("{}", "💡 Tips:".dimmed());
+                println!("   {} Try lowering the minimum score with --min-score", "-".dimmed());
+                println!("   {} Make sure you've added documents with 'jarvis context add'", "-".dimmed());
             } else {
                 println!(
-                    "{} ({} results)",
+                    "\n{} ({} results)",
                     "Results:".bold().green(),
-                    result.count
+                    filtered_results.len()
                 );
                 println!();
 
-                for (i, retrieved) in result.chunks.iter().enumerate() {
+                for (i, result) in filtered_results.iter().enumerate() {
                     println!(
                         "{}. {} [{}]",
                         i + 1,
                         "Result".bold(),
-                        format!("{:.1}% relevance", retrieved.relevance_score * 100.0)
+                        format!("{:.1}% similarity", result.similarity * 100.0)
                             .yellow()
                     );
 
@@ -292,29 +432,26 @@ async fn search_context(args: SearchArgs) -> Result<()> {
                         println!(
                             "   {} {}",
                             "Source:".dimmed(),
-                            retrieved.source_info.title.cyan()
+                            result.embedding.metadata.source.cyan()
                         );
                         println!(
                             "   {} {}",
-                            "Path:".dimmed(),
-                            retrieved.source_info.path.dimmed()
+                            "Chunk:".dimmed(),
+                            result.embedding.chunk_id.dimmed()
+                        );
+                        println!(
+                            "   {} {}",
+                            "Index:".dimmed(),
+                            result.embedding.metadata.chunk_index.to_string().dimmed()
                         );
                     }
 
+                    // Note: We don't have the actual text here unless we store it
+                    // This would require a document store implementation
                     println!(
-                        "   {} {}",
-                        "Content:".dimmed(),
-                        retrieved
-                            .chunk
-                            .text
-                            .chars()
-                            .take(200)
-                            .collect::<String>()
+                        "   {} Use 'jarvis context list' to see full documents",
+                        "Note:".dimmed()
                     );
-
-                    if retrieved.chunk.text.len() > 200 {
-                        println!("   {}", "...".dimmed());
-                    }
 
                     println!();
                 }
@@ -327,17 +464,15 @@ async fn search_context(args: SearchArgs) -> Result<()> {
 
 /// List all documents in context
 async fn list_context(args: ListArgs) -> Result<()> {
-    let config = ChunkingConfig::default();
-    let indexer: Arc<dyn DocumentIndexer> = Arc::new(InMemoryDocumentIndexer::new(config));
-
     if args.output == OutputFormat::Human {
         println!("\n{}", "📚 Context Documents".bold().cyan());
         println!("{}", "─".repeat(50).dimmed());
         println!();
     }
 
-    // List documents
-    let documents = indexer.list_documents().await?;
+    // Get document store and list documents
+    let doc_store = create_document_store().await;
+    let documents = doc_store.list_documents().await?;
 
     // Filter if needed
     let filtered: Vec<_> = documents
@@ -474,18 +609,40 @@ async fn remove_context(args: RemoveArgs) -> Result<()> {
     println!("  {} {}", "Document ID:".bold(), args.doc_id.yellow());
     println!();
 
-    // TODO: Implement actual removal
-    println!("{}", "✅ Document removed successfully".green().bold());
+    let doc_store = create_document_store().await;
+
+    // Get document first to retrieve chunk IDs
+    let doc = doc_store.get_document(&args.doc_id).await?;
+
+    if let Some(doc) = doc {
+        // Remove embeddings from vector store
+        #[cfg(feature = "qdrant")]
+        {
+            if let Ok(vector_store) = QdrantVectorStore::from_config().await {
+                for chunk in &doc.chunks {
+                    let _ = vector_store.remove_embedding(&chunk.id).await;
+                }
+            }
+        }
+
+        // Remove document from document store
+        doc_store.remove_document(&args.doc_id).await?;
+
+        println!("{}", "✅ Document removed successfully".green().bold());
+        println!();
+        println!("  {} {} chunks removed", "Cleaned:".dimmed(), doc.chunks.len());
+    } else {
+        println!("{}", "❌ Document not found".red().bold());
+        return Err(anyhow::anyhow!("Document with ID '{}' not found", args.doc_id));
+    }
 
     Ok(())
 }
 
 /// Show statistics about the context
 async fn show_stats(args: StatsArgs) -> Result<()> {
-    let config = ChunkingConfig::default();
-    let indexer: Arc<dyn DocumentIndexer> = Arc::new(InMemoryDocumentIndexer::new(config));
-
-    let documents = indexer.list_documents().await?;
+    let doc_store = create_document_store().await;
+    let documents = doc_store.list_documents().await?;
     let total_chunks: usize = documents.iter().map(|d| d.chunks.len()).sum();
     let total_size: usize = documents.iter().map(|d| d.content.len()).sum();
 

@@ -29,6 +29,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use std::time::Instant;
 
+// RAG integration imports
+use jarvis_core::rag::{create_rag_injector, inject_rag_context, RagContextConfig, RagContextInjector};
+
 use crate::version::jarvis_CLI_VERSION;
 use jarvis_backend_client::Client as BackendClient;
 use jarvis_chatgpt::connectors;
@@ -572,6 +575,8 @@ pub(crate) struct ChatWidget {
     // This lets the separator show per-chunk work time (since the previous separator) rather than
     // the total task-running time reported by the status indicator.
     last_separator_elapsed_secs: Option<u64>,
+    // RAG context injector for semantic search
+    rag_injector: Arc<RagContextInjector>,
 
     last_rendered_width: std::cell::Cell<Option<usize>>,
     // Feedback sink for /feedback
@@ -2324,6 +2329,39 @@ impl ChatWidget {
             plan_delta_buffer: String::new(),
             plan_item_active: false,
             last_separator_elapsed_secs: None,
+            rag_injector: {
+                // Initialize RAG injector (blocking async call)
+                tokio::runtime::Handle::try_current()
+                    .ok()
+                    .and_then(|handle| {
+                        handle.block_on(async {
+                            create_rag_injector().await
+                        })
+                    })
+                    .unwrap_or_else(|| {
+                        // Create a disabled injector as fallback
+                        Arc::new({
+                            let embedding_gen = Arc::new(
+                                jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
+                                    .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                        "http://localhost:11434".to_string(),
+                                        "nomic-embed-text".to_string(),
+                                        768,
+                                    ))
+                            );
+                            let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
+                            let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
+                            let mut injector = RagContextInjector::new(
+                                embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
+                                vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
+                                doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
+                                false,
+                            );
+                            injector.set_enabled(false);
+                            injector
+                        })
+                    })
+            },
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
             feedback_audience,
@@ -2605,6 +2643,39 @@ impl ChatWidget {
             plan_delta_buffer: String::new(),
             plan_item_active: false,
             last_separator_elapsed_secs: None,
+            rag_injector: {
+                // Initialize RAG injector (blocking async call)
+                tokio::runtime::Handle::try_current()
+                    .ok()
+                    .and_then(|handle| {
+                        handle.block_on(async {
+                            create_rag_injector().await
+                        })
+                    })
+                    .unwrap_or_else(|| {
+                        // Create a disabled injector as fallback
+                        Arc::new({
+                            let embedding_gen = Arc::new(
+                                jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
+                                    .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                        "http://localhost:11434".to_string(),
+                                        "nomic-embed-text".to_string(),
+                                        768,
+                                    ))
+                            );
+                            let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
+                            let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
+                            let mut injector = RagContextInjector::new(
+                                embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
+                                vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
+                                doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
+                                false,
+                            );
+                            injector.set_enabled(false);
+                            injector
+                        })
+                    })
+            },
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
             feedback_audience,
@@ -3294,8 +3365,29 @@ impl ChatWidget {
         }
 
         if !text.is_empty() {
+            // Inject RAG context before sending to LLM
+            let enhanced_text = {
+                let rag_injector = Arc::clone(&self.rag_injector);
+                let text_for_rag = text.clone();
+
+                tokio::runtime::Handle::try_current()
+                    .ok()
+                    .and_then(|handle| {
+                        handle.block_on(async move {
+                            let config = RagContextConfig::default();
+                            inject_rag_context(&text_for_rag, &rag_injector, &config)
+                                .await
+                                .ok()
+                        })
+                    })
+                    .unwrap_or_else(|| {
+                        tracing::debug!("RAG context injection skipped (no async runtime or failed)");
+                        text.clone()
+                    })
+            };
+
             items.push(UserInput::Text {
-                text: text.clone(),
+                text: enhanced_text,
                 text_elements: text_elements.clone(),
             });
         }

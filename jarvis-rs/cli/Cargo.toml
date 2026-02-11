@@ -26,7 +26,7 @@ jarvis-arg0 = { workspace = true }
 jarvis-chatgpt = { workspace = true }
 jarvis-cloud-tasks = { path = "../cloud-tasks" }
 jarvis-common = { workspace = true, features = ["cli"] }
-jarvis-core = { workspace = true }
+jarvis-core = { workspace = true, features = ["integrations"] }
 jarvis-exec = { workspace = true }
 jarvis-execpolicy = { workspace = true }
 jarvis-login = { workspace = true }
@@ -54,6 +54,12 @@ tracing = { workspace = true }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 jarvis_windows_sandbox = { package = "jarvis-windows-sandbox", path = "../windows-sandbox-rs" }
+
+[features]
+default = []
+qdrant = ["jarvis-core/qdrant"]
+postgres = ["jarvis-core/postgres"]
+integrations = ["qdrant", "postgres"]
 
 [dev-dependencies]
 assert_cmd = { workspace = true }
