@@ -2330,37 +2330,27 @@ impl ChatWidget {
             plan_item_active: false,
             last_separator_elapsed_secs: None,
             rag_injector: {
-                // Initialize RAG injector (blocking async call)
-                tokio::runtime::Handle::try_current()
-                    .ok()
-                    .and_then(|handle| {
-                        Some(handle.block_on(async {
-                            create_rag_injector().await
-                        }))
-                    })
-                    .unwrap_or_else(|| {
-                        // Create a disabled injector as fallback
-                        Arc::new({
-                            let embedding_gen = Arc::new(
-                                jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
-                                    .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                        "http://localhost:11434".to_string(),
-                                        "nomic-embed-text".to_string(),
-                                        768,
-                                    ))
-                            );
-                            let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
-                            let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
-                            let mut injector = RagContextInjector::new(
-                                embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
-                                vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
-                                doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
-                                false,
-                            );
-                            injector.set_enabled(false);
-                            injector
-                        })
-                    })
+                // Initialize RAG injector synchronously (disabled by default)
+                Arc::new({
+                    let embedding_gen = Arc::new(
+                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
+                            .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                "http://localhost:11434".to_string(),
+                                "nomic-embed-text".to_string(),
+                                768,
+                            ))
+                    );
+                    let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
+                    let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
+                    let mut injector = RagContextInjector::new(
+                        embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
+                        vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
+                        doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
+                        false,
+                    );
+                    injector.set_enabled(false);
+                    injector
+                })
             },
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
@@ -2509,37 +2499,27 @@ impl ChatWidget {
             had_work_activity: false,
             last_separator_elapsed_secs: None,
             rag_injector: {
-                // Initialize RAG injector (blocking async call)
-                tokio::runtime::Handle::try_current()
-                    .ok()
-                    .and_then(|handle| {
-                        Some(handle.block_on(async {
-                            create_rag_injector().await
-                        }))
-                    })
-                    .unwrap_or_else(|| {
-                        // Create a disabled injector as fallback
-                        Arc::new({
-                            let embedding_gen = Arc::new(
-                                jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
-                                    .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                        "http://localhost:11434".to_string(),
-                                        "nomic-embed-text".to_string(),
-                                        768,
-                                    ))
-                            );
-                            let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
-                            let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
-                            let mut injector = RagContextInjector::new(
-                                embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
-                                vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
-                                doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
-                                false,
-                            );
-                            injector.set_enabled(false);
-                            injector
-                        })
-                    })
+                // Initialize RAG injector synchronously (disabled by default)
+                Arc::new({
+                    let embedding_gen = Arc::new(
+                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
+                            .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                "http://localhost:11434".to_string(),
+                                "nomic-embed-text".to_string(),
+                                768,
+                            ))
+                    );
+                    let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
+                    let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
+                    let mut injector = RagContextInjector::new(
+                        embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
+                        vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
+                        doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
+                        false,
+                    );
+                    injector.set_enabled(false);
+                    injector
+                })
             },
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
@@ -2677,37 +2657,27 @@ impl ChatWidget {
             plan_item_active: false,
             last_separator_elapsed_secs: None,
             rag_injector: {
-                // Initialize RAG injector (blocking async call)
-                tokio::runtime::Handle::try_current()
-                    .ok()
-                    .and_then(|handle| {
-                        Some(handle.block_on(async {
-                            create_rag_injector().await
-                        }))
-                    })
-                    .unwrap_or_else(|| {
-                        // Create a disabled injector as fallback
-                        Arc::new({
-                            let embedding_gen = Arc::new(
-                                jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
-                                    .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                        "http://localhost:11434".to_string(),
-                                        "nomic-embed-text".to_string(),
-                                        768,
-                                    ))
-                            );
-                            let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
-                            let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
-                            let mut injector = RagContextInjector::new(
-                                embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
-                                vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
-                                doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
-                                false,
-                            );
-                            injector.set_enabled(false);
-                            injector
-                        })
-                    })
+                // Initialize RAG injector synchronously (disabled by default)
+                Arc::new({
+                    let embedding_gen = Arc::new(
+                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
+                            .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                "http://localhost:11434".to_string(),
+                                "nomic-embed-text".to_string(),
+                                768,
+                            ))
+                    );
+                    let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
+                    let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
+                    let mut injector = RagContextInjector::new(
+                        embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
+                        vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
+                        doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
+                        false,
+                    );
+                    injector.set_enabled(false);
+                    injector
+                })
             },
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
