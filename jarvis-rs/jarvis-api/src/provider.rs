@@ -47,6 +47,8 @@ pub struct Provider {
     pub headers: HeaderMap,
     pub retry: RetryConfig,
     pub stream_idle_timeout: Duration,
+    /// If true, this provider uses Chat Completions API instead of Responses API.
+    pub uses_chat_completions_api: bool,
 }
 
 impl Provider {

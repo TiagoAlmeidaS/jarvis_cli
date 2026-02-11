@@ -109,6 +109,12 @@ impl<'a> ResponsesRequestBuilder<'a> {
         self
     }
 
+    /// Checks if the provider should use Chat Completions API format.
+    /// Returns true for Databricks and any provider with uses_chat_completions_api flag.
+    fn should_use_chat_completions(provider: &Provider) -> bool {
+        provider.name.to_lowercase() == "databricks" || provider.uses_chat_completions_api
+    }
+
     pub fn build(self, provider: &Provider) -> Result<ResponsesRequest, ApiError> {
         let model = self
             .model
@@ -147,8 +153,9 @@ impl<'a> ResponsesRequestBuilder<'a> {
             attach_item_ids(&mut body, input);
         }
 
-        // Convert to Chat Completions format for Databricks
-        if provider.name.to_lowercase() == "databricks" {
+        // Convert to Chat Completions format for providers that use it
+        // (e.g., Databricks, Ollama)
+        if Self::should_use_chat_completions(provider) {
             body = convert_to_chat_format(&body, model, instructions, input)?;
         }
 
@@ -158,10 +165,13 @@ impl<'a> ResponsesRequestBuilder<'a> {
             insert_header(&mut headers, "x-openai-subagent", &subagent);
         }
 
-        // Build path dynamically for Databricks provider
+        // Build path dynamically based on provider
         let path = if provider.name.to_lowercase() == "databricks" {
             // For Databricks, construct path: serving-endpoints/{model}/invocations
             format!("serving-endpoints/{}/invocations", model)
+        } else if Self::should_use_chat_completions(provider) {
+            // For providers using Chat Completions API (e.g., Ollama)
+            "chat/completions".to_string()
         } else {
             // For other providers (OpenAI, etc.), use standard "responses" path
             "responses".to_string()
@@ -176,9 +186,10 @@ impl<'a> ResponsesRequestBuilder<'a> {
     }
 }
 
-/// Converts Responses API format to Chat Completions format for Databricks.
+/// Converts Responses API format to Chat Completions format.
 ///
-/// Databricks uses the standard Chat Completions API which expects:
+/// Used for providers that implement the OpenAI Chat Completions API
+/// (e.g., Databricks, Ollama) which expect:
 /// - `messages` array instead of `instructions` + `input`
 /// - `max_tokens` instead of extended response controls
 fn convert_to_chat_format(

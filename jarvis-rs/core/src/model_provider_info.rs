@@ -113,6 +113,14 @@ pub struct ModelProviderInfo {
     /// Whether this provider supports the Responses API WebSocket transport.
     #[serde(default)]
     pub supports_websockets: bool,
+
+    /// If true, this provider uses Chat Completions API (`/v1/chat/completions`)
+    /// instead of Responses API (`/v1/responses`). When enabled, requests will be
+    /// automatically converted from Responses format to Chat Completions format.
+    /// This is used for providers like Ollama and others that implement the
+    /// OpenAI Chat Completions API but not the Responses API.
+    #[serde(default)]
+    pub uses_chat_completions_api: bool,
 }
 
 impl ModelProviderInfo {
@@ -171,6 +179,7 @@ impl ModelProviderInfo {
             headers,
             retry,
             stream_idle_timeout: self.stream_idle_timeout(),
+            uses_chat_completions_api: self.uses_chat_completions_api,
         })
     }
 
@@ -262,6 +271,7 @@ impl ModelProviderInfo {
             stream_idle_timeout_ms: None,
             requires_openai_auth: true,
             supports_websockets: true,
+            uses_chat_completions_api: false,
         }
     }
 
@@ -287,7 +297,7 @@ pub fn built_in_model_providers() -> HashMap<String, ModelProviderInfo> {
         ("openai", P::create_openai_provider()),
         (
             OLLAMA_OSS_PROVIDER_ID,
-            create_oss_provider(DEFAULT_OLLAMA_PORT, WireApi::Responses),
+            create_ollama_provider(None),  // Use dedicated Ollama provider
         ),
         (
             LMSTUDIO_OSS_PROVIDER_ID,
@@ -335,6 +345,62 @@ pub fn create_oss_provider_with_base_url(base_url: &str, wire_api: WireApi) -> M
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
         supports_websockets: false,
+        uses_chat_completions_api: false,
+    }
+}
+
+/// Creates an Ollama provider configuration.
+///
+/// Ollama uses the OpenAI Chat Completions API format. The base URL should be
+/// in the format: `http://{host}:{port}/v1` (e.g., `http://localhost:11434/v1`
+/// or `http://100.98.213.86:11434/v1` for VPS via Tailscale).
+///
+/// Ollama does not require authentication by default, but can be configured to
+/// use an API key if needed via the `OLLAMA_API_KEY` environment variable.
+///
+/// Example configuration in `~/.jarvis/config.toml`:
+/// ```toml
+/// [model_providers.ollama]
+/// name = "Ollama"
+/// base_url = "http://localhost:11434/v1"
+/// uses_chat_completions_api = true  # Automatically set by create_ollama_provider
+/// ```
+///
+/// For VPS via Tailscale:
+/// ```toml
+/// [model_providers.ollama]
+/// name = "Ollama VPS"
+/// base_url = "http://100.98.213.86:11434/v1"
+/// uses_chat_completions_api = true
+/// ```
+pub fn create_ollama_provider(base_url: Option<String>) -> ModelProviderInfo {
+    // Allow users to override the default Ollama endpoint by
+    // exporting `OLLAMA_BASE_URL`. This is useful when pointing
+    // Jarvis at a remote Ollama instance via Tailscale or custom setup.
+    let effective_base_url = base_url.or_else(|| {
+        std::env::var("OLLAMA_BASE_URL")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+    }).unwrap_or_else(|| {
+        format!("http://localhost:{}/v1", DEFAULT_OLLAMA_PORT)
+    });
+
+    ModelProviderInfo {
+        name: "Ollama".into(),
+        base_url: Some(effective_base_url),
+        env_key: None,  // Ollama doesn't require auth by default
+        env_key_instructions: None,
+        experimental_bearer_token: None,
+        wire_api: WireApi::Responses,  // Internal representation stays Responses
+        query_params: None,
+        http_headers: None,
+        env_http_headers: None,
+        request_max_retries: Some(DEFAULT_REQUEST_MAX_RETRIES),
+        stream_max_retries: Some(DEFAULT_STREAM_MAX_RETRIES),
+        stream_idle_timeout_ms: Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
+        requires_openai_auth: false,
+        supports_websockets: false,
+        uses_chat_completions_api: true,  // Ollama uses Chat Completions API
     }
 }
 
@@ -386,6 +452,7 @@ pub fn create_databricks_provider(base_url: Option<String>) -> ModelProviderInfo
         stream_idle_timeout_ms: Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
         requires_openai_auth: false,
         supports_websockets: false,
+        uses_chat_completions_api: true,  // Databricks uses Chat Completions API
     }
 }
 
@@ -415,6 +482,7 @@ base_url = "http://localhost:11434/v1"
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             supports_websockets: false,
+            uses_chat_completions_api: false,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -446,6 +514,7 @@ query_params = { api-version = "2025-04-01-preview" }
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             supports_websockets: false,
+            uses_chat_completions_api: false,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -480,6 +549,7 @@ env_http_headers = { "X-Example-Env-Header" = "EXAMPLE_ENV_VAR" }
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             supports_websockets: false,
+            uses_chat_completions_api: false,
         };
 
         let provider: ModelProviderInfo = toml::from_str(azure_provider_toml).unwrap();
@@ -520,6 +590,7 @@ wire_api = "chat"
         assert_eq!(provider.stream_idle_timeout_ms, Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS));
         assert!(!provider.requires_openai_auth);
         assert!(!provider.supports_websockets);
+        assert!(provider.uses_chat_completions_api);  // Databricks uses Chat Completions
     }
 
     #[test]
@@ -547,6 +618,7 @@ http_headers = { "Content-Type" = "application/json" }
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             supports_websockets: false,
+            uses_chat_completions_api: false,  // Default when not specified
         };
 
         let provider: ModelProviderInfo = toml::from_str(databricks_provider_toml).unwrap();
