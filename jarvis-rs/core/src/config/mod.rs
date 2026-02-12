@@ -1,4 +1,4 @@
-﻿use crate::auth::AuthCredentialsStoreMode;
+use crate::auth::AuthCredentialsStoreMode;
 use crate::config::edit::ConfigEdit;
 use crate::config::edit::ConfigEditsBuilder;
 use crate::config::types::DEFAULT_OTEL_ENVIRONMENT;
@@ -368,6 +368,9 @@ pub struct Config {
 
     /// GitHub API configuration.
     pub github: crate::config::types::GitHubConfig,
+
+    /// Messaging integrations configuration (WhatsApp, Telegram).
+    pub messaging: crate::config::types::MessagingConfig,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -983,6 +986,10 @@ pub struct ConfigToml {
 
     /// GitHub API configuration.
     pub github: Option<crate::config::types::GitHubConfigToml>,
+
+    /// Messaging integrations configuration (WhatsApp, Telegram).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub messaging: Option<crate::config::types::MessagingConfigToml>,
 
     /// Tracks whether the Windows onboarding screen has been acknowledged.
     pub windows_wsl_setup_acknowledged: Option<bool>,
@@ -1717,6 +1724,7 @@ impl Config {
                 }
             },
             github: cfg.github.unwrap_or_default().into(),
+            messaging: cfg.messaging.unwrap_or_default().into(),
         };
         Ok(config)
     }
@@ -3889,6 +3897,7 @@ model_verbosity = "high"
                 tui_alternate_screen: AltScreenMode::Auto,
                 otel: OtelConfig::default(),
                 github: Default::default(),
+                messaging: Default::default(),
             },
             o3_profile_config
         );
@@ -3975,6 +3984,7 @@ model_verbosity = "high"
             tui_alternate_screen: AltScreenMode::Auto,
             otel: OtelConfig::default(),
             github: Default::default(),
+            messaging: Default::default(),
         };
 
         assert_eq!(expected_gpt3_profile_config, gpt3_profile_config);
@@ -4076,6 +4086,7 @@ model_verbosity = "high"
             tui_alternate_screen: AltScreenMode::Auto,
             otel: OtelConfig::default(),
             github: Default::default(),
+            messaging: Default::default(),
         };
 
         assert_eq!(expected_zdr_profile_config, zdr_profile_config);
@@ -4163,6 +4174,7 @@ model_verbosity = "high"
             tui_alternate_screen: AltScreenMode::Auto,
             otel: OtelConfig::default(),
             github: Default::default(),
+            messaging: Default::default(),
         };
 
         assert_eq!(expected_gpt5_profile_config, gpt5_profile_config);

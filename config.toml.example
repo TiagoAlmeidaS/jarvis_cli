@@ -149,3 +149,38 @@ username = "your_github_username"
 [search]
 provider = "searxng"
 searxng_url = "http://100.98.213.86:8888"
+
+# ============================================================================
+# INTEGRAÇÕES DE MENSAGERIA (Messaging Integrations)
+# ============================================================================
+
+# Configuração geral de mensageria
+[messaging]
+# Quando false, desabilita todas as integrações de mensageria
+enabled = true
+
+# Configuração do WhatsApp Business API
+[messaging.whatsapp]
+enabled = true
+# URL base da API do WhatsApp Business (padrão: https://graph.facebook.com/v18.0)
+api_url = "https://graph.facebook.com/v18.0"
+# Token de acesso (ou use variável de ambiente WHATSAPP_ACCESS_TOKEN)
+access_token = "your_whatsapp_access_token"
+# Token de verificação para webhook (ou use variável de ambiente WHATSAPP_VERIFY_TOKEN)
+verify_token = "your_verify_token"
+# ID do número de telefone (ou use variável de ambiente WHATSAPP_PHONE_NUMBER_ID)
+phone_number_id = "your_phone_number_id"
+# Porta do servidor webhook (padrão: 8080)
+webhook_port = 8080
+
+# Configuração do Telegram Bot API
+[messaging.telegram]
+enabled = true
+# Token do bot obtido do BotFather (ou use variável de ambiente TELEGRAM_BOT_TOKEN)
+bot_token = "your_telegram_bot_token"
+# URL do webhook (opcional, para configurar via API)
+webhook_url = "https://your-domain.com/telegram/webhook"
+# Porta do servidor webhook (padrão: 8081)
+webhook_port = 8081
+# Token secreto para validação do webhook (opcional, ou use variável de ambiente TELEGRAM_WEBHOOK_SECRET)
+webhook_secret = "your_webhook_secret"

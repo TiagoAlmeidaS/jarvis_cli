@@ -1,4 +1,4 @@
-﻿use crate::client_common::tools::ToolSpec;
+use crate::client_common::tools::ToolSpec;
 use crate::Session;
 use crate::TurnContext;
 use crate::function_tool::FunctionCallError;
@@ -28,7 +28,7 @@ pub struct ToolCall {
 }
 
 pub struct ToolRouter {
-    registry: ToolRegistry,
+    pub(crate) registry: ToolRegistry,
     specs: Vec<ConfiguredToolSpec>,
 }
 

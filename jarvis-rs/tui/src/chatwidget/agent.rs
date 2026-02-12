@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 
 use jarvis_core::JarvisThread;
 use jarvis_core::NewThread;
@@ -28,7 +28,7 @@ pub(crate) fn spawn_agent(
             thread,
             session_configured,
             ..
-        } = match server.start_thread(config).await {
+        } = match server.start_thread(config.clone()).await {
             Ok(v) => v,
             Err(err) => {
                 let message = format!("Failed to initialize Jarvis: {err}");
@@ -42,6 +42,26 @@ pub(crate) fn spawn_agent(
                 return;
             }
         };
+
+        // Inicializar servidores de mensageria se configurado
+        if config.messaging.enabled {
+            let thread_for_messaging = thread.clone();
+            let config_for_messaging = config.clone();
+            tokio::spawn(async move {
+                // Aguardar um pouco para garantir que a thread está totalmente inicializada
+                tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                
+                // Inicializar os servidores de mensageria usando o thread
+                if let Err(e) = jarvis_core::messaging::initialize_messaging_servers_from_thread(
+                    &config_for_messaging,
+                    thread_for_messaging,
+                ).await {
+                    tracing::error!("Failed to initialize messaging servers: {}", e);
+                } else {
+                    tracing::info!("Messaging servers initialized successfully");
+                }
+            });
+        }
 
         // Forward the captured `SessionConfigured` event so it can be rendered in the UI.
         let ev = jarvis_core::protocol::Event {

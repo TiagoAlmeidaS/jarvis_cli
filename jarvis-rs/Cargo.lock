@@ -744,6 +744,7 @@ checksum = "8b52af3cb4058c895d37317bb27508dccc8e5f2d39454016b297bf4a400597b8"
 dependencies = [
  "axum-core 0.5.6",
  "bytes",
+ "form_urlencoded",
  "futures-util",
  "http 1.4.0",
  "http-body",
@@ -754,11 +755,13 @@ dependencies = [
  "matchit 0.8.4",
  "memchr",
  "mime",
+ "multer",
  "percent-encoding",
  "pin-project-lite",
  "serde_core",
  "serde_json",
  "serde_path_to_error",
+ "serde_urlencoded",
  "sync_wrapper",
  "tokio",
  "tower 0.5.3",
@@ -4143,17 +4146,20 @@ dependencies = [
  "jarvis-git",
  "jarvis-github",
  "jarvis-keyring-store",
+ "jarvis-messaging",
  "jarvis-otel",
  "jarvis-protocol",
  "jarvis-rmcp-client",
  "jarvis-secrets",
  "jarvis-state",
+ "jarvis-telegram",
  "jarvis-utils-absolute-path",
  "jarvis-utils-cargo-bin",
  "jarvis-utils-home-dir",
  "jarvis-utils-pty",
  "jarvis-utils-readiness",
  "jarvis-utils-string",
+ "jarvis-whatsapp",
  "jarvis-windows-sandbox",
  "keyring",
  "landlock",
@@ -4484,6 +4490,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "jarvis-messaging"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "hex",
+ "hmac",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
 name = "jarvis-network-proxy"
 version = "0.0.0"
 dependencies = [
@@ -4695,6 +4717,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "jarvis-telegram"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum 0.8.8",
+ "chrono",
+ "http 1.4.0",
+ "jarvis-messaging",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tower 0.5.3",
+ "tower-http",
+ "tracing",
+]
+
+[[package]]
 name = "jarvis-tui"
 version = "0.0.0"
 dependencies = [
@@ -4864,6 +4906,26 @@ dependencies = [
 [[package]]
 name = "jarvis-utils-string"
 version = "0.0.0"
+
+[[package]]
+name = "jarvis-whatsapp"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum 0.8.8",
+ "chrono",
+ "http 1.4.0",
+ "jarvis-messaging",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tokio-stream",
+ "tower 0.5.3",
+ "tower-http",
+ "tracing",
+]
 
 [[package]]
 name = "jarvis-windows-sandbox"
@@ -5441,6 +5503,23 @@ checksum = "ac9557c559cd6fc9867e122e20d2cbefc9ca29d80d027a8e39310920ed2f0a97"
 dependencies = [
  "num-traits",
  "pxfm",
+]
+
+[[package]]
+name = "multer"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "83e87776546dc87511aa5ee218730c92b666d7264ab6ed41f9d215af9cd5224b"
+dependencies = [
+ "bytes",
+ "encoding_rs",
+ "futures-util",
+ "http 1.4.0",
+ "httparse",
+ "memchr",
+ "mime",
+ "spin",
+ "version_check",
 ]
 
 [[package]]
@@ -9677,6 +9756,7 @@ dependencies = [
  "tower 0.5.3",
  "tower-layer",
  "tower-service",
+ "tracing",
 ]
 
 [[package]]

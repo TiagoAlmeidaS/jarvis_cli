@@ -1,4 +1,4 @@
-﻿use crate::agent::AgentStatus;
+use crate::agent::AgentStatus;
 use crate::Jarvis;
 use crate::error::Result as CodexResult;
 use crate::protocol::Event;
@@ -10,6 +10,7 @@ use jarvis_protocol::protocol::AskForApproval;
 use jarvis_protocol::protocol::SandboxPolicy;
 use jarvis_protocol::protocol::SessionSource;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::watch;
 
 use crate::state_db::StateDbHandle;
@@ -72,5 +73,11 @@ impl JarvisThread {
 
     pub async fn config_snapshot(&self) -> ThreadConfigSnapshot {
         self.Jarvis.thread_config_snapshot().await
+    }
+
+    /// Get access to the internal Session for advanced use cases.
+    /// This is primarily used for initializing messaging servers.
+    pub fn session(&self) -> Arc<crate::Session> {
+        self.Jarvis.session.clone()
     }
 }

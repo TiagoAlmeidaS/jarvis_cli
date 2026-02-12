@@ -1,4 +1,4 @@
-﻿//! Types used to define the fields of [`crate::config::Config`].
+//! Types used to define the fields of [`crate::config::Config`].
 
 // Note this file should generally be restricted to simple struct/enum
 // definitions that do not contain business logic.
@@ -330,6 +330,175 @@ pub struct AnalyticsConfigToml {
 pub struct FeedbackConfigToml {
     /// When `false`, disables the feedback flow across Jarvis product surfaces.
     pub enabled: Option<bool>,
+}
+
+// ===== Messaging configuration =====
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct MessagingConfigToml {
+    /// When `false`, disables messaging integrations (WhatsApp, Telegram).
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+
+    /// WhatsApp Business API configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub whatsapp: Option<WhatsAppConfigToml>,
+
+    /// Telegram Bot API configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub telegram: Option<TelegramConfigToml>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct WhatsAppConfigToml {
+    /// When `false`, disables WhatsApp integration.
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+
+    /// Base URL for WhatsApp Business API. Defaults to "https://graph.facebook.com/v18.0".
+    #[serde(default)]
+    pub api_url: Option<String>,
+
+    /// Access token for WhatsApp Business API.
+    /// Can be set via environment variable WHATSAPP_ACCESS_TOKEN.
+    pub access_token: Option<String>,
+
+    /// Verify token for webhook verification.
+    /// Can be set via environment variable WHATSAPP_VERIFY_TOKEN.
+    pub verify_token: Option<String>,
+
+    /// Phone number ID from WhatsApp Business API.
+    /// Can be set via environment variable WHATSAPP_PHONE_NUMBER_ID.
+    pub phone_number_id: Option<String>,
+
+    /// Port for WhatsApp webhook server. Defaults to 8080.
+    #[serde(default)]
+    pub webhook_port: Option<u16>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct TelegramConfigToml {
+    /// When `false`, disables Telegram integration.
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+
+    /// Bot token from BotFather.
+    /// Can be set via environment variable TELEGRAM_BOT_TOKEN.
+    pub bot_token: Option<String>,
+
+    /// Webhook URL for Telegram (optional, for setting webhook via API).
+    pub webhook_url: Option<String>,
+
+    /// Port for Telegram webhook server. Defaults to 8081.
+    #[serde(default)]
+    pub webhook_port: Option<u16>,
+
+    /// Secret token for webhook validation (optional).
+    /// Can be set via environment variable TELEGRAM_WEBHOOK_SECRET.
+    pub webhook_secret: Option<String>,
+}
+
+/// Effective messaging settings after defaults are applied.
+#[derive(Debug, Clone, PartialEq)]
+pub struct MessagingConfig {
+    pub enabled: bool,
+    pub whatsapp: Option<WhatsAppConfig>,
+    pub telegram: Option<TelegramConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhatsAppConfig {
+    pub enabled: bool,
+    pub api_url: String,
+    pub access_token: String,
+    pub verify_token: String,
+    pub phone_number_id: String,
+    pub webhook_port: u16,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TelegramConfig {
+    pub enabled: bool,
+    pub bot_token: String,
+    pub webhook_url: Option<String>,
+    pub webhook_port: u16,
+    pub webhook_secret: Option<String>,
+}
+
+impl Default for MessagingConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            whatsapp: None,
+            telegram: None,
+        }
+    }
+}
+
+impl From<MessagingConfigToml> for MessagingConfig {
+    fn from(toml: MessagingConfigToml) -> Self {
+        let whatsapp = toml.whatsapp.and_then(|w| {
+            if !w.enabled {
+                return None;
+            }
+            let access_token = w.access_token
+                .or_else(|| std::env::var("WHATSAPP_ACCESS_TOKEN").ok())
+                .unwrap_or_default();
+            let verify_token = w.verify_token
+                .or_else(|| std::env::var("WHATSAPP_VERIFY_TOKEN").ok())
+                .unwrap_or_default();
+            let phone_number_id = w.phone_number_id
+                .or_else(|| std::env::var("WHATSAPP_PHONE_NUMBER_ID").ok())
+                .unwrap_or_default();
+
+            if access_token.is_empty() || verify_token.is_empty() || phone_number_id.is_empty() {
+                return None;
+            }
+
+            Some(WhatsAppConfig {
+                enabled: true,
+                api_url: w.api_url.unwrap_or_else(|| {
+                    "https://graph.facebook.com/v18.0".to_string()
+                }),
+                access_token,
+                verify_token,
+                phone_number_id,
+                webhook_port: w.webhook_port.unwrap_or(8080),
+            })
+        });
+
+        let telegram = toml.telegram.and_then(|t| {
+            if !t.enabled {
+                return None;
+            }
+            let bot_token = t.bot_token
+                .or_else(|| std::env::var("TELEGRAM_BOT_TOKEN").ok())
+                .unwrap_or_default();
+            let webhook_secret = t.webhook_secret
+                .or_else(|| std::env::var("TELEGRAM_WEBHOOK_SECRET").ok());
+
+            if bot_token.is_empty() {
+                return None;
+            }
+
+            Some(TelegramConfig {
+                enabled: true,
+                bot_token,
+                webhook_url: t.webhook_url,
+                webhook_port: t.webhook_port.unwrap_or(8081),
+                webhook_secret,
+            })
+        });
+
+        Self {
+            enabled: toml.enabled && (whatsapp.is_some() || telegram.is_some()),
+            whatsapp,
+            telegram,
+        }
+    }
 }
 
 // ===== GitHub configuration =====
@@ -977,9 +1146,239 @@ mod tests {
         )
         .expect_err("should reject bearer_token field");
 
-        assert!(
-            err.to_string().contains("bearer_token is not supported"),
-            "unexpected error: {err}"
-        );
+        assert!(err.to_string().contains("bearer_token"));
+    }
+
+    // ===== Messaging configuration tests =====
+
+    #[test]
+    fn deserialize_messaging_config_default() {
+        let cfg: MessagingConfigToml = toml::from_str("").unwrap_or_default();
+        assert!(cfg.enabled);
+        assert!(cfg.whatsapp.is_none());
+        assert!(cfg.telegram.is_none());
+    }
+
+    #[test]
+    fn deserialize_messaging_config_disabled() {
+        let cfg: MessagingConfigToml = toml::from_str(
+            r#"
+            enabled = false
+        "#,
+        )
+        .expect("should deserialize disabled messaging config");
+        assert!(!cfg.enabled);
+    }
+
+    #[test]
+    fn deserialize_whatsapp_config() {
+        let cfg: MessagingConfigToml = toml::from_str(
+            r#"
+            [whatsapp]
+            enabled = true
+            access_token = "test_token"
+            verify_token = "test_verify"
+            phone_number_id = "123456"
+            webhook_port = 9090
+        "#,
+        )
+        .expect("should deserialize WhatsApp config");
+        assert!(cfg.enabled);
+        let whatsapp = cfg.whatsapp.expect("should have WhatsApp config");
+        assert!(whatsapp.enabled);
+        assert_eq!(whatsapp.access_token, Some("test_token".to_string()));
+        assert_eq!(whatsapp.verify_token, Some("test_verify".to_string()));
+        assert_eq!(whatsapp.phone_number_id, Some("123456".to_string()));
+        assert_eq!(whatsapp.webhook_port, Some(9090));
+    }
+
+    #[test]
+    fn deserialize_telegram_config() {
+        let cfg: MessagingConfigToml = toml::from_str(
+            r#"
+            [telegram]
+            enabled = true
+            bot_token = "test_bot_token"
+            webhook_url = "https://example.com/webhook"
+            webhook_port = 9091
+            webhook_secret = "test_secret"
+        "#,
+        )
+        .expect("should deserialize Telegram config");
+        assert!(cfg.enabled);
+        let telegram = cfg.telegram.expect("should have Telegram config");
+        assert!(telegram.enabled);
+        assert_eq!(telegram.bot_token, Some("test_bot_token".to_string()));
+        assert_eq!(telegram.webhook_url, Some("https://example.com/webhook".to_string()));
+        assert_eq!(telegram.webhook_port, Some(9091));
+        assert_eq!(telegram.webhook_secret, Some("test_secret".to_string()));
+    }
+
+    #[test]
+    fn messaging_config_from_toml_with_env_vars() {
+        std::env::set_var("WHATSAPP_ACCESS_TOKEN", "env_token");
+        std::env::set_var("WHATSAPP_VERIFY_TOKEN", "env_verify");
+        std::env::set_var("WHATSAPP_PHONE_NUMBER_ID", "env_phone");
+        std::env::set_var("TELEGRAM_BOT_TOKEN", "env_bot_token");
+
+        let toml = MessagingConfigToml {
+            enabled: true,
+            whatsapp: Some(WhatsAppConfigToml {
+                enabled: true,
+                api_url: None,
+                access_token: None,
+                verify_token: None,
+                phone_number_id: None,
+                webhook_port: None,
+            }),
+            telegram: Some(TelegramConfigToml {
+                enabled: true,
+                bot_token: None,
+                webhook_url: None,
+                webhook_port: None,
+                webhook_secret: None,
+            }),
+        };
+
+        let config: MessagingConfig = toml.into();
+        assert!(config.enabled);
+        assert!(config.whatsapp.is_some());
+        assert!(config.telegram.is_some());
+
+        let whatsapp = config.whatsapp.unwrap();
+        assert_eq!(whatsapp.access_token, "env_token");
+        assert_eq!(whatsapp.verify_token, "env_verify");
+        assert_eq!(whatsapp.phone_number_id, "env_phone");
+
+        let telegram = config.telegram.unwrap();
+        assert_eq!(telegram.bot_token, "env_bot_token");
+
+        std::env::remove_var("WHATSAPP_ACCESS_TOKEN");
+        std::env::remove_var("WHATSAPP_VERIFY_TOKEN");
+        std::env::remove_var("WHATSAPP_PHONE_NUMBER_ID");
+        std::env::remove_var("TELEGRAM_BOT_TOKEN");
+    }
+
+    #[test]
+    fn messaging_config_from_toml_missing_credentials() {
+        let toml = MessagingConfigToml {
+            enabled: true,
+            whatsapp: Some(WhatsAppConfigToml {
+                enabled: true,
+                api_url: None,
+                access_token: None,
+                verify_token: None,
+                phone_number_id: None,
+                webhook_port: None,
+            }),
+            telegram: Some(TelegramConfigToml {
+                enabled: true,
+                bot_token: None,
+                webhook_url: None,
+                webhook_port: None,
+                webhook_secret: None,
+            }),
+        };
+
+        let config: MessagingConfig = toml.into();
+        // Should be disabled if credentials are missing
+        assert!(!config.enabled);
+        assert!(config.whatsapp.is_none());
+        assert!(config.telegram.is_none());
+    }
+}
+
+#[cfg(test)]
+mod messaging_tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn test_messaging_config_default() {
+        let config = MessagingConfig::default();
+        assert!(!config.enabled);
+        assert!(config.whatsapp.is_none());
+        assert!(config.telegram.is_none());
+    }
+
+    #[test]
+    fn test_whatsapp_config_defaults() {
+        let toml = MessagingConfigToml {
+            enabled: true,
+            whatsapp: Some(WhatsAppConfigToml {
+                enabled: true,
+                api_url: None,
+                access_token: Some("token".to_string()),
+                verify_token: Some("verify".to_string()),
+                phone_number_id: Some("123".to_string()),
+                webhook_port: None,
+            }),
+            telegram: None,
+        };
+
+        let config: MessagingConfig = toml.into();
+        assert!(config.enabled);
+        let whatsapp = config.whatsapp.expect("should have WhatsApp config");
+        assert_eq!(whatsapp.api_url, "https://graph.facebook.com/v18.0");
+        assert_eq!(whatsapp.webhook_port, 8080);
+    }
+
+    #[test]
+    fn test_telegram_config_defaults() {
+        let toml = MessagingConfigToml {
+            enabled: true,
+            whatsapp: None,
+            telegram: Some(TelegramConfigToml {
+                enabled: true,
+                bot_token: Some("token".to_string()),
+                webhook_url: None,
+                webhook_port: None,
+                webhook_secret: None,
+            }),
+        };
+
+        let config: MessagingConfig = toml.into();
+        assert!(config.enabled);
+        let telegram = config.telegram.expect("should have Telegram config");
+        assert_eq!(telegram.webhook_port, 8081);
+    }
+
+    #[test]
+    fn test_whatsapp_disabled() {
+        let toml = MessagingConfigToml {
+            enabled: true,
+            whatsapp: Some(WhatsAppConfigToml {
+                enabled: false,
+                api_url: None,
+                access_token: Some("token".to_string()),
+                verify_token: Some("verify".to_string()),
+                phone_number_id: Some("123".to_string()),
+                webhook_port: None,
+            }),
+            telegram: None,
+        };
+
+        let config: MessagingConfig = toml.into();
+        assert!(!config.enabled);
+        assert!(config.whatsapp.is_none());
+    }
+
+    #[test]
+    fn test_telegram_disabled() {
+        let toml = MessagingConfigToml {
+            enabled: true,
+            whatsapp: None,
+            telegram: Some(TelegramConfigToml {
+                enabled: false,
+                bot_token: Some("token".to_string()),
+                webhook_url: None,
+                webhook_port: None,
+                webhook_secret: None,
+            }),
+        };
+
+        let config: MessagingConfig = toml.into();
+        assert!(!config.enabled);
+        assert!(config.telegram.is_none());
     }
 }

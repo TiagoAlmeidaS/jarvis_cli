@@ -1,4 +1,4 @@
-﻿use crate::app_backtrack::BacktrackState;
+use crate::app_backtrack::BacktrackState;
 use crate::app_event::AppEvent;
 use crate::app_event::ExitMode;
 #[cfg(target_os = "windows")]

@@ -1,4 +1,4 @@
-﻿//! Root of the `jarvis-core` library.
+//! Root of the `jarvis-core` library.
 
 // Prevent accidental direct writes to stdout/stderr in library code. All
 // user-visible output must go through the appropriate abstraction (e.g.,
@@ -67,6 +67,7 @@ pub use mcp_connection_manager::SandboxState;
 mod mcp_tool_call;
 mod mentions;
 mod message_history;
+pub mod messaging;
 mod model_provider_info;
 pub mod parse_command;
 pub mod path_utils;

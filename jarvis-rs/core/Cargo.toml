@@ -36,7 +36,10 @@ jarvis-file-search = { workspace = true }
 jarvis-git = { workspace = true }
 jarvis-github = { workspace = true }
 jarvis-keyring-store = { workspace = true }
+jarvis-messaging = { workspace = true }
 jarvis-secrets = { workspace = true }
+jarvis-whatsapp = { workspace = true }
+jarvis-telegram = { workspace = true }
 jarvis-otel = { workspace = true }
 jarvis-protocol = { workspace = true }
 jarvis-rmcp-client = { workspace = true }
