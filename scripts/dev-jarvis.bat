@@ -11,6 +11,7 @@ REM Providers:
 REM   openrouter - OpenRouter API (default, free DeepSeek R1)
 REM   qwen       - OpenRouter + Qwen3 Coder 80B MoE (best cheap paid for TUI, ~$0.09/day)
 REM   nemo       - OpenRouter + Mistral Nemo 12B (daemon only, no tool calling)
+REM   agent      - AgentLoop + OpenRouter + Mistral Nemo (text-based tool calling)
 REM   gemini     - Google AI Studio (free tier)
 REM   ollama     - Ollama local/VPS
 REM   azure      - Azure OpenAI
@@ -39,6 +40,8 @@ REM
 REM Examples:
 REM   dev-jarvis.bat                                       (OpenRouter + DeepSeek R1 free)
 REM   dev-jarvis.bat qwen                                  (OpenRouter + Qwen3 Coder, paid ~$0.09/day)
+REM   dev-jarvis.bat agent                                 (AgentLoop + OpenRouter + Mistral Nemo)
+REM   dev-jarvis.bat agent mistralai/codestral-mamba-latest (AgentLoop + custom model)
 REM   dev-jarvis.bat openrouter qwen/qwen3-coder-next     (same as above, explicit)
 REM   dev-jarvis.bat openrouter nvidia/nemotron-nano-9b-v2:free
 REM   dev-jarvis.bat openrouter stepfun/step-3.5-flash:free
@@ -88,6 +91,13 @@ if "%1"=="nemo" (
     shift
     goto :parse_args
 )
+if "%1"=="agent" (
+    set "PROVIDER=openrouter"
+    set "MODEL=mistralai/mistral-nemo"
+    set "AGENT_LOOP=1"
+    shift
+    goto :parse_args
+)
 if "%1"=="qwen" (
     set "PROVIDER=openrouter"
     set "MODEL=qwen/qwen3-coder-next"
@@ -125,6 +135,9 @@ echo ========================================
 echo.
 echo  Provider: %PROVIDER%
 echo  Modelo:   %MODEL%
+if defined AGENT_LOOP (
+    echo  Mode:     AgentLoop [text-based tool calling]
+)
 if defined CARGO_FLAGS (
     echo  Build:    release
 ) else (
@@ -135,10 +148,23 @@ echo  Compilando e executando...
 echo ========================================
 echo.
 
+REM Build the config overrides
+set "CONFIG_OVERRIDES=model_provider=\"%PROVIDER%\""
+
+REM When AgentLoop mode is requested, inject [agent_loop] config overrides.
+REM The api_key is auto-resolved from OPENROUTER_API_KEY env var via base_url detection.
+if defined AGENT_LOOP (
+    set "CONFIG_OVERRIDES=%CONFIG_OVERRIDES%" -c "agent_loop.mode=\"text_based\"" -c "agent_loop.base_url=\"https://openrouter.ai/api/v1\"" -c "agent_loop.model=\"%MODEL%\""
+)
+
 REM Use cargo run for incremental compilation + execution in one step
 REM --cd points Jarvis to the project root (jarvis_cli), not the Rust subfolder
 cd jarvis-rs
-cargo run %CARGO_FLAGS% --bin jarvis -- -c "model_provider=\"%PROVIDER%\"" -m "%MODEL%" --cd "%~dp0.."
+if defined AGENT_LOOP (
+    cargo run %CARGO_FLAGS% --bin jarvis -- -c "model_provider=\"%PROVIDER%\"" -c "agent_loop.mode=\"text_based\"" -c "agent_loop.base_url=\"https://openrouter.ai/api/v1\"" -c "agent_loop.model=\"%MODEL%\"" -m "%MODEL%" --cd "%~dp0.."
+) else (
+    cargo run %CARGO_FLAGS% --bin jarvis -- -c "model_provider=\"%PROVIDER%\"" -m "%MODEL%" --cd "%~dp0.."
+)
 set "EXIT_CODE=%ERRORLEVEL%"
 cd ..
 

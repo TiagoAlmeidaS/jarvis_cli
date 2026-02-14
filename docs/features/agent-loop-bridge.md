@@ -51,29 +51,66 @@ O TUI detecta automaticamente o modo baseado no modelo ativo e roteia mensagens 
 
 ### config.toml
 
+#### Exemplo com OpenRouter (recomendado)
+
 ```toml
 [agent_loop]
-# "auto" (default), "text_based", "native", or "disabled"
 mode = "auto"
-
-# OpenAI-compatible API URL (default: Ollama local)
-base_url = "http://localhost:11434/v1"
-
-# API key (empty for local models)
-api_key = ""
-
-# Model override for text-based mode
-model = "mistral"
-
-# LLM parameters
+base_url = "https://openrouter.ai/api/v1"
+model = "mistralai/mistral-nemo"
 temperature = 0.7
 max_tokens = 4096
-
-# Loop safety limits
 max_iterations = 25
 timeout_sec = 300
 max_context_tokens = 32000
 ```
+
+A `api_key` e resolvida automaticamente a partir da env var `OPENROUTER_API_KEY`
+quando a `base_url` contem "openrouter.ai". Alternativamente, use:
+
+```toml
+# Resolucao explicita via env var
+api_key_env = "OPENROUTER_API_KEY"
+
+# Ou diretamente no valor com syntax env:
+api_key = "env:OPENROUTER_API_KEY"
+
+# Ou valor literal (nao recomendado para versionamento)
+api_key = "sk-or-..."
+```
+
+#### Exemplo com Ollama local
+
+```toml
+[agent_loop]
+mode = "auto"
+base_url = "http://localhost:11434/v1"
+model = "mistral"
+```
+
+### Resolucao de API Key
+
+A resolucao segue esta ordem de prioridade:
+
+1. **`api_key_env`** — nome da env var a ser lida (ex: `"OPENROUTER_API_KEY"`)
+2. **`api_key = "env:VAR"`** — syntax `env:` no campo api_key
+3. **`api_key = "sk-..."`** — valor literal direto
+4. **Auto-detect** — baseado na `base_url`:
+   - `openrouter.ai` → `OPENROUTER_API_KEY`
+   - `api.openai.com` → `OPENAI_API_KEY`
+   - `generativelanguage.googleapis.com` → `GOOGLE_API_KEY`
+   - `anthropic.com` → `ANTHROPIC_API_KEY`
+
+### dev-jarvis.bat
+
+Atalho rapido para testar com OpenRouter:
+
+```batch
+dev-jarvis.bat agent                              # Mistral Nemo via OpenRouter
+dev-jarvis.bat agent mistralai/codestral-mamba-latest  # Custom model
+```
+
+Requer `OPENROUTER_API_KEY` definida no `.env` ou no ambiente.
 
 ### Modos
 

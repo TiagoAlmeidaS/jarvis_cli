@@ -164,6 +164,46 @@ model_provider = "ollama"
 model = "llama3.2"
 
 # ============================================================================
+# AGENT LOOP (Text-Based Tool Calling para modelos locais/baratos)
+# ============================================================================
+# Quando habilitado, o Jarvis usa um loop autonomo (Think -> Execute -> Observe)
+# para modelos que nao suportam function calling nativo (Mistral-Nemo, Phi-3, etc.)
+#
+# Modos:
+#   "auto"       - Detecta automaticamente pelo modelo (default)
+#   "text_based" - Sempre usa o agent loop (util para Ollama local)
+#   "native"     - Sempre usa Responses API (function calling nativo)
+#   "disabled"   - Desabilita tool calling
+#
+# ---------- Exemplo 1: Ollama local (default) ----------
+# [agent_loop]
+# mode = "auto"
+# base_url = "http://localhost:11434/v1"
+# model = "mistral"
+
+# ---------- Exemplo 2: OpenRouter (recomendado) ----------
+# A api_key e resolvida automaticamente a partir da env var
+# OPENROUTER_API_KEY quando a base_url contem "openrouter.ai".
+# Alternativamente, use api_key_env ou api_key = "env:OPENROUTER_API_KEY".
+[agent_loop]
+mode = "auto"
+base_url = "https://openrouter.ai/api/v1"
+# api_key_env = "OPENROUTER_API_KEY"     # explicito, ou deixe vazio para auto-detect
+model = "mistralai/mistral-nemo"
+temperature = 0.7
+max_tokens = 4096
+max_iterations = 25
+timeout_sec = 300
+max_context_tokens = 32000
+
+# ---------- Exemplo 3: OpenAI direto ----------
+# [agent_loop]
+# mode = "text_based"
+# base_url = "https://api.openai.com/v1"
+# api_key_env = "OPENAI_API_KEY"
+# model = "gpt-4o-mini"
+
+# ============================================================================
 # CONFIGURAÇÃO GLOBAL
 # ============================================================================
 

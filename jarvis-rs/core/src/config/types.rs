@@ -931,8 +931,16 @@ pub struct AgentLoopConfigToml {
     pub base_url: Option<String>,
 
     /// API key for the LLM endpoint (can be empty for local models).
+    /// Supports `env:VAR_NAME` syntax to read from environment variables,
+    /// e.g. `env:OPENROUTER_API_KEY`.
     #[serde(default)]
     pub api_key: Option<String>,
+
+    /// Environment variable name to read the API key from.
+    /// Alternative to `api_key = "env:VAR_NAME"`.
+    /// Common values: "OPENROUTER_API_KEY", "OPENAI_API_KEY", "GOOGLE_API_KEY".
+    #[serde(default)]
+    pub api_key_env: Option<String>,
 
     /// Model identifier for text-based mode (e.g. "mistral", "llama3.1").
     /// When not set, falls back to the main `model` config field.
@@ -993,10 +1001,16 @@ impl Default for AgentLoopSettings {
 impl From<AgentLoopConfigToml> for AgentLoopSettings {
     fn from(toml: AgentLoopConfigToml) -> Self {
         let defaults = Self::default();
+        let base_url = toml.base_url.unwrap_or(defaults.base_url);
+        let api_key = resolve_agent_loop_api_key(
+            toml.api_key.as_deref(),
+            toml.api_key_env.as_deref(),
+            &base_url,
+        );
         Self {
             mode: toml.mode.unwrap_or(defaults.mode),
-            base_url: toml.base_url.unwrap_or(defaults.base_url),
-            api_key: toml.api_key.unwrap_or(defaults.api_key),
+            base_url,
+            api_key,
             model: toml.model,
             temperature: toml.temperature.unwrap_or(defaults.temperature),
             max_tokens: toml.max_tokens.unwrap_or(defaults.max_tokens),
@@ -1007,6 +1021,57 @@ impl From<AgentLoopConfigToml> for AgentLoopSettings {
                 .unwrap_or(defaults.max_context_tokens),
         }
     }
+}
+
+/// Resolve the API key for the agent loop from explicit value, env var name,
+/// `env:VAR` syntax, or auto-detect from base_url.
+fn resolve_agent_loop_api_key(
+    api_key: Option<&str>,
+    api_key_env: Option<&str>,
+    base_url: &str,
+) -> String {
+    // 1. Explicit api_key_env field takes highest priority.
+    if let Some(env_var) = api_key_env {
+        if let Ok(val) = std::env::var(env_var) {
+            if !val.is_empty() {
+                return val;
+            }
+        }
+    }
+
+    // 2. api_key with "env:VAR_NAME" syntax.
+    if let Some(key) = api_key {
+        if let Some(var_name) = key.strip_prefix("env:") {
+            return std::env::var(var_name).unwrap_or_default();
+        }
+        if !key.is_empty() {
+            return key.to_string();
+        }
+    }
+
+    // 3. Auto-detect from base_url.
+    let url_lower = base_url.to_lowercase();
+    let auto_env = if url_lower.contains("openrouter.ai") {
+        Some("OPENROUTER_API_KEY")
+    } else if url_lower.contains("api.openai.com") {
+        Some("OPENAI_API_KEY")
+    } else if url_lower.contains("generativelanguage.googleapis.com") {
+        Some("GOOGLE_API_KEY")
+    } else if url_lower.contains("anthropic.com") {
+        Some("ANTHROPIC_API_KEY")
+    } else {
+        None
+    };
+
+    if let Some(var) = auto_env {
+        if let Ok(val) = std::env::var(var) {
+            if !val.is_empty() {
+                return val;
+            }
+        }
+    }
+
+    String::new()
 }
 
 impl AgentLoopSettings {
@@ -1662,5 +1727,86 @@ mod agent_loop_tests {
                 max_context_tokens: 32_000,
             }
         );
+    }
+
+    // -- resolve_agent_loop_api_key tests --
+
+    #[test]
+    fn resolve_api_key_literal_value() {
+        let key =
+            super::resolve_agent_loop_api_key(Some("sk-literal-key"), None, "http://localhost");
+        assert_eq!(key, "sk-literal-key");
+    }
+
+    #[test]
+    fn resolve_api_key_env_syntax() {
+        std::env::set_var("TEST_JARVIS_AGENT_KEY_1", "key-from-env-syntax");
+        let key = super::resolve_agent_loop_api_key(
+            Some("env:TEST_JARVIS_AGENT_KEY_1"),
+            None,
+            "http://localhost",
+        );
+        assert_eq!(key, "key-from-env-syntax");
+        std::env::remove_var("TEST_JARVIS_AGENT_KEY_1");
+    }
+
+    #[test]
+    fn resolve_api_key_api_key_env_field() {
+        std::env::set_var("TEST_JARVIS_AGENT_KEY_2", "key-from-env-field");
+        let key = super::resolve_agent_loop_api_key(
+            Some("sk-should-be-ignored"),
+            Some("TEST_JARVIS_AGENT_KEY_2"),
+            "http://localhost",
+        );
+        // api_key_env takes priority over api_key literal
+        assert_eq!(key, "key-from-env-field");
+        std::env::remove_var("TEST_JARVIS_AGENT_KEY_2");
+    }
+
+    #[test]
+    fn resolve_api_key_auto_detect_openrouter() {
+        std::env::set_var("OPENROUTER_API_KEY", "sk-or-auto");
+        let key = super::resolve_agent_loop_api_key(None, None, "https://openrouter.ai/api/v1");
+        assert_eq!(key, "sk-or-auto");
+        std::env::remove_var("OPENROUTER_API_KEY");
+    }
+
+    #[test]
+    fn resolve_api_key_auto_detect_openai() {
+        std::env::set_var("OPENAI_API_KEY", "sk-openai-auto");
+        let key = super::resolve_agent_loop_api_key(None, None, "https://api.openai.com/v1");
+        assert_eq!(key, "sk-openai-auto");
+        std::env::remove_var("OPENAI_API_KEY");
+    }
+
+    #[test]
+    fn resolve_api_key_empty_when_no_match() {
+        let key = super::resolve_agent_loop_api_key(None, None, "http://localhost:11434/v1");
+        assert_eq!(key, "");
+    }
+
+    #[test]
+    fn resolve_api_key_config_toml_with_api_key_env() {
+        std::env::set_var("TEST_JARVIS_AGENT_KEY_3", "key-via-toml-env");
+        let toml: AgentLoopConfigToml = serde_json::from_value(serde_json::json!({
+            "base_url": "https://openrouter.ai/api/v1",
+            "api_key_env": "TEST_JARVIS_AGENT_KEY_3",
+        }))
+        .unwrap();
+        let settings: AgentLoopSettings = toml.into();
+        assert_eq!(settings.api_key, "key-via-toml-env");
+        std::env::remove_var("TEST_JARVIS_AGENT_KEY_3");
+    }
+
+    #[test]
+    fn resolve_api_key_config_toml_openrouter_auto() {
+        std::env::set_var("OPENROUTER_API_KEY", "sk-or-toml-auto");
+        let toml: AgentLoopConfigToml = serde_json::from_value(serde_json::json!({
+            "base_url": "https://openrouter.ai/api/v1",
+        }))
+        .unwrap();
+        let settings: AgentLoopSettings = toml.into();
+        assert_eq!(settings.api_key, "sk-or-toml-auto");
+        std::env::remove_var("OPENROUTER_API_KEY");
     }
 }
