@@ -168,6 +168,36 @@ impl DaemonDb {
         Ok(job)
     }
 
+    /// Create a job with a specific attempt number (used for retries).
+    pub async fn create_job_with_attempt(
+        &self,
+        pipeline_id: &str,
+        attempt: i32,
+    ) -> Result<DaemonJob> {
+        let mut job = DaemonJob::new(pipeline_id);
+        job.attempt = attempt;
+        sqlx::query(
+            "INSERT INTO daemon_jobs (id, pipeline_id, status, attempt, started_at, completed_at, input_json, output_json, error_message, error_stack, duration_ms, created_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(&job.id)
+        .bind(&job.pipeline_id)
+        .bind(&job.status)
+        .bind(job.attempt)
+        .bind(job.started_at)
+        .bind(job.completed_at)
+        .bind(&job.input_json)
+        .bind(&job.output_json)
+        .bind(&job.error_message)
+        .bind(&job.error_stack)
+        .bind(job.duration_ms)
+        .bind(job.created_at)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(job)
+    }
+
     /// Mark a job as running.
     pub async fn start_job(&self, job_id: &str) -> Result<()> {
         let now = chrono::Utc::now().timestamp();
@@ -2285,5 +2315,124 @@ mod tests {
             .expect("update schedule");
         let pipeline = db.get_pipeline("p1").await.expect("get").expect("exists");
         assert_eq!(pipeline.schedule_cron, "0 */6 * * *");
+    }
+
+    #[tokio::test]
+    async fn test_create_job_with_attempt() {
+        let db = DaemonDb::open_memory().await.expect("open db");
+
+        let input = CreatePipeline {
+            id: "p1".to_string(),
+            name: "P1".to_string(),
+            strategy: Strategy::SeoBlog,
+            config_json: serde_json::json!({}),
+            schedule_cron: "0 * * * *".to_string(),
+            max_retries: None,
+            retry_delay_sec: None,
+        };
+        db.create_pipeline(&input).await.expect("create pipeline");
+
+        // Normal job has attempt 1.
+        let job1 = db.create_job("p1").await.expect("create job");
+        assert_eq!(job1.attempt, 1);
+
+        // Retry job has attempt 2.
+        let job2 = db
+            .create_job_with_attempt("p1", 2)
+            .await
+            .expect("create retry job");
+        assert_eq!(job2.attempt, 2);
+        assert_eq!(job2.pipeline_id, "p1");
+        assert_eq!(job2.status, "pending");
+
+        // Third retry.
+        let job3 = db
+            .create_job_with_attempt("p1", 3)
+            .await
+            .expect("create retry job 3");
+        assert_eq!(job3.attempt, 3);
+
+        // All three jobs exist.
+        let filter = JobFilter {
+            pipeline_id: Some("p1".to_string()),
+            ..Default::default()
+        };
+        let jobs = db.list_jobs(&filter).await.expect("list jobs");
+        assert_eq!(jobs.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn test_experiment_lifecycle() {
+        let db = DaemonDb::open_memory().await.expect("open db");
+
+        let pipe = CreatePipeline {
+            id: "p1".to_string(),
+            name: "P1".to_string(),
+            strategy: Strategy::SeoBlog,
+            config_json: serde_json::json!({}),
+            schedule_cron: "0 * * * *".to_string(),
+            max_retries: None,
+            retry_delay_sec: None,
+        };
+        db.create_pipeline(&pipe).await.expect("create pipeline");
+        let job = db.create_job("p1").await.expect("create job");
+        let content = db
+            .create_content(
+                &job.id,
+                "p1",
+                &ContentOutput {
+                    content_type: ContentType::Article,
+                    platform: Platform::Wordpress,
+                    title: "Test Article".to_string(),
+                    slug: "test-article".to_string(),
+                    body: "Test body for experiment lifecycle".to_string(),
+                    url: None,
+                    word_count: Some(5),
+                    llm_model: "test".to_string(),
+                    llm_tokens_used: 10,
+                    llm_cost_usd: None,
+                },
+            )
+            .await
+            .expect("create content");
+
+        // Create experiment.
+        let exp = db
+            .create_experiment(&CreateExperiment {
+                content_id: content.id.clone(),
+                pipeline_id: "p1".to_string(),
+                experiment_type: ExperimentType::Title,
+                variant_a: "Original".to_string(),
+                variant_b: "Better Title".to_string(),
+                metric: "ctr".to_string(),
+                min_duration_days: Some(7),
+            })
+            .await
+            .expect("create experiment");
+
+        assert_eq!(exp.status, "running");
+        assert_eq!(exp.active_variant, "a");
+        assert!(exp.winner.is_none());
+        assert_eq!(exp.min_duration_days, 7);
+
+        // Update metrics.
+        db.update_experiment_metrics(&exp.id, 3.2, 4.1)
+            .await
+            .expect("update metrics");
+
+        // Complete.
+        db.complete_experiment(&exp.id, "b")
+            .await
+            .expect("complete");
+
+        let completed = db
+            .get_experiment(&exp.id)
+            .await
+            .expect("get")
+            .expect("exists");
+        assert_eq!(completed.status, "completed");
+        assert_eq!(completed.winner.as_deref(), Some("b"));
+        assert!((completed.metric_a - 3.2).abs() < 0.01);
+        assert!((completed.metric_b - 4.1).abs() < 0.01);
     }
 }

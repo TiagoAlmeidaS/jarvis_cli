@@ -6,13 +6,13 @@
 //! 3. Loads sources for the pipeline
 //! 4. Delegates to the pipeline implementation
 //! 5. Persists generated content
-//! 6. Handles retries on failure
+//! 6. Retries on failure (up to `max_retries` with `retry_delay_sec` backoff)
 
 use anyhow::Result;
 use jarvis_daemon_common::{DaemonDb, DaemonJob, DaemonPipeline, LogLevel};
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 use crate::pipeline::{PipelineContext, PipelineRegistry};
 use crate::processor::OpenAiCompatibleClient;
@@ -144,7 +144,55 @@ impl PipelineRunner {
                     )
                     .await?;
 
-                // TODO: implement retry logic based on pipeline.max_retries
+                // Retry logic: create a new pending job if below max_retries.
+                // The scheduler will pick it up on the next tick, naturally
+                // respecting retry_delay_sec via the job's created_at timestamp.
+                let attempt = ctx.job.attempt;
+                let max_retries = pipeline.max_retries;
+                if attempt < max_retries {
+                    let next_attempt = attempt + 1;
+                    warn!(
+                        "Scheduling retry {next_attempt}/{max_retries} for pipeline '{}'",
+                        pipeline_id,
+                    );
+
+                    match self
+                        .db
+                        .create_job_with_attempt(&pipeline_id, next_attempt)
+                        .await
+                    {
+                        Ok(retry_job) => {
+                            self.db
+                                .insert_log(
+                                    &pipeline_id,
+                                    Some(&retry_job.id),
+                                    LogLevel::Info,
+                                    &format!(
+                                        "Retry {next_attempt}/{max_retries} enqueued (from job {job_id})"
+                                    ),
+                                    None,
+                                )
+                                .await?;
+                        }
+                        Err(e) => {
+                            error!("Failed to create retry job: {e:#}");
+                        }
+                    }
+                } else {
+                    warn!(
+                        "Pipeline '{}' job {} exhausted all {max_retries} retries",
+                        pipeline_id, job_id,
+                    );
+                    self.db
+                        .insert_log(
+                            &pipeline_id,
+                            Some(&job_id),
+                            LogLevel::Error,
+                            &format!("All {max_retries} retries exhausted"),
+                            None,
+                        )
+                        .await?;
+                }
             }
         }
 

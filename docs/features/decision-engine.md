@@ -1,6 +1,6 @@
 # Decision Engine Local
 
-**Status**: Implementado  
+**Status**: Implementado e Integrado  
 **Data**: 2026-02-13  
 **Roadmap**: Fase 3, item 3.5
 
@@ -14,9 +14,35 @@ LLM no strategy_analyzer. Ele da ao daemon um "cerebro" determinístico que:
 3. **Valida**: Bloqueia propostas perigosas do LLM
 4. **Ajusta scores**: Combina confianca do LLM com analise de goals
 
-## Arquivo
+## Arquivos
 
-`daemon/src/decision_engine.rs`
+- `daemon/src/decision_engine.rs` — Motor de regras
+- `daemon/src/pipelines/strategy_analyzer.rs` — Integracao no pipeline
+
+## Integracao no Strategy Analyzer
+
+O `StrategyAnalyzerPipeline.execute()` agora segue este fluxo:
+
+1. **Gather data** — Coleta metricas do banco
+2. **Build SystemSnapshot** — Cria snapshot com publicacoes, custos, receita, goals
+3. **Pre-analyze (DecisionEngine)** — Regras locais decidem se LLM e necessario
+4. **Create rule proposals** — Propostas urgentes do engine sao salvas direto no DB
+5. **Call LLM** (se `should_call_llm=true`) — Analise profunda
+6. **Validate proposals** — Cada proposta do LLM passa por `validate_proposal()`
+7. **Adjust confidence** — `adjust_confidence_for_goals()` ajusta scores
+8. **Create proposals** — Propostas validadas sao salvas no DB
+
+### Configuracao via pipeline config
+
+```json
+{
+  "decision_engine": {
+    "cost_alert_threshold": 5.0,
+    "min_data_points_for_llm": 1,
+    "max_pending_proposals": 10
+  }
+}
+```
 
 ## Componentes
 

@@ -60,7 +60,7 @@ o TUI funciona com modelos premium.
 | 3.3 | A/B Testing de Titulos SEO | **COMPLETO** |
 | 3.4 | Decision Engine Local (rule-based) | **COMPLETO** |
 | 3.5 | Auto-otimizacao de prompts | PENDENTE |
-| 3.6 | Conectar core/autonomous com daemon | PARCIAL (decision_engine.rs criado) |
+| 3.6 | Conectar core/autonomous com daemon | **COMPLETO** (decision_engine.rs integrado no strategy_analyzer) |
 
 ## Proximos Passos (Prioridade)
 
@@ -97,3 +97,10 @@ o TUI funciona com modelos premium.
 - `daemon-common/src/models.rs` — Strategy::AbTester adicionado
 - `daemon/src/pipeline.rs` — AbTesterPipeline registrado no PipelineRegistry
 - `daemon/src/main.rs` — Registro do modulo decision_engine
+
+### Sessao 4 (Integracao + Retry + Fix)
+- `daemon/src/pipelines/strategy_analyzer.rs` — DecisionEngine integrado: pre-analysis, validation, confidence adjustment
+- `daemon/src/runner.rs` — Retry logic implementada (max_retries com backoff)
+- `daemon-common/src/db.rs` — `create_job_with_attempt()` para retry jobs + testes experiment lifecycle
+- `daemon/src/pipelines/seo_blog.rs` — Clarificacao do TODO de token tracking
+- 13 arquivos faltantes commitados (schedule.rs, executor.rs, scheduler.rs, runner.rs, etc.)

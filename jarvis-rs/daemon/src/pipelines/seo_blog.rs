@@ -283,7 +283,7 @@ impl Pipeline for SeoBlogPipeline {
                     url: None, // filled after publishing
                     word_count: Some(word_count as i32),
                     llm_model: config.llm.effective_model(),
-                    llm_tokens_used: 0, // TODO: track from LLM response
+                    llm_tokens_used: 0, // Not available: generate_structured discards LlmResponse metadata
                     llm_cost_usd: None,
                 };
 

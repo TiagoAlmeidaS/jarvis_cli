@@ -17,6 +17,7 @@ use jarvis_daemon_common::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::decision_engine::{DecisionEngine, DecisionEngineConfig, GoalSnapshot, SystemSnapshot};
 use crate::pipeline::{Pipeline, PipelineContext};
 use crate::processor;
 
@@ -41,6 +42,9 @@ pub struct StrategyAnalyzerConfig {
     /// Maximum proposals to generate per run.
     #[serde(default = "default_max_proposals")]
     pub max_proposals_per_run: usize,
+    /// Local decision engine configuration.
+    #[serde(default)]
+    pub decision_engine: DecisionEngineConfig,
 }
 
 impl Default for StrategyAnalyzerConfig {
@@ -51,6 +55,7 @@ impl Default for StrategyAnalyzerConfig {
             min_confidence_for_auto_approve: default_min_confidence(),
             max_auto_approve_risk: default_max_risk(),
             max_proposals_per_run: default_max_proposals(),
+            decision_engine: DecisionEngineConfig::default(),
         }
     }
 }
@@ -104,6 +109,7 @@ impl Pipeline for StrategyAnalyzerPipeline {
     async fn execute(&self, ctx: &PipelineContext) -> Result<Vec<ContentOutput>> {
         let config: StrategyAnalyzerConfig = ctx.pipeline.config()?;
         let db = &ctx.db;
+        let engine = DecisionEngine::new(config.decision_engine.clone());
 
         ctx.log_info(&format!(
             "Starting strategy analysis (window: {}d)",
@@ -120,23 +126,96 @@ impl Pipeline for StrategyAnalyzerPipeline {
             return Ok(vec![]);
         }
 
-        // 2. Check if there are already too many pending proposals.
-        let pending_count = db.count_pending_proposals().await?;
-        if pending_count >= config.max_proposals_per_run as i64 {
+        // 2. Build a SystemSnapshot for the decision engine.
+        let snapshot = build_system_snapshot(ctx, &config).await?;
+
+        // 3. Run local pre-analysis (decision engine).
+        let pre_result = engine.pre_analyze(&snapshot);
+
+        ctx.log_info(&format!("Decision engine: {}", pre_result.reason))
+            .await;
+
+        let max_risk = parse_risk_level(&config.max_auto_approve_risk);
+        let mut created_count = 0;
+
+        // 4. Create rule-based proposals from the decision engine.
+        for rule_proposal in &pre_result.rule_proposals {
+            let action_type = match parse_action_type(&rule_proposal.action_type) {
+                Some(at) => at,
+                None => continue,
+            };
+            let risk = parse_risk_level(&rule_proposal.risk_level);
+            let confidence = rule_proposal.confidence.clamp(0.0, 1.0);
+            let auto_approvable = confidence >= config.min_confidence_for_auto_approve
+                && risk_level_value(risk) <= risk_level_value(max_risk);
+
+            let input = CreateProposal {
+                pipeline_id: rule_proposal.pipeline_id.clone(),
+                action_type,
+                title: rule_proposal.title.clone(),
+                description: rule_proposal.description.clone(),
+                reasoning: format!(
+                    "[rule:{}] {}",
+                    rule_proposal.source_rule, rule_proposal.reasoning
+                ),
+                confidence,
+                risk_level: risk,
+                proposed_config: rule_proposal.proposed_config.clone(),
+                metrics_snapshot: Some(serde_json::Value::String(analysis_data.clone())),
+                auto_approvable,
+                expires_in_hours: Some(168),
+            };
+
+            if let Ok(proposal) = db.create_proposal(&input).await {
+                created_count += 1;
+                ctx.log_info(&format!(
+                    "Rule proposal created: {} [rule:{}]",
+                    proposal.title, rule_proposal.source_rule
+                ))
+                .await;
+
+                if auto_approvable {
+                    if let Err(e) = db.approve_proposal(&proposal.id).await {
+                        ctx.log(
+                            LogLevel::Warn,
+                            &format!("Failed to auto-approve rule proposal: {e}"),
+                        )
+                        .await;
+                    } else {
+                        ctx.log_info(&format!("Rule proposal auto-approved: {}", proposal.title))
+                            .await;
+                    }
+                }
+            }
+        }
+
+        // 5. Call LLM for deeper analysis (only if decision engine says so).
+        if !pre_result.should_call_llm {
             ctx.log_info(&format!(
-                "Already {pending_count} pending proposals, skipping analysis to avoid overload",
+                "Decision engine skipped LLM call. {created_count} rule proposals created.",
             ))
             .await;
             return Ok(vec![]);
         }
 
-        // 3. Build the analysis prompt.
+        let pending_count = db.count_pending_proposals().await?;
+        let remaining_slots = (config.max_proposals_per_run as i64)
+            .saturating_sub(pending_count)
+            .max(0) as usize;
+
+        if remaining_slots == 0 {
+            ctx.log_info(&format!(
+                "Already {pending_count} pending proposals, skipping LLM call",
+            ))
+            .await;
+            return Ok(vec![]);
+        }
+
         let system_prompt = build_system_prompt();
         let user_prompt = build_user_prompt(&analysis_data, &config);
 
         ctx.log(LogLevel::Debug, "Sending analysis to LLM").await;
 
-        // 4. Call LLM for analysis.
         let llm_response = ctx
             .llm_client
             .generate_json(&user_prompt, Some(&system_prompt))
@@ -150,17 +229,15 @@ impl Pipeline for StrategyAnalyzerPipeline {
             }
         };
 
-        // 5. Parse proposals from LLM response.
         let raw_proposals = parse_proposals(&proposals_json);
 
         ctx.log_info(&format!("LLM suggested {} proposals", raw_proposals.len()))
             .await;
 
-        // 6. Create proposals in the database.
-        let max_risk = parse_risk_level(&config.max_auto_approve_risk);
-        let mut created_count = 0;
+        // 6. Validate, adjust confidence, and create LLM proposals.
+        let mut llm_created = 0;
 
-        for raw in raw_proposals.into_iter().take(config.max_proposals_per_run) {
+        for raw in raw_proposals.into_iter().take(remaining_slots) {
             let action_type = match parse_action_type(&raw.action_type) {
                 Some(at) => at,
                 None => {
@@ -173,8 +250,30 @@ impl Pipeline for StrategyAnalyzerPipeline {
                 }
             };
 
+            // Validate proposal against safety constraints.
+            if let Err(reason) = engine.validate_proposal(
+                &raw.action_type,
+                &raw.risk_level,
+                raw.confidence,
+                &snapshot,
+            ) {
+                ctx.log(
+                    LogLevel::Warn,
+                    &format!("Proposal '{}' blocked: {reason}", raw.title),
+                )
+                .await;
+                continue;
+            }
+
             let risk = parse_risk_level(&raw.risk_level);
-            let confidence = raw.confidence.clamp(0.0, 1.0);
+
+            // Adjust confidence based on goal alignment.
+            let confidence = engine.adjust_confidence_for_goals(
+                raw.confidence.clamp(0.0, 1.0),
+                &raw.action_type,
+                raw.pipeline_id.as_deref(),
+                &snapshot,
+            );
 
             let auto_approvable = confidence >= config.min_confidence_for_auto_approve
                 && risk_level_value(risk) <= risk_level_value(max_risk);
@@ -195,6 +294,7 @@ impl Pipeline for StrategyAnalyzerPipeline {
 
             match db.create_proposal(&input).await {
                 Ok(proposal) => {
+                    llm_created += 1;
                     created_count += 1;
                     let auto_label = if auto_approvable {
                         " [AUTO-APPROVABLE]"
@@ -209,7 +309,6 @@ impl Pipeline for StrategyAnalyzerPipeline {
                     ))
                     .await;
 
-                    // Auto-approve if eligible.
                     if auto_approvable {
                         if let Err(e) = db.approve_proposal(&proposal.id).await {
                             ctx.log(
@@ -231,11 +330,11 @@ impl Pipeline for StrategyAnalyzerPipeline {
         }
 
         ctx.log_info(&format!(
-            "Strategy analysis complete: {created_count} proposals created",
+            "Strategy analysis complete: {created_count} proposals ({} rule, {llm_created} LLM)",
+            pre_result.rule_proposals.len(),
         ))
         .await;
 
-        // Strategy analyzer doesn't produce content outputs.
         Ok(vec![])
     }
 }
@@ -354,6 +453,54 @@ async fn gather_analysis_data(
     }
 
     Ok(data)
+}
+
+/// Build a [`SystemSnapshot`] for the decision engine from live DB data.
+async fn build_system_snapshot(
+    ctx: &PipelineContext,
+    config: &StrategyAnalyzerConfig,
+) -> Result<SystemSnapshot> {
+    let db = &ctx.db;
+
+    // Count published content.
+    let content_filter = ContentFilter {
+        since_days: Some(config.analysis_window_days),
+        ..Default::default()
+    };
+    let all_content = db.list_content(&content_filter).await?;
+    let total_published = all_content
+        .iter()
+        .filter(|c| c.status == "published")
+        .count() as i64;
+    let total_llm_cost: f64 = all_content.iter().filter_map(|c| c.llm_cost_usd).sum();
+
+    // Revenue.
+    let revenue = db.revenue_summary(config.analysis_window_days).await?;
+
+    // Pending proposals.
+    let pending_count = db.count_pending_proposals().await?;
+
+    // Pipelines.
+    let pipelines = db.list_pipelines(false).await?;
+
+    // Goals.
+    let goals = db
+        .list_goals(&GoalFilter {
+            status: Some(GoalStatus::Active),
+            ..Default::default()
+        })
+        .await?;
+    let goal_snapshots: Vec<GoalSnapshot> =
+        goals.iter().map(GoalSnapshot::from_daemon_goal).collect();
+
+    Ok(SystemSnapshot {
+        total_published,
+        total_llm_cost,
+        total_revenue: revenue.total_usd,
+        pending_proposals: pending_count,
+        goals: goal_snapshots,
+        pipeline_count: pipelines.len(),
+    })
 }
 
 fn build_system_prompt() -> String {
@@ -553,5 +700,32 @@ mod tests {
             !(confidence >= min_confidence
                 && risk_level_value(risk2) <= risk_level_value(max_risk))
         );
+    }
+
+    #[test]
+    fn parse_config_with_decision_engine() {
+        let config: StrategyAnalyzerConfig = serde_json::from_value(serde_json::json!({
+            "decision_engine": {
+                "cost_alert_threshold": 10.0,
+                "min_data_points_for_llm": 5,
+                "max_pending_proposals": 20
+            }
+        }))
+        .expect("parse config with decision_engine");
+
+        assert!((config.decision_engine.cost_alert_threshold - 10.0).abs() < 0.01);
+        assert_eq!(config.decision_engine.min_data_points_for_llm, 5);
+        assert_eq!(config.decision_engine.max_pending_proposals, 20);
+        // Other fields retain defaults.
+        assert_eq!(config.analysis_window_days, 30);
+    }
+
+    #[test]
+    fn parse_config_decision_engine_defaults() {
+        let config: StrategyAnalyzerConfig =
+            serde_json::from_value(serde_json::json!({})).expect("parse");
+        assert!((config.decision_engine.cost_alert_threshold - 5.0).abs() < 0.01);
+        assert_eq!(config.decision_engine.min_data_points_for_llm, 1);
+        assert_eq!(config.decision_engine.max_pending_proposals, 10);
     }
 }
