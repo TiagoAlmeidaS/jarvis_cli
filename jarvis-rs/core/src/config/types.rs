@@ -17,10 +17,10 @@ use std::time::Duration;
 use wildmatch::WildMatchPattern;
 
 use schemars::JsonSchema;
-use serde::de::Error as SerdeError;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
+use serde::de::Error as SerdeError;
 
 pub const DEFAULT_OTEL_ENVIRONMENT: &str = "dev";
 

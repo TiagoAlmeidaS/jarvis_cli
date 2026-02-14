@@ -102,13 +102,24 @@ pub fn build_tool_prompt_injection(tools: &[TextToolSpec]) -> String {
 
     let mut out = String::from(
         "\n\n## Available Tools\n\n\
-         You have access to the following tools. To use a tool, respond with a \
-         JSON block inside a ```tool_call fence:\n\n\
+         You have access to the following tools. You MUST use these tools to \
+         accomplish tasks. NEVER ask the user for file paths, directory locations, \
+         or information you can discover yourself using these tools.\n\n\
+         **IMPORTANT RULES:**\n\
+         - When the user asks you to analyze, read, search, or explore something, \
+           USE the tools immediately. Do NOT ask for clarification.\n\
+         - Use `list_directory` to explore project structure.\n\
+         - Use `read_file` to read file contents.\n\
+         - Use `grep_search` to search for patterns in files.\n\
+         - Use `shell` to run commands.\n\
+         - Always act autonomously. You are an agent — take action, don't ask.\n\n\
+         To call a tool, include a JSON block inside a ```tool_call fence:\n\n\
          ```tool_call\n\
          {\"name\": \"tool_name\", \"arguments\": {\"param\": \"value\"}}\n\
          ```\n\n\
-         You may call multiple tools in sequence by including multiple ```tool_call blocks.\n\
-         After receiving tool results, continue your analysis.\n\n\
+         You may call multiple tools in a single response by including multiple \
+         ```tool_call blocks. After receiving tool results, continue your analysis \
+         or call more tools as needed.\n\n\
          ### Tools\n\n",
     );
 

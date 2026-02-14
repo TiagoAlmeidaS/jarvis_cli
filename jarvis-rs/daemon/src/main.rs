@@ -20,6 +20,7 @@ use tracing_subscriber::EnvFilter;
 mod data_sources;
 mod decision_engine;
 mod executor;
+mod notifications;
 mod pipeline;
 mod pipelines;
 mod processor;
@@ -232,6 +233,20 @@ async fn run_daemon(
         shutdown_signal.cancel();
     });
 
+    // Bootstrap default goals if none exist.
+    if let Err(e) = bootstrap_default_goals(&db).await {
+        error!("Failed to bootstrap goals: {e:#}");
+    }
+
+    // Spawn Telegram notifier if configured.
+    let notifier_db = db.clone();
+    let notifier_shutdown = shutdown.clone();
+    tokio::spawn(async move {
+        if let Err(e) = notifications::run_daily_notifier(notifier_db, notifier_shutdown).await {
+            error!("Telegram notifier error: {e:#}");
+        }
+    });
+
     info!("Jarvis Daemon started (max_concurrent={max_concurrent}, tick={tick_interval_sec}s)");
 
     // Run the scheduler (blocks until shutdown).
@@ -240,5 +255,93 @@ async fn run_daemon(
     }
 
     info!("Jarvis Daemon stopped.");
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Goal Bootstrap
+// ---------------------------------------------------------------------------
+
+/// Create default goals if the database has none.
+///
+/// This runs once on daemon startup. If the user has already created goals
+/// (manually via CLI or from a previous run), this is a no-op.
+async fn bootstrap_default_goals(db: &DaemonDb) -> Result<()> {
+    use jarvis_daemon_common::{CreateGoal, GoalFilter, GoalMetricType, GoalPeriod};
+
+    let existing = db.list_goals(&GoalFilter::default()).await?;
+    if !existing.is_empty() {
+        info!("{} goals already exist, skipping bootstrap", existing.len());
+        return Ok(());
+    }
+
+    info!("No goals found — bootstrapping defaults...");
+
+    let defaults = vec![
+        CreateGoal {
+            name: "Revenue Mensal".to_string(),
+            description: Some("Receita mensal via AdSense + afiliados".to_string()),
+            metric_type: GoalMetricType::Revenue,
+            target_value: 200.0,
+            target_unit: Some("USD".to_string()),
+            period: GoalPeriod::Monthly,
+            pipeline_id: None,
+            priority: Some(1),
+            deadline: None,
+        },
+        CreateGoal {
+            name: "Artigos Publicados".to_string(),
+            description: Some("Total de artigos publicados por mes".to_string()),
+            metric_type: GoalMetricType::ContentCount,
+            target_value: 90.0,
+            target_unit: Some("count".to_string()),
+            period: GoalPeriod::Monthly,
+            pipeline_id: None,
+            priority: Some(1),
+            deadline: None,
+        },
+        CreateGoal {
+            name: "Custo LLM Maximo".to_string(),
+            description: Some("Manter custo LLM abaixo do limite".to_string()),
+            metric_type: GoalMetricType::CostLimit,
+            target_value: 5.0,
+            target_unit: Some("USD".to_string()),
+            period: GoalPeriod::Monthly,
+            pipeline_id: None,
+            priority: Some(2),
+            deadline: None,
+        },
+        CreateGoal {
+            name: "Pageviews Mensais".to_string(),
+            description: Some("Total de visualizacoes por mes".to_string()),
+            metric_type: GoalMetricType::Pageviews,
+            target_value: 10_000.0,
+            target_unit: Some("count".to_string()),
+            period: GoalPeriod::Monthly,
+            pipeline_id: None,
+            priority: Some(2),
+            deadline: None,
+        },
+        CreateGoal {
+            name: "Clicks Mensais".to_string(),
+            description: Some("Total de clicks organicos por mes (Search Console)".to_string()),
+            metric_type: GoalMetricType::Clicks,
+            target_value: 5_000.0,
+            target_unit: Some("count".to_string()),
+            period: GoalPeriod::Monthly,
+            pipeline_id: None,
+            priority: Some(3),
+            deadline: None,
+        },
+    ];
+
+    for goal in &defaults {
+        match db.create_goal(goal).await {
+            Ok(created) => info!("Goal created: {} (P{})", created.name, created.priority),
+            Err(e) => error!("Failed to create goal '{}': {e}", goal.name),
+        }
+    }
+
+    info!("{} default goals bootstrapped", defaults.len());
     Ok(())
 }

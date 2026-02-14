@@ -757,33 +757,26 @@ impl ChatWidget {
     fn maybe_init_agent_loop(&mut self) {
         use jarvis_core::config::types::AgentLoopMode;
 
-        let model_name = self
-            .config
-            .model
-            .as_deref()
-            .unwrap_or("unknown");
+        let model_name = self.config.model.as_deref().unwrap_or("unknown");
         let effective = self.config.agent_loop.effective_mode(model_name);
 
         if effective == AgentLoopMode::TextBased {
-            let system_prompt = self
-                .config
-                .user_instructions
-                .clone()
-                .unwrap_or_else(|| "You are Jarvis, a helpful AI coding assistant.".to_string());
+            let system_prompt =
+                self.config.user_instructions.clone().unwrap_or_else(|| {
+                    "You are Jarvis, a helpful AI coding assistant.".to_string()
+                });
 
             let (tx, cancel) = agent_loop_runner::spawn_agent_loop_runner(
                 self.config.agent_loop.clone(),
                 system_prompt,
                 self.app_event_tx.clone(),
                 self.config.cwd.clone(),
+                self.config.jarvis_home.clone(),
             );
             self.agent_loop_tx = Some(tx);
             self.agent_loop_cancel = Some(cancel);
 
-            tracing::info!(
-                "Agent loop enabled for text-based model: {}",
-                model_name
-            );
+            tracing::info!("Agent loop enabled for text-based model: {}", model_name);
         }
     }
 

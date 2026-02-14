@@ -66,6 +66,11 @@ impl PersistentAgentSessionManager {
         Ok(Some(session))
     }
 
+    /// Lists all session IDs (public API for the TUI to discover recent sessions).
+    pub async fn resume_latest_session_ids(&self) -> Result<Vec<String>, SessionError> {
+        self.list_sessions().await
+    }
+
     /// Lists all session IDs.
     async fn list_sessions(&self) -> Result<Vec<String>, SessionError> {
         if !self.storage_dir.exists() {

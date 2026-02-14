@@ -19,12 +19,12 @@ use super::{
     AgentLlmClient, AgentMessage, AgentToolExecutor, ThinkResponse, ToolCallRequest, ToolCallResult,
 };
 use crate::tools::text_tool_calling::{
-    build_tool_prompt_injection, default_text_tool_specs, parse_tool_calls_from_text, TextToolSpec,
+    TextToolSpec, build_tool_prompt_injection, default_text_tool_specs, parse_tool_calls_from_text,
 };
 
 // Re-export for consumers outside the core crate.
 pub use crate::tools::text_tool_calling::{
-    default_text_tool_specs as default_tool_specs, TextToolSpec as ToolSpec, ToolCallingMode,
+    TextToolSpec as ToolSpec, ToolCallingMode, default_text_tool_specs as default_tool_specs,
 };
 
 // ---------------------------------------------------------------------------
@@ -382,20 +382,12 @@ impl BridgeToolExecutor {
 
 /// Get the platform shell program.
 fn shell_program() -> &'static str {
-    if cfg!(windows) {
-        "cmd"
-    } else {
-        "sh"
-    }
+    if cfg!(windows) { "cmd" } else { "sh" }
 }
 
 /// Get the shell argument flag.
 fn shell_arg() -> &'static str {
-    if cfg!(windows) {
-        "/C"
-    } else {
-        "-c"
-    }
+    if cfg!(windows) { "/C" } else { "-c" }
 }
 
 #[async_trait::async_trait]
@@ -648,9 +640,11 @@ mod tests {
             .expect("execute read");
 
         assert!(!read_result.is_error);
-        assert!(read_result
-            .output
-            .contains("hello from agent loop bridge test"));
+        assert!(
+            read_result
+                .output
+                .contains("hello from agent loop bridge test")
+        );
     }
 
     #[tokio::test]

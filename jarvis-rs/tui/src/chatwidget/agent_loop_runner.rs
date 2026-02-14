@@ -12,8 +12,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+use jarvis_core::agent::AgentSessionManager;
+use jarvis_core::agent::session_persistent::PersistentAgentSessionManager;
 use jarvis_core::agent_loop::bridge::{
-    default_tool_specs, BridgeLlmConfig, BridgeToolConfig, BridgeToolExecutor,
+    BridgeLlmConfig, BridgeToolConfig, BridgeToolExecutor, default_tool_specs,
 };
 use jarvis_core::agent_loop::events::AgentEvent;
 use jarvis_core::agent_loop::{AgentLoop, AgentLoopConfig};
@@ -23,8 +25,8 @@ use jarvis_core::protocol::{
     ExecCommandEndEvent, ExecCommandSource, SandboxPolicy, SessionConfiguredEvent,
     TurnCompleteEvent, TurnStartedEvent, WarningEvent,
 };
-use jarvis_protocol::config_types::ModeKind;
 use jarvis_protocol::ThreadId;
+use jarvis_protocol::config_types::ModeKind;
 use tokio_util::sync::CancellationToken;
 
 use crate::app_event::AppEvent;
@@ -36,6 +38,97 @@ pub(crate) struct AgentLoopMessage {
     pub cwd: PathBuf,
 }
 
+/// Build the system prompt for the agent loop.
+///
+/// Combines the user-provided instructions with a strong agentic preamble
+/// that directs the model to use tools autonomously instead of asking the user.
+/// If there is context from a previous session, it is included so the agent
+/// can pick up where it left off.
+fn build_agent_system_prompt(
+    user_instructions: &str,
+    cwd: &std::path::Path,
+    previous_context: Option<&str>,
+) -> String {
+    let cwd_display = cwd.display();
+    let mut prompt = format!(
+        "You are Jarvis, an autonomous AI coding assistant with access to local tools.\n\
+         \n\
+         ## Core Directives\n\
+         - You MUST act autonomously. NEVER ask the user for information you can \
+           discover yourself using your tools.\n\
+         - When asked to analyze, read, explore, or search a project, IMMEDIATELY \
+           use the appropriate tools (list_directory, read_file, grep_search, shell).\n\
+         - The current working directory is: {cwd_display}\n\
+         - All relative paths should be resolved from this directory.\n\
+         - If you need to find files, start by listing the directory structure.\n\
+         - If you need file contents, read them directly.\n\
+         - If you need to search for patterns, use grep_search.\n\
+         - Think step by step, use tools to gather information, then provide \
+           a comprehensive answer.\n"
+    );
+
+    if let Some(ctx) = previous_context {
+        prompt.push_str(&format!(
+            "\n## Previous Session Context\n\
+             The following is a summary of recent interactions. Use this as background \
+             knowledge but do NOT repeat it unless asked.\n\
+             {ctx}\n"
+        ));
+    }
+
+    prompt.push_str(&format!(
+        "\n## User Instructions\n\
+         {user_instructions}"
+    ));
+
+    prompt
+}
+
+/// Directory for storing agent session files.
+fn sessions_dir(jarvis_home: &std::path::Path) -> PathBuf {
+    jarvis_home.join("sessions")
+}
+
+/// Build a compact summary of a session's recent history for context injection.
+fn build_session_summary(session: &jarvis_core::agent::AgentSession) -> String {
+    let mut summary = String::new();
+
+    // Include knowledge base.
+    if !session.knowledge_base.is_empty() {
+        summary.push_str("### Learned Facts\n");
+        for (key, value) in &session.knowledge_base {
+            summary.push_str(&format!("- {key}: {value}\n"));
+        }
+        summary.push('\n');
+    }
+
+    // Include last N messages as context (compact form).
+    let recent: Vec<_> = session.history.iter().rev().take(20).collect();
+    if !recent.is_empty() {
+        summary.push_str("### Recent Conversation (newest first)\n");
+        for msg in &recent {
+            let role = &msg.role;
+            // Truncate long messages.
+            let content = if msg.content.len() > 300 {
+                format!("{}...", &msg.content[..300])
+            } else {
+                msg.content.clone()
+            };
+            summary.push_str(&format!("**{role}**: {content}\n"));
+        }
+    }
+
+    // Include files that were read.
+    if !session.files_read.is_empty() {
+        summary.push_str("\n### Files Previously Read\n");
+        for f in session.files_read.iter().take(30) {
+            summary.push_str(&format!("- {}\n", f.display()));
+        }
+    }
+
+    summary
+}
+
 /// Spawn the agent loop runner.
 ///
 /// Returns a sender for submitting user messages and a cancellation token
@@ -45,6 +138,7 @@ pub(crate) fn spawn_agent_loop_runner(
     system_prompt: String,
     app_event_tx: AppEventSender,
     cwd: PathBuf,
+    jarvis_home: PathBuf,
 ) -> (
     tokio::sync::mpsc::UnboundedSender<AgentLoopMessage>,
     CancellationToken,
@@ -54,6 +148,42 @@ pub(crate) fn spawn_agent_loop_runner(
     let cancel_clone = cancel.clone();
 
     tokio::spawn(async move {
+        // Initialize session persistence.
+        let session_dir = sessions_dir(&jarvis_home);
+        let session_mgr = PersistentAgentSessionManager::new(session_dir.clone());
+
+        // Try to load context from the most recent session.
+        let previous_context = match load_latest_session_context(&session_mgr).await {
+            Ok(Some(ctx)) => {
+                tracing::info!("Loaded previous session context ({} chars)", ctx.len());
+                Some(ctx)
+            }
+            Ok(None) => {
+                tracing::debug!("No previous session context found");
+                None
+            }
+            Err(e) => {
+                tracing::warn!("Failed to load previous session: {e}");
+                None
+            }
+        };
+
+        // Create a new session for this run.
+        let current_session_id = match session_mgr.create_session("agent_loop").await {
+            Ok(session) => {
+                tracing::info!("Created session: {}", session.session_id);
+                Some(session.session_id)
+            }
+            Err(e) => {
+                tracing::warn!("Failed to create session: {e}");
+                None
+            }
+        };
+
+        // Build the full agentic system prompt with CWD, autonomy directives, and context.
+        let effective_system_prompt =
+            build_agent_system_prompt(&system_prompt, &cwd, previous_context.as_deref());
+
         // Send a synthetic SessionConfigured so the chatwidget enters "ready" state.
         let model_name = settings
             .model
@@ -146,7 +276,7 @@ pub(crate) fn spawn_agent_loop_runner(
 
             let result = agent
                 .run(
-                    &system_prompt,
+                    &effective_system_prompt,
                     &message.text,
                     move |event| {
                         emit_agent_event(&tx_for_events, &event, &cwd_for_events);
@@ -157,6 +287,19 @@ pub(crate) fn spawn_agent_loop_runner(
 
             match result {
                 Ok(loop_result) => {
+                    // Persist conversation to session.
+                    if let Some(ref sid) = current_session_id {
+                        let _ = session_mgr.add_message(sid, "user", &message.text).await;
+                        if !loop_result.response.is_empty() {
+                            let _ = session_mgr
+                                .add_message(sid, "assistant", &loop_result.response)
+                                .await;
+                        }
+                        for tool in &loop_result.tools_used {
+                            let _ = session_mgr.record_tool_usage(sid, tool).await;
+                        }
+                    }
+
                     // Emit final message if not already emitted via FinalResponse event
                     if !loop_result.response.is_empty() {
                         let msg_event = Event {
@@ -325,6 +468,36 @@ fn emit_agent_event(tx: &AppEventSender, event: &AgentEvent, cwd: &PathBuf) {
             tx.send(AppEvent::CodexEvent(err_event));
         }
     }
+}
+
+/// Load context from the most recent session file in the sessions directory.
+///
+/// Returns `Ok(Some(summary))` if a usable session was found, `Ok(None)` if
+/// no sessions exist, or `Err` on I/O errors.
+async fn load_latest_session_context(
+    mgr: &PersistentAgentSessionManager,
+) -> anyhow::Result<Option<String>> {
+    // List sessions via the manager's internal directory scan.
+    // We pick the one with the most recent `updated_at`.
+    let session_ids = match mgr.resume_latest_session_ids().await {
+        Ok(ids) => ids,
+        Err(_) => return Ok(None),
+    };
+
+    // Try each session (sorted newest first by the filename convention).
+    for sid in session_ids.iter().rev().take(3) {
+        if let Ok(session) = mgr.resume_session(sid).await {
+            if session.history.is_empty() {
+                continue;
+            }
+            let summary = build_session_summary(&session);
+            if !summary.is_empty() {
+                return Ok(Some(summary));
+            }
+        }
+    }
+
+    Ok(None)
 }
 
 // ---------------------------------------------------------------------------
