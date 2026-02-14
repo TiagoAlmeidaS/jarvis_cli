@@ -1,7 +1,7 @@
-﻿use crate::bottom_pane::ApprovalRequest;
+use crate::bottom_pane::ApprovalRequest;
 use crate::render::renderable::Renderable;
-use jarvis_protocol::request_user_input::RequestUserInputEvent;
 use crossterm::event::KeyEvent;
+use jarvis_protocol::request_user_input::RequestUserInputEvent;
 
 use super::CancellationEvent;
 

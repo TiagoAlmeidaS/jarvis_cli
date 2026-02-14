@@ -31,10 +31,7 @@ impl MessagingPlatform for WhatsAppPlatform {
         Ok(Vec::new())
     }
 
-    async fn start_webhook_server(
-        &self,
-        handler: Box<dyn MessageHandler>,
-    ) -> anyhow::Result<()> {
+    async fn start_webhook_server(&self, handler: Box<dyn MessageHandler>) -> anyhow::Result<()> {
         use crate::webhook::WhatsAppWebhookServer;
         let server = WhatsAppWebhookServer::new(handler, self.config.clone());
         server.start().await

@@ -1,13 +1,13 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::Context;
 use chrono::DateTime;
 use clap::Parser;
+use dirs::home_dir;
 use jarvis_state::LogQuery;
 use jarvis_state::LogRow;
 use jarvis_state::StateRuntime;
-use dirs::home_dir;
 use owo_colors::OwoColorize;
 
 #[derive(Debug, Parser)]
@@ -80,9 +80,11 @@ async fn main() -> anyhow::Result<()> {
         .map(ToOwned::to_owned)
         .unwrap_or_else(|| PathBuf::from("."));
     #[cfg(feature = "otel")]
-    let runtime: std::sync::Arc<StateRuntime> = StateRuntime::init(jarvis_home, "logs-client".to_string(), None).await?;
+    let runtime: std::sync::Arc<StateRuntime> =
+        StateRuntime::init(jarvis_home, "logs-client".to_string(), None).await?;
     #[cfg(not(feature = "otel"))]
-    let runtime: std::sync::Arc<StateRuntime> = StateRuntime::init(jarvis_home, "logs-client".to_string()).await?;
+    let runtime: std::sync::Arc<StateRuntime> =
+        StateRuntime::init(jarvis_home, "logs-client".to_string()).await?;
 
     let mut last_id = print_backfill(runtime.as_ref(), &filter, args.backfill).await?;
     if last_id == 0 {

@@ -85,9 +85,9 @@ impl RuleBasedSafetyClassifier {
     /// Checks if action affects test files only.
     fn affects_test_files_only(&self, files: &[String]) -> bool {
         !files.is_empty()
-            && files.iter().all(|f| {
-                f.contains("test") || f.contains("spec") || f.contains("_test")
-            })
+            && files
+                .iter()
+                .all(|f| f.contains("test") || f.contains("spec") || f.contains("_test"))
     }
 
     /// Generates reasoning for the assessment.
@@ -96,7 +96,9 @@ impl RuleBasedSafetyClassifier {
             RiskLevel::Low => {
                 if self.affects_test_files_only(&action.files) {
                     "Action affects test files only, which don't affect production".to_string()
-                } else if action.action_type.contains("comment") || action.action_type.contains("doc") {
+                } else if action.action_type.contains("comment")
+                    || action.action_type.contains("doc")
+                {
                     "Action affects comments/documentation only".to_string()
                 } else {
                     "Action is whitelisted as safe for autonomous execution".to_string()
@@ -114,7 +116,10 @@ impl RuleBasedSafetyClassifier {
             }
             RiskLevel::Critical => {
                 if self.rules.is_prohibited(&action.action_type) {
-                    format!("Action '{}' is prohibited from autonomous execution", action.action_type)
+                    format!(
+                        "Action '{}' is prohibited from autonomous execution",
+                        action.action_type
+                    )
                 } else {
                     "Action has critical risk. Must not execute autonomously".to_string()
                 }

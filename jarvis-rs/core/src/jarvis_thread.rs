@@ -1,5 +1,5 @@
-use crate::agent::AgentStatus;
 use crate::Jarvis;
+use crate::agent::AgentStatus;
 use crate::error::Result as CodexResult;
 use crate::protocol::Event;
 use crate::protocol::Op;

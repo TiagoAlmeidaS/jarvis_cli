@@ -1,12 +1,12 @@
-﻿pub mod apply_patch;
+pub mod apply_patch;
 pub(crate) mod collab;
 mod dynamic;
+mod github;
 mod grep_files;
 mod list_dir;
 mod mcp;
 mod mcp_resource;
 mod plan;
-mod github;
 mod read_file;
 mod request_user_input;
 mod shell;

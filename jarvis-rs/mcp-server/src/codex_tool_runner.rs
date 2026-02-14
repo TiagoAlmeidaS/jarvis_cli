@@ -1,4 +1,4 @@
-﻿//! Asynchronous worker that executes a **Jarvis** tool-call inside a spawned
+//! Asynchronous worker that executes a **Jarvis** tool-call inside a spawned
 //! Tokio task. Separated from `message_processor.rs` to keep that file small
 //! and to make future feature-growth easier to manage.
 
@@ -72,7 +72,9 @@ pub async fn run_codex_tool_session(
         Ok(res) => res,
         Err(e) => {
             let result = CallToolResult {
-                content: vec![Content::text(format!("Failed to start Jarvis session: {e}"))],
+                content: vec![Content::text(format!(
+                    "Failed to start Jarvis session: {e}"
+                ))],
                 is_error: Some(true),
                 structured_content: None,
                 meta: None,

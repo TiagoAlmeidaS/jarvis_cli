@@ -134,8 +134,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_database_creation_preserves_config() {
-        let conn_str =
-            "Server=localhost,1433;Database=jarvis;User Id=sa;Password=Pass123!;TrustServerCertificate=True";
+        let conn_str = "Server=localhost,1433;Database=jarvis;User Id=sa;Password=Pass123!;TrustServerCertificate=True";
 
         let db = Database::new(conn_str).await.unwrap();
 
@@ -206,7 +205,12 @@ mod tests {
 
         let result = db.get_client().await;
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Failed to connect"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Failed to connect")
+        );
     }
 
     #[tokio::test]

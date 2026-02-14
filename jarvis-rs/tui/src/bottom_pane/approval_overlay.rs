@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::app_event::AppEvent;
@@ -16,18 +16,20 @@ use crate::key_hint::KeyBinding;
 use crate::render::highlight::highlight_bash_to_lines;
 use crate::render::renderable::ColumnRenderable;
 use crate::render::renderable::Renderable;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyEventKind;
+use crossterm::event::KeyModifiers;
 use jarvis_core::features::Feature;
 use jarvis_core::features::Features;
+use jarvis_core::protocol::AskForApproval;
 use jarvis_core::protocol::ElicitationAction;
 use jarvis_core::protocol::ExecPolicyAmendment;
 use jarvis_core::protocol::FileChange;
 use jarvis_core::protocol::Op;
 use jarvis_core::protocol::ReviewDecision;
+use jarvis_core::protocol::SandboxPolicy;
 use jarvis_protocol::mcp::RequestId;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyEventKind;
-use crossterm::event::KeyModifiers;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Stylize;
@@ -183,6 +185,17 @@ impl ApprovalOverlay {
                 ) => {
                     self.handle_elicitation_decision(server_name, request_id, *decision);
                 }
+                (
+                    ApprovalVariant::Exec { id, command, .. },
+                    ApprovalDecision::ApproveAllSession,
+                ) => {
+                    self.handle_exec_decision(id, command, ReviewDecision::Approved);
+                    self.activate_approve_all_session();
+                }
+                (ApprovalVariant::ApplyPatch { id, .. }, ApprovalDecision::ApproveAllSession) => {
+                    self.handle_patch_decision(id, ReviewDecision::Approved);
+                    self.activate_approve_all_session();
+                }
                 _ => {}
             }
         }
@@ -219,6 +232,27 @@ impl ApprovalOverlay {
                 request_id: request_id.clone(),
                 decision,
             }));
+    }
+
+    /// Switch the session to "approve all" (yolo mode) — no more approval prompts.
+    fn activate_approve_all_session(&self) {
+        let sandbox = SandboxPolicy::DangerFullAccess;
+        self.app_event_tx
+            .send(AppEvent::CodexOp(Op::OverrideTurnContext {
+                cwd: None,
+                approval_policy: Some(AskForApproval::Never),
+                sandbox_policy: Some(sandbox.clone()),
+                windows_sandbox_level: None,
+                model: None,
+                effort: None,
+                summary: None,
+                collaboration_mode: None,
+                personality: None,
+            }));
+        self.app_event_tx
+            .send(AppEvent::UpdateAskForApprovalPolicy(AskForApproval::Never));
+        self.app_event_tx
+            .send(AppEvent::UpdateSandboxPolicy(sandbox));
     }
 
     fn advance_queue(&mut self) {
@@ -429,6 +463,8 @@ enum ApprovalVariant {
 enum ApprovalDecision {
     Review(ReviewDecision),
     McpElicitation(ElicitationAction),
+    /// Approve this action AND switch the session to full auto-approve (yolo mode).
+    ApproveAllSession,
 }
 
 #[derive(Clone)]
@@ -481,12 +517,20 @@ fn exec_options(
                 })
             }),
     )
-    .chain([ApprovalOption {
-        label: "No, and tell Jarvis what to do differently".to_string(),
-        decision: ApprovalDecision::Review(ReviewDecision::Abort),
-        display_shortcut: Some(key_hint::plain(KeyCode::Esc)),
-        additional_shortcuts: vec![key_hint::plain(KeyCode::Char('n'))],
-    }])
+    .chain([
+        ApprovalOption {
+            label: "Yes, and don't ask again this session (approve all)".to_string(),
+            decision: ApprovalDecision::ApproveAllSession,
+            display_shortcut: None,
+            additional_shortcuts: vec![key_hint::plain(KeyCode::Char('a'))],
+        },
+        ApprovalOption {
+            label: "No, and tell Jarvis what to do differently".to_string(),
+            decision: ApprovalDecision::Review(ReviewDecision::Abort),
+            display_shortcut: Some(key_hint::plain(KeyCode::Esc)),
+            additional_shortcuts: vec![key_hint::plain(KeyCode::Char('n'))],
+        },
+    ])
     .collect()
 }
 
@@ -501,6 +545,12 @@ fn patch_options() -> Vec<ApprovalOption> {
         ApprovalOption {
             label: "Yes, and don't ask again for these files".to_string(),
             decision: ApprovalDecision::Review(ReviewDecision::ApprovedForSession),
+            display_shortcut: None,
+            additional_shortcuts: vec![key_hint::plain(KeyCode::Char('f'))],
+        },
+        ApprovalOption {
+            label: "Yes, and don't ask again this session (approve all)".to_string(),
+            decision: ApprovalDecision::ApproveAllSession,
             display_shortcut: None,
             additional_shortcuts: vec![key_hint::plain(KeyCode::Char('a'))],
         },
@@ -639,7 +689,9 @@ mod tests {
                 features
             },
         );
-        assert_eq!(view.options.len(), 2);
+        // Without ExecPolicy: "Yes, proceed" + "approve all session" + "No" = 3 options
+        // (the "don't ask again for commands that start with ..." option is hidden)
+        assert_eq!(view.options.len(), 3);
         view.handle_key_event(KeyEvent::new(KeyCode::Char('p'), KeyModifiers::NONE));
         assert!(!view.is_complete());
         assert!(rx.try_recv().is_err());

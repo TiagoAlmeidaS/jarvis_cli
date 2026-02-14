@@ -1,14 +1,14 @@
 //! Handler que conecta mensagens de mensageria ao sistema de tools do Jarvis
 
-use std::sync::Arc;
-use jarvis_messaging::handler::MessageHandler;
-use jarvis_messaging::message::{IncomingMessage, OutgoingMessage, MessageType};
-use jarvis_messaging::platform::MessagingPlatform;
 use crate::Session;
 use crate::TurnContext;
+use crate::tools::context::{SharedTurnDiffTracker, ToolInvocation, ToolPayload};
 use crate::tools::router::ToolRouter;
-use crate::tools::context::{ToolInvocation, ToolPayload, SharedTurnDiffTracker};
 use crate::turn_diff_tracker::TurnDiffTracker;
+use jarvis_messaging::handler::MessageHandler;
+use jarvis_messaging::message::{IncomingMessage, MessageType, OutgoingMessage};
+use jarvis_messaging::platform::MessagingPlatform;
+use std::sync::Arc;
 
 use super::command_parser::{CommandParser, ParsedCommand};
 use super::router::MessagingRouter;
@@ -45,28 +45,23 @@ impl MessageToJarvisHandler {
         let command = CommandParser::parse(&message.message_type);
 
         match command {
-            ParsedCommand::Help => {
-                Ok(CommandParser::help_message())
-            }
-            ParsedCommand::Exec { command, args } => {
-                self.handle_exec_command(command, args).await
-            }
-            ParsedCommand::Read { path } => {
-                self.handle_read_command(path).await
-            }
-            ParsedCommand::List { path } => {
-                self.handle_list_command(path).await
-            }
-            ParsedCommand::Search { query } => {
-                self.handle_search_command(query).await
-            }
-            ParsedCommand::Unknown { text } => {
-                Ok(format!("Comando desconhecido ou inválido. Use /help para ver os comandos disponíveis.\n\nMensagem recebida: {}", text))
-            }
+            ParsedCommand::Help => Ok(CommandParser::help_message()),
+            ParsedCommand::Exec { command, args } => self.handle_exec_command(command, args).await,
+            ParsedCommand::Read { path } => self.handle_read_command(path).await,
+            ParsedCommand::List { path } => self.handle_list_command(path).await,
+            ParsedCommand::Search { query } => self.handle_search_command(query).await,
+            ParsedCommand::Unknown { text } => Ok(format!(
+                "Comando desconhecido ou inválido. Use /help para ver os comandos disponíveis.\n\nMensagem recebida: {}",
+                text
+            )),
         }
     }
 
-    async fn handle_exec_command(&self, command: String, args: Vec<String>) -> anyhow::Result<String> {
+    async fn handle_exec_command(
+        &self,
+        command: String,
+        args: Vec<String>,
+    ) -> anyhow::Result<String> {
         // Cria um payload de shell command
         let full_command = if args.is_empty() {
             command.clone()
@@ -78,7 +73,8 @@ impl MessageToJarvisHandler {
             arguments: serde_json::json!({
                 "command": command,
                 "args": args
-            }).to_string(),
+            })
+            .to_string(),
         };
 
         let invocation = ToolInvocation {
@@ -93,7 +89,10 @@ impl MessageToJarvisHandler {
         // Executa através do router
         let router = MessagingRouter::new(Arc::clone(&self.tool_router));
         match router.execute_tool(invocation).await {
-            Ok(output) => Ok(format!("Comando executado:\n```\n{}\n```\n{}", full_command, output)),
+            Ok(output) => Ok(format!(
+                "Comando executado:\n```\n{}\n```\n{}",
+                full_command, output
+            )),
             Err(e) => Ok(format!("Erro ao executar comando: {}", e)),
         }
     }
@@ -102,7 +101,8 @@ impl MessageToJarvisHandler {
         let payload = ToolPayload::Function {
             arguments: serde_json::json!({
                 "file_path": path
-            }).to_string(),
+            })
+            .to_string(),
         };
 
         let invocation = ToolInvocation {
@@ -116,7 +116,10 @@ impl MessageToJarvisHandler {
 
         let router = MessagingRouter::new(Arc::clone(&self.tool_router));
         match router.execute_tool(invocation).await {
-            Ok(output) => Ok(format!("Conteúdo do arquivo `{}`:\n```\n{}\n```", path, output)),
+            Ok(output) => Ok(format!(
+                "Conteúdo do arquivo `{}`:\n```\n{}\n```",
+                path, output
+            )),
             Err(e) => Ok(format!("Erro ao ler arquivo: {}", e)),
         }
     }
@@ -125,7 +128,8 @@ impl MessageToJarvisHandler {
         let payload = ToolPayload::Function {
             arguments: serde_json::json!({
                 "path": path
-            }).to_string(),
+            })
+            .to_string(),
         };
 
         let invocation = ToolInvocation {
@@ -139,7 +143,10 @@ impl MessageToJarvisHandler {
 
         let router = MessagingRouter::new(Arc::clone(&self.tool_router));
         match router.execute_tool(invocation).await {
-            Ok(output) => Ok(format!("Conteúdo do diretório `{}`:\n```\n{}\n```", path, output)),
+            Ok(output) => Ok(format!(
+                "Conteúdo do diretório `{}`:\n```\n{}\n```",
+                path, output
+            )),
             Err(e) => Ok(format!("Erro ao listar diretório: {}", e)),
         }
     }
@@ -148,7 +155,8 @@ impl MessageToJarvisHandler {
         let payload = ToolPayload::Function {
             arguments: serde_json::json!({
                 "query": query
-            }).to_string(),
+            })
+            .to_string(),
         };
 
         let invocation = ToolInvocation {
@@ -162,7 +170,10 @@ impl MessageToJarvisHandler {
 
         let router = MessagingRouter::new(Arc::clone(&self.tool_router));
         match router.execute_tool(invocation).await {
-            Ok(output) => Ok(format!("Resultados da busca por `{}`:\n```\n{}\n```", query, output)),
+            Ok(output) => Ok(format!(
+                "Resultados da busca por `{}`:\n```\n{}\n```",
+                query, output
+            )),
             Err(e) => Ok(format!("Erro ao buscar: {}", e)),
         }
     }

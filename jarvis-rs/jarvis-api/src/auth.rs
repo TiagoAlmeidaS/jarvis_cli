@@ -1,6 +1,6 @@
-﻿use jarvis_client::Request;
 use http::HeaderMap;
 use http::HeaderValue;
+use jarvis_client::Request;
 
 /// Provides bearer and account identity information for API requests.
 ///

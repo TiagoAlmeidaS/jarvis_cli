@@ -228,13 +228,25 @@ mod tests {
     fn test_message_creation_all_roles() {
         let conversation_id = Uuid::new_v4();
 
-        let user_msg = Message::new(conversation_id, MessageRole::User, "User message".to_string());
+        let user_msg = Message::new(
+            conversation_id,
+            MessageRole::User,
+            "User message".to_string(),
+        );
         assert_eq!(user_msg.role, MessageRole::User);
 
-        let assistant_msg = Message::new(conversation_id, MessageRole::Assistant, "Assistant message".to_string());
+        let assistant_msg = Message::new(
+            conversation_id,
+            MessageRole::Assistant,
+            "Assistant message".to_string(),
+        );
         assert_eq!(assistant_msg.role, MessageRole::Assistant);
 
-        let system_msg = Message::new(conversation_id, MessageRole::System, "System message".to_string());
+        let system_msg = Message::new(
+            conversation_id,
+            MessageRole::System,
+            "System message".to_string(),
+        );
         assert_eq!(system_msg.role, MessageRole::System);
     }
 
@@ -284,17 +296,34 @@ mod tests {
     fn test_message_role_parsing_case_insensitive() {
         assert_eq!("USER".parse::<MessageRole>().unwrap(), MessageRole::User);
         assert_eq!("User".parse::<MessageRole>().unwrap(), MessageRole::User);
-        assert_eq!("ASSISTANT".parse::<MessageRole>().unwrap(), MessageRole::Assistant);
-        assert_eq!("Assistant".parse::<MessageRole>().unwrap(), MessageRole::Assistant);
-        assert_eq!("SYSTEM".parse::<MessageRole>().unwrap(), MessageRole::System);
-        assert_eq!("System".parse::<MessageRole>().unwrap(), MessageRole::System);
+        assert_eq!(
+            "ASSISTANT".parse::<MessageRole>().unwrap(),
+            MessageRole::Assistant
+        );
+        assert_eq!(
+            "Assistant".parse::<MessageRole>().unwrap(),
+            MessageRole::Assistant
+        );
+        assert_eq!(
+            "SYSTEM".parse::<MessageRole>().unwrap(),
+            MessageRole::System
+        );
+        assert_eq!(
+            "System".parse::<MessageRole>().unwrap(),
+            MessageRole::System
+        );
     }
 
     #[test]
     fn test_message_role_parsing_invalid() {
         let result = "invalid".parse::<MessageRole>();
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Invalid message role"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Invalid message role")
+        );
     }
 
     #[test]

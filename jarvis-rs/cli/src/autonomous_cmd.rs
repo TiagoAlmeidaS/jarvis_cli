@@ -214,11 +214,7 @@ async fn create_execution_plan(args: PlanArgs) -> Result<()> {
         let json = serde_json::to_string_pretty(&plan)?;
         std::fs::write(&save_path, json)?;
         if args.output == OutputFormat::Human {
-            println!(
-                "\n{} Plan saved to: {}",
-                "✓".green(),
-                save_path.cyan()
-            );
+            println!("\n{} Plan saved to: {}", "✓".green(), save_path.cyan());
         }
     }
 
@@ -292,7 +288,11 @@ async fn execute_autonomous_task(args: ExecuteArgs) -> Result<()> {
 
             if !assessment.is_safe_to_execute_autonomously && !args.dry_run {
                 if args.output == OutputFormat::Human {
-                    println!("  {} {}", "⚠".yellow(), "Step requires approval - skipping in non-auto mode".yellow());
+                    println!(
+                        "  {} {}",
+                        "⚠".yellow(),
+                        "Step requires approval - skipping in non-auto mode".yellow()
+                    );
                 }
                 continue;
             }
@@ -351,14 +351,21 @@ async fn show_execution_status(args: StatusArgs) -> Result<()> {
 
     // Simulate execution data
     let executions = vec![
-        ("exec-001", "Update documentation", "completed", "2 minutes ago"),
+        (
+            "exec-001",
+            "Update documentation",
+            "completed",
+            "2 minutes ago",
+        ),
         ("exec-002", "Run tests", "running", "30 seconds ago"),
         ("exec-003", "Deploy to staging", "pending", "5 minutes ago"),
     ];
 
     if let Some(ref exec_id) = args.execution_id {
         // Show specific execution
-        if let Some((id, task, status, time)) = executions.iter().find(|(id, _, _, _)| id == exec_id) {
+        if let Some((id, task, status, time)) =
+            executions.iter().find(|(id, _, _, _)| id == exec_id)
+        {
             if args.output == OutputFormat::Human {
                 println!("  {} {}", "ID:".bold(), id.yellow());
                 println!("  {} {}", "Task:".bold(), task);
@@ -455,8 +462,16 @@ async fn run_autonomous_workflow(args: RunArgs) -> Result<()> {
     let intent_result = detector.detect_intent(&args.task).await?;
 
     if args.output == OutputFormat::Human {
-        println!("  {} {}", "Intent:".bold(), format!("{:?}", intent_result.intent_type).yellow());
-        println!("  {} {:.0}%", "Confidence:".bold(), intent_result.confidence * 100.0);
+        println!(
+            "  {} {}",
+            "Intent:".bold(),
+            format!("{:?}", intent_result.intent_type).yellow()
+        );
+        println!(
+            "  {} {:.0}%",
+            "Confidence:".bold(),
+            intent_result.confidence * 100.0
+        );
         println!();
     }
 
@@ -478,8 +493,16 @@ async fn run_autonomous_workflow(args: RunArgs) -> Result<()> {
     };
 
     if args.output == OutputFormat::Human {
-        println!("  {} {}", "Requirements:".bold(), context.requirements.len().to_string().cyan());
-        println!("  {} {}", "Goals:".bold(), context.goals.len().to_string().yellow());
+        println!(
+            "  {} {}",
+            "Requirements:".bold(),
+            context.requirements.len().to_string().cyan()
+        );
+        println!(
+            "  {} {}",
+            "Goals:".bold(),
+            context.goals.len().to_string().yellow()
+        );
         println!();
     }
 
@@ -494,8 +517,16 @@ async fn run_autonomous_workflow(args: RunArgs) -> Result<()> {
     let plan = planner.create_plan(&context, &registry).await?;
 
     if args.output == OutputFormat::Human {
-        println!("  {} {} steps", "Plan created:".bold(), plan.steps.len().to_string().cyan());
-        println!("  {} {}", "Estimated time:".bold(), plan.estimated_time.yellow());
+        println!(
+            "  {} {} steps",
+            "Plan created:".bold(),
+            plan.steps.len().to_string().cyan()
+        );
+        println!(
+            "  {} {}",
+            "Estimated time:".bold(),
+            plan.estimated_time.yellow()
+        );
         println!();
     }
 
@@ -519,8 +550,14 @@ async fn run_autonomous_workflow(args: RunArgs) -> Result<()> {
     let assessment = classifier.assess_action(&action).await?;
 
     if args.output == OutputFormat::Human {
-        println!("  {} {}", "Risk level:".bold(), format_risk_level(&assessment.risk_level));
-        println!("  {} {}", "Safe to execute:".bold(),
+        println!(
+            "  {} {}",
+            "Risk level:".bold(),
+            format_risk_level(&assessment.risk_level)
+        );
+        println!(
+            "  {} {}",
+            "Safe to execute:".bold(),
             if assessment.is_safe_to_execute_autonomously {
                 format!("{}", "Yes".green())
             } else {
@@ -535,9 +572,17 @@ async fn run_autonomous_workflow(args: RunArgs) -> Result<()> {
         if args.output == OutputFormat::Human {
             println!("{}", "─".repeat(50).dimmed());
             if args.dry_run {
-                println!("\n{} {}", "ℹ".cyan(), "Dry run complete - no actions executed".cyan());
+                println!(
+                    "\n{} {}",
+                    "ℹ".cyan(),
+                    "Dry run complete - no actions executed".cyan()
+                );
             } else {
-                println!("\n{} {}", "⚠".yellow(), "Execution requires manual approval".yellow());
+                println!(
+                    "\n{} {}",
+                    "⚠".yellow(),
+                    "Execution requires manual approval".yellow()
+                );
                 println!("  Run with --auto-approve-low-risk to execute low-risk actions");
             }
         }
@@ -552,7 +597,13 @@ async fn run_autonomous_workflow(args: RunArgs) -> Result<()> {
         // Simulate execution
         for (i, step) in plan.steps.iter().enumerate() {
             if args.output == OutputFormat::Human {
-                println!("  {} Step {}/{}: {}", "✓".green(), i + 1, plan.steps.len(), step.description);
+                println!(
+                    "  {} Step {}/{}: {}",
+                    "✓".green(),
+                    i + 1,
+                    plan.steps.len(),
+                    step.description
+                );
             }
             std::thread::sleep(std::time::Duration::from_millis(300));
         }
@@ -560,7 +611,11 @@ async fn run_autonomous_workflow(args: RunArgs) -> Result<()> {
         if args.output == OutputFormat::Human {
             println!();
             println!("{}", "─".repeat(50).dimmed());
-            println!("\n{} {}", "✅".bold(), "Workflow completed successfully!".green().bold());
+            println!(
+                "\n{} {}",
+                "✅".bold(),
+                "Workflow completed successfully!".green().bold()
+            );
         }
     }
 
@@ -600,7 +655,11 @@ fn print_execution_plan(plan: &ExecutionPlan) {
         for step in &plan.steps {
             println!();
             println!("  {}. {}", step.step_number, step.description.bold());
-            println!("     {} {}", "Capability:".dimmed(), step.capability_name.cyan());
+            println!(
+                "     {} {}",
+                "Capability:".dimmed(),
+                step.capability_name.cyan()
+            );
             if !step.dependencies.is_empty() {
                 println!(
                     "     {} Step(s) {}",
@@ -612,7 +671,11 @@ fn print_execution_plan(plan: &ExecutionPlan) {
                         .join(", ")
                 );
             }
-            println!("     {} {}", "Estimated time:".dimmed(), step.estimated_time.yellow());
+            println!(
+                "     {} {}",
+                "Estimated time:".dimmed(),
+                step.estimated_time.yellow()
+            );
         }
         println!();
     }
@@ -626,8 +689,16 @@ fn print_execution_plan(plan: &ExecutionPlan) {
     }
 
     println!("{}", "Summary:".bold());
-    println!("  {} {}", "Total time:".dimmed(), plan.estimated_time.yellow());
-    println!("  {} {:.0}%", "Confidence:".dimmed(), plan.confidence * 100.0);
+    println!(
+        "  {} {}",
+        "Total time:".dimmed(),
+        plan.estimated_time.yellow()
+    );
+    println!(
+        "  {} {:.0}%",
+        "Confidence:".dimmed(),
+        plan.confidence * 100.0
+    );
     println!();
 }
 

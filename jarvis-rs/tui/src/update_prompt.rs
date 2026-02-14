@@ -1,4 +1,4 @@
-﻿#![cfg(not(debug_assertions))]
+#![cfg(not(debug_assertions))]
 
 use crate::history_cell::padded_emoji;
 use crate::key_hint;
@@ -12,12 +12,12 @@ use crate::tui::Tui;
 use crate::tui::TuiEvent;
 use crate::update_action::UpdateAction;
 use crate::updates;
-use jarvis_core::config::Config;
 use color_eyre::Result;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
+use jarvis_core::config::Config;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::prelude::Widget;

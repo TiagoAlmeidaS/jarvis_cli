@@ -1,4 +1,4 @@
-﻿use clap::Args;
+use clap::Args;
 use clap::CommandFactory;
 use clap::Parser;
 use clap_complete::Shell;
@@ -119,6 +119,9 @@ enum Subcommand {
 
     /// [experimental] Analyze system performance and suggest improvements.
     Analytics(jarvis_cli::analytics_cmd::AnalyticsCli),
+
+    /// [experimental] Manage daemon automation pipelines (SEO, YouTube, SaaS).
+    Daemon(jarvis_cli::daemon_cmd::DaemonCli),
 
     /// [experimental] Run the app server or related tooling.
     AppServer(AppServerCommand),
@@ -482,7 +485,12 @@ fn run_debug_app_server_command(cmd: DebugAppServerCommand) -> anyhow::Result<()
     match cmd.subcommand {
         DebugAppServerSubcommand::SendMessageV2(cmd) => {
             let jarvis_bin = std::env::current_exe()?;
-            jarvis_app_server_test_client::send_message_v2(&jarvis_bin, &[], cmd.user_message, &None)
+            jarvis_app_server_test_client::send_message_v2(
+                &jarvis_bin,
+                &[],
+                cmd.user_message,
+                &None,
+            )
         }
     }
 }
@@ -608,38 +616,62 @@ async fn cli_main(jarvis_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<(
         }
         Some(Subcommand::Intent(mut intent_cli)) => {
             // Propagate any root-level config overrides (e.g. `-c key=value`).
-            prepend_config_flags(&mut intent_cli.config_overrides, root_config_overrides.clone());
+            prepend_config_flags(
+                &mut intent_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
             intent_cli.run().await?;
         }
         Some(Subcommand::Skills(mut skills_cli)) => {
             // Propagate any root-level config overrides (e.g. `-c key=value`).
-            prepend_config_flags(&mut skills_cli.config_overrides, root_config_overrides.clone());
+            prepend_config_flags(
+                &mut skills_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
             skills_cli.run().await?;
         }
         Some(Subcommand::Agent(mut agent_cli)) => {
             // Propagate any root-level config overrides (e.g. `-c key=value`).
-            prepend_config_flags(&mut agent_cli.config_overrides, root_config_overrides.clone());
+            prepend_config_flags(
+                &mut agent_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
             agent_cli.run().await?;
         }
         Some(Subcommand::Context(mut context_cli)) => {
             // Propagate any root-level config overrides (e.g. `-c key=value`).
-            prepend_config_flags(&mut context_cli.config_overrides, root_config_overrides.clone());
+            prepend_config_flags(
+                &mut context_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
             context_cli.run().await?;
         }
         Some(Subcommand::Safety(mut safety_cli)) => {
             // Propagate any root-level config overrides (e.g. `-c key=value`).
-            prepend_config_flags(&mut safety_cli.config_overrides, root_config_overrides.clone());
+            prepend_config_flags(
+                &mut safety_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
             safety_cli.run().await?;
         }
         Some(Subcommand::Autonomous(mut autonomous_cli)) => {
             // Propagate any root-level config overrides (e.g. `-c key=value`).
-            prepend_config_flags(&mut autonomous_cli.config_overrides, root_config_overrides.clone());
+            prepend_config_flags(
+                &mut autonomous_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
             autonomous_cli.run().await?;
         }
         Some(Subcommand::Analytics(mut analytics_cli)) => {
             // Propagate any root-level config overrides (e.g. `-c key=value`).
-            prepend_config_flags(&mut analytics_cli.config_overrides, root_config_overrides.clone());
+            prepend_config_flags(
+                &mut analytics_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
             analytics_cli.run().await?;
+        }
+        Some(Subcommand::Daemon(daemon_cli)) => {
+            jarvis_cli::daemon_cmd::run_daemon_command(daemon_cli).await?;
         }
         Some(Subcommand::AppServer(app_server_cli)) => match app_server_cli.subcommand {
             None => {

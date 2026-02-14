@@ -1,4 +1,4 @@
-﻿use async_trait::async_trait;
+use async_trait::async_trait;
 use std::cmp::Reverse;
 use std::ffi::OsStr;
 use std::io::{self};
@@ -1110,7 +1110,10 @@ async fn find_thread_path_by_id_str_in_subdir(
                     db_path.display()
                 );
                 #[cfg(feature = "state")]
-                state_db::record_discrepancy("find_thread_path_by_id_str_in_subdir", "stale_db_path");
+                state_db::record_discrepancy(
+                    "find_thread_path_by_id_str_in_subdir",
+                    "stale_db_path",
+                );
             }
         }
     }

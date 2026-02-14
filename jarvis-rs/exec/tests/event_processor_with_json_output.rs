@@ -1,4 +1,4 @@
-﻿use jarvis_core::protocol::AgentMessageEvent;
+use jarvis_core::protocol::AgentMessageEvent;
 use jarvis_core::protocol::AgentReasoningEvent;
 use jarvis_core::protocol::AgentStatus;
 use jarvis_core::protocol::AskForApproval;
@@ -61,9 +61,9 @@ use jarvis_protocol::models::WebSearchAction;
 use jarvis_protocol::plan_tool::PlanItemArg;
 use jarvis_protocol::plan_tool::StepStatus;
 use jarvis_protocol::plan_tool::UpdatePlanArgs;
-use jarvis_protocol::protocol::JarvisErrorInfo;
 use jarvis_protocol::protocol::ExecCommandOutputDeltaEvent;
 use jarvis_protocol::protocol::ExecOutputStream;
+use jarvis_protocol::protocol::JarvisErrorInfo;
 use pretty_assertions::assert_eq;
 use rmcp::model::Content;
 use serde_json::json;

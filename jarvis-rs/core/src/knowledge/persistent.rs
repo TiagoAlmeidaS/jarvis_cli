@@ -34,36 +34,39 @@ impl PersistentKnowledgeBase {
     /// Stores knowledge to file.
     async fn store_knowledge(&self, knowledge: &Knowledge) -> Result<(), KnowledgeError> {
         // Ensure directory exists
-        fs::create_dir_all(&self.storage_dir).await
-            .map_err(|e| KnowledgeError::StorageError(format!("Failed to create storage dir: {}", e)))?;
+        fs::create_dir_all(&self.storage_dir).await.map_err(|e| {
+            KnowledgeError::StorageError(format!("Failed to create storage dir: {}", e))
+        })?;
 
         let path = self.knowledge_path(&knowledge.id);
         let data = serde_json::to_string_pretty(knowledge)
             .map_err(|e| KnowledgeError::StorageError(format!("Serialization error: {}", e)))?;
-        
-        fs::write(&path, data).await
-            .map_err(|e| KnowledgeError::StorageError(format!("Failed to write knowledge file: {}", e)))?;
-        
+
+        fs::write(&path, data).await.map_err(|e| {
+            KnowledgeError::StorageError(format!("Failed to write knowledge file: {}", e))
+        })?;
+
         // Update index
         self.update_index(knowledge).await?;
-        
+
         Ok(())
     }
 
     /// Loads knowledge from file.
     async fn load_knowledge(&self, id: &str) -> Result<Option<Knowledge>, KnowledgeError> {
         let path = self.knowledge_path(id);
-        
+
         if !path.exists() {
             return Ok(None);
         }
 
-        let data = fs::read_to_string(&path).await
-            .map_err(|e| KnowledgeError::StorageError(format!("Failed to read knowledge file: {}", e)))?;
-        
+        let data = fs::read_to_string(&path).await.map_err(|e| {
+            KnowledgeError::StorageError(format!("Failed to read knowledge file: {}", e))
+        })?;
+
         let knowledge: Knowledge = serde_json::from_str(&data)
             .map_err(|e| KnowledgeError::InvalidData(format!("Deserialization error: {}", e)))?;
-        
+
         Ok(Some(knowledge))
     }
 
@@ -71,10 +74,10 @@ impl PersistentKnowledgeBase {
     async fn update_index(&self, knowledge: &Knowledge) -> Result<(), KnowledgeError> {
         let index_path = self.index_path();
         let mut index: Vec<String> = if index_path.exists() {
-            let data = fs::read_to_string(&index_path).await
-                .map_err(|e| KnowledgeError::StorageError(format!("Failed to read index: {}", e)))?;
-            serde_json::from_str(&data)
-                .unwrap_or_default()
+            let data = fs::read_to_string(&index_path).await.map_err(|e| {
+                KnowledgeError::StorageError(format!("Failed to read index: {}", e))
+            })?;
+            serde_json::from_str(&data).unwrap_or_default()
         } else {
             Vec::new()
         };
@@ -85,27 +88,29 @@ impl PersistentKnowledgeBase {
 
         let data = serde_json::to_string_pretty(&index)
             .map_err(|e| KnowledgeError::StorageError(format!("Serialization error: {}", e)))?;
-        
-        fs::write(&index_path, data).await
+
+        fs::write(&index_path, data)
+            .await
             .map_err(|e| KnowledgeError::StorageError(format!("Failed to write index: {}", e)))?;
-        
+
         Ok(())
     }
 
     /// Loads all knowledge IDs from index.
     async fn load_all_ids(&self) -> Result<Vec<String>, KnowledgeError> {
         let index_path = self.index_path();
-        
+
         if !index_path.exists() {
             return Ok(vec![]);
         }
 
-        let data = fs::read_to_string(&index_path).await
+        let data = fs::read_to_string(&index_path)
+            .await
             .map_err(|e| KnowledgeError::StorageError(format!("Failed to read index: {}", e)))?;
-        
+
         let ids: Vec<String> = serde_json::from_str(&data)
             .map_err(|e| KnowledgeError::InvalidData(format!("Deserialization error: {}", e)))?;
-        
+
         Ok(ids)
     }
 
@@ -129,10 +134,10 @@ impl KnowledgeBase for PersistentKnowledgeBase {
     async fn add_knowledge(&self, knowledge: Knowledge) -> Result<(), KnowledgeError> {
         // Add to fallback
         self.fallback.add_knowledge(knowledge.clone()).await?;
-        
+
         // Persist
         self.store_knowledge(&knowledge).await?;
-        
+
         Ok(())
     }
 
@@ -143,7 +148,7 @@ impl KnowledgeBase for PersistentKnowledgeBase {
             let _ = self.fallback.add_knowledge(knowledge.clone()).await;
             return Ok(Some(knowledge));
         }
-        
+
         // Fallback to in-memory
         self.fallback.get_knowledge(id).await
     }
@@ -151,14 +156,16 @@ impl KnowledgeBase for PersistentKnowledgeBase {
     async fn search(&self, query: &str, limit: usize) -> Result<Vec<Knowledge>, KnowledgeError> {
         // Load all knowledge
         let all_knowledge = self.load_all().await?;
-        
+
         // Search
         let query_lower = query.to_lowercase();
         let mut results: Vec<Knowledge> = all_knowledge
             .into_iter()
             .filter(|k| {
                 k.content.to_lowercase().contains(&query_lower)
-                    || k.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+                    || k.tags
+                        .iter()
+                        .any(|tag| tag.to_lowercase().contains(&query_lower))
                     || k.category.to_lowercase().contains(&query_lower)
             })
             .collect();
@@ -167,7 +174,9 @@ impl KnowledgeBase for PersistentKnowledgeBase {
         results.sort_by(|a, b| {
             let score_a = a.confidence + (a.access_count as f32 / 1000.0).min(0.3);
             let score_b = b.confidence + (b.access_count as f32 / 1000.0).min(0.3);
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(results.into_iter().take(limit).collect())
@@ -181,7 +190,10 @@ impl KnowledgeBase for PersistentKnowledgeBase {
             .collect())
     }
 
-    async fn get_by_type(&self, knowledge_type: &KnowledgeType) -> Result<Vec<Knowledge>, KnowledgeError> {
+    async fn get_by_type(
+        &self,
+        knowledge_type: &KnowledgeType,
+    ) -> Result<Vec<Knowledge>, KnowledgeError> {
         let all_knowledge = self.load_all().await?;
         Ok(all_knowledge
             .into_iter()
@@ -192,33 +204,35 @@ impl KnowledgeBase for PersistentKnowledgeBase {
     async fn update_knowledge(&self, knowledge: Knowledge) -> Result<(), KnowledgeError> {
         // Update fallback
         self.fallback.update_knowledge(knowledge.clone()).await?;
-        
+
         // Persist
         self.store_knowledge(&knowledge).await?;
-        
+
         Ok(())
     }
 
     async fn remove_knowledge(&self, id: &str) -> Result<(), KnowledgeError> {
         // Remove from fallback
         self.fallback.remove_knowledge(id).await?;
-        
+
         // Remove file
         let path = self.knowledge_path(id);
         if path.exists() {
-            fs::remove_file(&path).await
-                .map_err(|e| KnowledgeError::StorageError(format!("Failed to remove file: {}", e)))?;
+            fs::remove_file(&path).await.map_err(|e| {
+                KnowledgeError::StorageError(format!("Failed to remove file: {}", e))
+            })?;
         }
-        
+
         // Update index
         let mut ids = self.load_all_ids().await?;
         ids.retain(|x| x != id);
         let index_path = self.index_path();
         let data = serde_json::to_string_pretty(&ids)
             .map_err(|e| KnowledgeError::StorageError(format!("Serialization error: {}", e)))?;
-        fs::write(&index_path, data).await
+        fs::write(&index_path, data)
+            .await
             .map_err(|e| KnowledgeError::StorageError(format!("Failed to write index: {}", e)))?;
-        
+
         Ok(())
     }
 }

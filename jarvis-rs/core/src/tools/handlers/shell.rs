@@ -1,4 +1,4 @@
-﻿use async_trait::async_trait;
+use async_trait::async_trait;
 use jarvis_protocol::ThreadId;
 use jarvis_protocol::models::ShellCommandToolCallParams;
 use jarvis_protocol::models::ShellToolCallParams;
@@ -344,9 +344,9 @@ mod tests {
     use jarvis_protocol::models::ShellCommandToolCallParams;
     use pretty_assertions::assert_eq;
 
-    use crate::make_session_and_context;
     use crate::exec_env::create_env;
     use crate::is_safe_command::is_known_safe_command;
+    use crate::make_session_and_context;
     use crate::powershell::try_find_powershell_executable_blocking;
     use crate::powershell::try_find_pwsh_executable_blocking;
     use crate::sandboxing::SandboxPermissions;

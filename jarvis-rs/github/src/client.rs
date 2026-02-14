@@ -1,4 +1,4 @@
-﻿//! GitHub API client implementation.
+//! GitHub API client implementation.
 
 use crate::errors::GitHubError;
 use crate::issues::{create_issue, list_issues, update_issue};
@@ -10,7 +10,7 @@ use crate::models::PullRequest;
 use crate::models::Repository;
 use crate::pull_requests::{comment_pr, get_pr, list_pr_comments};
 use crate::repositories::{clone_repo, get_repo, list_repositories};
-use http::header::{HeaderValue, AUTHORIZATION};
+use http::header::{AUTHORIZATION, HeaderValue};
 use reqwest::Client;
 use std::time::Duration;
 
@@ -82,7 +82,11 @@ impl GitHubClient {
     }
 
     /// Make a POST request to the GitHub API.
-    pub(crate) async fn post<T>(&self, path: &str, body: &impl serde::Serialize) -> Result<T, GitHubError>
+    pub(crate) async fn post<T>(
+        &self,
+        path: &str,
+        body: &impl serde::Serialize,
+    ) -> Result<T, GitHubError>
     where
         T: serde::de::DeserializeOwned,
     {
@@ -102,7 +106,11 @@ impl GitHubClient {
     }
 
     /// Make a PATCH request to the GitHub API.
-    pub(crate) async fn patch<T>(&self, path: &str, body: &impl serde::Serialize) -> Result<T, GitHubError>
+    pub(crate) async fn patch<T>(
+        &self,
+        path: &str,
+        body: &impl serde::Serialize,
+    ) -> Result<T, GitHubError>
     where
         T: serde::de::DeserializeOwned,
     {

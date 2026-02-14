@@ -1,4 +1,4 @@
-﻿use std::collections::VecDeque;
+use std::collections::VecDeque;
 use std::fs;
 use std::io::BufRead;
 use std::io::BufReader;
@@ -195,7 +195,11 @@ pub fn run() -> Result<()> {
     }
 }
 
-fn send_message(jarvis_bin: &Path, config_overrides: &[String], user_message: String) -> Result<()> {
+fn send_message(
+    jarvis_bin: &Path,
+    config_overrides: &[String],
+    user_message: String,
+) -> Result<()> {
     let mut client = CodexClient::spawn(jarvis_bin, config_overrides)?;
 
     let initialize = client.initialize()?;
@@ -548,7 +552,9 @@ impl CodexClient {
         let request_id = self.request_id();
         let request = ClientRequest::RemoveConversationListener {
             request_id: request_id.clone(),
-            params: jarvis_app_server_protocol::RemoveConversationListenerParams { subscription_id },
+            params: jarvis_app_server_protocol::RemoveConversationListenerParams {
+                subscription_id,
+            },
         };
 
         self.send_request::<jarvis_app_server_protocol::RemoveConversationSubscriptionResponse>(

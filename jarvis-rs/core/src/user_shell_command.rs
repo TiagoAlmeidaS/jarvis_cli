@@ -1,4 +1,4 @@
-﻿use std::time::Duration;
+use std::time::Duration;
 
 use jarvis_protocol::models::ContentItem;
 use jarvis_protocol::models::ResponseItem;
@@ -70,8 +70,8 @@ pub fn user_shell_command_record_item(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::make_session_and_context;
     use crate::exec::StreamOutput;
+    use crate::make_session_and_context;
     use pretty_assertions::assert_eq;
 
     #[test]

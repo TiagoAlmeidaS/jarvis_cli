@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::path::Path;
 use std::path::PathBuf;
@@ -6,6 +6,10 @@ use std::sync::Arc;
 
 use chrono::DateTime;
 use chrono::Utc;
+use color_eyre::eyre::Result;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyEventKind;
 use jarvis_core::Cursor;
 use jarvis_core::INTERACTIVE_SESSION_SOURCES;
 use jarvis_core::RolloutRecorder;
@@ -15,10 +19,6 @@ use jarvis_core::ThreadsPage;
 use jarvis_core::find_thread_names_by_ids;
 use jarvis_core::path_utils;
 use jarvis_protocol::items::TurnItem;
-use color_eyre::eyre::Result;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyEventKind;
 use ratatui::layout::Constraint;
 use ratatui::layout::Layout;
 use ratatui::layout::Rect;

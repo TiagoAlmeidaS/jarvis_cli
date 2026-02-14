@@ -1,4 +1,4 @@
-﻿//! Transcript/history cells for the Jarvis TUI.
+//! Transcript/history cells for the Jarvis TUI.
 //!
 //! A `HistoryCell` is the unit of display in the conversation UI, representing both committed
 //! transcript entries and, transiently, an in-flight active cell that can mutate in place while
@@ -37,6 +37,8 @@ use crate::wrapping::RtOptions;
 use crate::wrapping::word_wrap_line;
 use crate::wrapping::word_wrap_lines;
 use base64::Engine;
+use image::DynamicImage;
+use image::ImageReader;
 use jarvis_common::format_env_display::format_env_display;
 use jarvis_core::config::Config;
 use jarvis_core::config::types::McpServerTransportConfig;
@@ -57,8 +59,6 @@ use jarvis_protocol::plan_tool::UpdatePlanArgs;
 use jarvis_protocol::request_user_input::RequestUserInputAnswer;
 use jarvis_protocol::request_user_input::RequestUserInputQuestion;
 use jarvis_protocol::user_input::TextElement;
-use image::DynamicImage;
-use image::ImageReader;
 use ratatui::prelude::*;
 use ratatui::style::Color;
 use ratatui::style::Modifier;
@@ -2268,6 +2268,7 @@ mod tests {
     use crate::exec_cell::CommandOutput;
     use crate::exec_cell::ExecCall;
     use crate::exec_cell::ExecCell;
+    use dirs::home_dir;
     use jarvis_core::config::Config;
     use jarvis_core::config::ConfigBuilder;
     use jarvis_core::config::types::McpServerConfig;
@@ -2277,7 +2278,6 @@ mod tests {
     use jarvis_otel::RuntimeMetricsSummary;
     use jarvis_protocol::models::WebSearchAction;
     use jarvis_protocol::parse_command::ParsedCommand;
-    use dirs::home_dir;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::collections::HashMap;

@@ -1,11 +1,11 @@
-﻿use chrono::DateTime;
+use chrono::DateTime;
 use chrono::Utc;
+use http::HeaderMap;
 use jarvis_api::AuthProvider as ApiAuthProvider;
 use jarvis_api::TransportError;
 use jarvis_api::error::ApiError;
 use jarvis_api::rate_limits::parse_promo_message;
 use jarvis_api::rate_limits::parse_rate_limit;
-use http::HeaderMap;
 use serde::Deserialize;
 
 use crate::auth::JarvisAuth;
@@ -124,9 +124,9 @@ const CF_RAY_HEADER: &str = "cf-ray";
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jarvis_api::TransportError;
     use http::HeaderMap;
     use http::StatusCode;
+    use jarvis_api::TransportError;
 
     #[test]
     fn map_api_error_maps_model_cap_headers() {

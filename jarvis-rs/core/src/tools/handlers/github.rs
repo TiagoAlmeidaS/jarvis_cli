@@ -1,4 +1,4 @@
-﻿//! GitHub tool handlers for creating issues, commenting on PRs, and managing repositories.
+//! GitHub tool handlers for creating issues, commenting on PRs, and managing repositories.
 
 use async_trait::async_trait;
 use jarvis_github::GitHubClient;
@@ -8,18 +8,18 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Arc;
 
+use crate::TurnContext;
 use crate::config::Config;
 use crate::function_tool::FunctionCallError;
-use crate::TurnContext;
-use jarvis_secrets::SecretName;
-use jarvis_secrets::SecretScope;
-use jarvis_secrets::SecretsManager;
 use crate::tools::context::ToolInvocation;
 use crate::tools::context::ToolOutput;
 use crate::tools::context::ToolPayload;
 use crate::tools::handlers::parse_arguments;
 use crate::tools::registry::ToolHandler;
 use crate::tools::registry::ToolKind;
+use jarvis_secrets::SecretName;
+use jarvis_secrets::SecretScope;
+use jarvis_secrets::SecretsManager;
 
 /// Handler for GitHub operations.
 pub struct GitHubHandler;
@@ -71,7 +71,7 @@ struct GitHubToolOutput {
 
 impl GitHubHandler {
     /// Get or create a GitHub client using PAT from environment variable or secrets.
-    /// 
+    ///
     /// Priority order:
     /// 1. Environment variable `GITHUB_PAT` or `jarvis_GITHUB_PAT`
     /// 2. Secrets manager using configured secret name
@@ -161,7 +161,12 @@ impl GitHubHandler {
         let client = Self::get_client(config, secrets_manager).await?;
 
         let comment = client
-            .comment_pr(&params.owner, &params.repo, params.pr_number, params.comment)
+            .comment_pr(
+                &params.owner,
+                &params.repo,
+                params.pr_number,
+                params.comment,
+            )
             .await
             .map_err(|e| Self::format_error("comment_pr", e))?;
 
@@ -215,7 +220,10 @@ impl GitHubHandler {
 
         let output = GitHubToolOutput {
             success: true,
-            message: format!("Clone URL for {}/{}: {}", params.owner, params.repo, clone_url),
+            message: format!(
+                "Clone URL for {}/{}: {}",
+                params.owner, params.repo, clone_url
+            ),
             data: Some(serde_json::json!({ "clone_url": clone_url })),
         };
         Ok(ToolOutput::Function {
@@ -263,7 +271,9 @@ impl GitHubHandler {
     fn format_error(operation: &str, error: GitHubError) -> FunctionCallError {
         let message = match error {
             GitHubError::Authentication(msg) => {
-                format!("GitHub authentication failed for {operation}: {msg}. Please check your PAT token.")
+                format!(
+                    "GitHub authentication failed for {operation}: {msg}. Please check your PAT token."
+                )
             }
             GitHubError::RateLimit { reset_at } => {
                 format!(
@@ -272,7 +282,10 @@ impl GitHubHandler {
                 )
             }
             GitHubError::Api { status, message } => {
-                format!("GitHub API error for {operation} (status {}): {message}", status)
+                format!(
+                    "GitHub API error for {operation} (status {}): {message}",
+                    status
+                )
             }
             _ => format!("GitHub error for {operation}: {error}"),
         };
@@ -303,7 +316,7 @@ impl ToolHandler for GitHubHandler {
             _ => {
                 return Err(FunctionCallError::RespondToModel(
                     "GitHub tools only support function calls".to_string(),
-                ))
+                ));
             }
         };
 

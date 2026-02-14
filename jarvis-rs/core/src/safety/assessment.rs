@@ -73,10 +73,8 @@ mod tests {
 
     #[test]
     fn test_unsafe_assessment() {
-        let assessment = SafetyAssessment::r#unsafe(
-            RiskLevel::High,
-            "Production code modification".to_string(),
-        );
+        let assessment =
+            SafetyAssessment::r#unsafe(RiskLevel::High, "Production code modification".to_string());
         assert!(!assessment.is_safe_to_execute_autonomously);
         assert_eq!(assessment.risk_level, RiskLevel::High);
         assert!(assessment.requires_human_approval);

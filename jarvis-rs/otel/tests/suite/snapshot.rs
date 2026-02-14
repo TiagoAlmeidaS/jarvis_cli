@@ -1,4 +1,4 @@
-﻿use crate::harness::attributes_to_map;
+use crate::harness::attributes_to_map;
 use crate::harness::find_metric;
 use jarvis_app_server_protocol::AuthMode;
 use jarvis_otel::OtelManager;
@@ -65,9 +65,10 @@ fn snapshot_collects_metrics_without_shutdown() -> Result<()> {
 #[test]
 fn manager_snapshot_metrics_collects_without_shutdown() -> Result<()> {
     let exporter = InMemoryMetricExporter::default();
-    let config = MetricsConfig::in_memory("test", "Jarvis-cli", env!("CARGO_PKG_VERSION"), exporter)
-        .with_tag("service", "Jarvis-cli")?
-        .with_runtime_reader();
+    let config =
+        MetricsConfig::in_memory("test", "Jarvis-cli", env!("CARGO_PKG_VERSION"), exporter)
+            .with_tag("service", "Jarvis-cli")?
+            .with_runtime_reader();
     let metrics = MetricsClient::new(config)?;
     let manager = OtelManager::new(
         ThreadId::new(),

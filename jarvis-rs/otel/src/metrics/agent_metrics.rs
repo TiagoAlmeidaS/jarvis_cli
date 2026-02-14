@@ -1,9 +1,9 @@
+use crate::OtelManager;
 use crate::metrics::names::AGENT_CONVERSATION_DURATION_METRIC;
 use crate::metrics::names::AGENT_DECISION_METRIC;
 use crate::metrics::names::AGENT_OPERATION_SUCCESS_RATE_METRIC;
 use crate::metrics::names::AGENT_TOOL_CHAIN_LENGTH_METRIC;
 use crate::metrics::names::AGENT_TOOL_PATTERN_METRIC;
-use crate::OtelManager;
 use std::time::Duration;
 
 /// Helper functions for recording agent-specific metrics.
@@ -20,12 +20,7 @@ impl OtelManager {
     ///
     /// This metric tracks the success rate of operations by type,
     /// helping identify problematic operations or tools.
-    pub fn record_operation_success_rate(
-        &self,
-        operation_type: &str,
-        success: bool,
-        count: i64,
-    ) {
+    pub fn record_operation_success_rate(&self, operation_type: &str, success: bool, count: i64) {
         let success_str = if success { "true" } else { "false" };
         self.counter(
             AGENT_OPERATION_SUCCESS_RATE_METRIC,

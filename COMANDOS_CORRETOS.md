@@ -59,7 +59,7 @@ Opções:
 ### Script Automático
 ```bash
 cd /e/projects/ia/jarvis_cli
-./RUN_JARVIS.sh
+./scripts/RUN_JARVIS.sh
 ```
 
 ### Comando Manual

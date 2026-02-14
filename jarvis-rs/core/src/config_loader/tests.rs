@@ -1,4 +1,4 @@
-﻿use super::LoaderOverrides;
+use super::LoaderOverrides;
 use super::load_config_layers_state;
 use crate::config::CONFIG_TOML_FILE;
 use crate::config::ConfigBuilder;
@@ -671,7 +671,10 @@ async fn project_layers_prefer_closest_cwd() -> std::io::Result<()> {
         })
         .collect();
     assert_eq!(project_layers.len(), 2);
-    assert_eq!(project_layers[0].as_path(), nested.join(".jarvis").as_path());
+    assert_eq!(
+        project_layers[0].as_path(),
+        nested.join(".jarvis").as_path()
+    );
     assert_eq!(
         project_layers[1].as_path(),
         project_root.join(".jarvis").as_path()
@@ -702,7 +705,11 @@ model_instructions_file = "root.txt"
     let nested_cfg = r#"
 model_instructions_file = "child.txt"
 "#;
-    tokio::fs::write(project_root.join(".jarvis").join(CONFIG_TOML_FILE), root_cfg).await?;
+    tokio::fs::write(
+        project_root.join(".jarvis").join(CONFIG_TOML_FILE),
+        root_cfg,
+    )
+    .await?;
     tokio::fs::write(nested.join(".jarvis").join(CONFIG_TOML_FILE), nested_cfg).await?;
     tokio::fs::write(
         project_root.join(".jarvis").join("root.txt"),
@@ -802,7 +809,9 @@ async fn project_layer_is_added_when_dot_codex_exists_without_config_toml() -> s
     assert_eq!(
         vec![&ConfigLayerEntry {
             name: super::ConfigLayerSource::Project {
-                dot_codex_folder: AbsolutePathBuf::from_absolute_path(project_root.join(".jarvis"))?,
+                dot_codex_folder: AbsolutePathBuf::from_absolute_path(
+                    project_root.join(".jarvis")
+                )?,
             },
             config: TomlValue::Table(toml::map::Map::new()),
             version: version_for_toml(&TomlValue::Table(toml::map::Map::new())),
@@ -1157,7 +1166,10 @@ async fn project_root_markers_supports_alternate_markers() -> std::io::Result<()
         })
         .collect();
     assert_eq!(project_layers.len(), 2);
-    assert_eq!(project_layers[0].as_path(), nested.join(".jarvis").as_path());
+    assert_eq!(
+        project_layers[0].as_path(),
+        nested.join(".jarvis").as_path()
+    );
     assert_eq!(
         project_layers[1].as_path(),
         project_root.join(".jarvis").as_path()

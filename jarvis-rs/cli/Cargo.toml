@@ -26,6 +26,9 @@ jarvis-arg0 = { workspace = true }
 jarvis-chatgpt = { workspace = true }
 jarvis-cloud-tasks = { path = "../cloud-tasks" }
 jarvis-common = { workspace = true, features = ["cli"] }
+jarvis-daemon-common = { workspace = true }
+chrono = { workspace = true }
+dirs = { workspace = true }
 jarvis-core = { workspace = true, features = ["integrations"] }
 jarvis-exec = { workspace = true }
 jarvis-execpolicy = { workspace = true }

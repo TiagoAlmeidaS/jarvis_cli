@@ -1,4 +1,4 @@
-﻿//! Overlay UIs rendered in an alternate screen.
+//! Overlay UIs rendered in an alternate screen.
 //!
 //! This module implements the pager-style overlays used by the TUI, including the transcript
 //! overlay (`Ctrl+T`) that renders a full history view separate from the main viewport.
@@ -771,9 +771,9 @@ fn render_offset_content(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use insta::assert_snapshot;
     use jarvis_core::protocol::ExecCommandSource;
     use jarvis_core::protocol::ReviewDecision;
-    use insta::assert_snapshot;
     use pretty_assertions::assert_eq;
     use std::collections::HashMap;
     use std::path::PathBuf;

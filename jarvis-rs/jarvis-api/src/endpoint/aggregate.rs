@@ -1,10 +1,10 @@
-﻿use crate::common::ResponseEvent;
+use crate::common::ResponseEvent;
 use crate::common::ResponseStream;
 use crate::error::ApiError;
+use futures::Stream;
 use jarvis_protocol::models::ContentItem;
 use jarvis_protocol::models::ReasoningItemContent;
 use jarvis_protocol::models::ResponseItem;
-use futures::Stream;
 use std::collections::VecDeque;
 use std::pin::Pin;
 use std::task::Context;

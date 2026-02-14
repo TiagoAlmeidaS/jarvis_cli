@@ -169,7 +169,11 @@ impl RagContextInjector {
 
         for (i, result) in relevant_results.iter().enumerate() {
             // Try to get the full document to retrieve chunk text
-            if let Ok(Some(doc)) = self.doc_store.get_document(&result.embedding.metadata.source).await {
+            if let Ok(Some(doc)) = self
+                .doc_store
+                .get_document(&result.embedding.metadata.source)
+                .await
+            {
                 // Find the chunk in the document
                 if let Some(chunk) = doc
                     .chunks

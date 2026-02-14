@@ -9,14 +9,14 @@ Guia completo de comandos para compilar e executar o Jarvis CLI com Databricks.
 ### Build + Run Automático (Release)
 ```bash
 cd /e/projects/ia/jarvis_cli
-chmod +x BUILD_AND_RUN_COMPLETE.sh
-./BUILD_AND_RUN_COMPLETE.sh
+chmod +x scripts/BUILD_AND_RUN_COMPLETE.sh
+./scripts/BUILD_AND_RUN_COMPLETE.sh
 ```
 
 ### Build + Run em Modo Debug (Compila mais rápido)
 ```bash
 cd /e/projects/ia/jarvis_cli
-./BUILD_AND_RUN_COMPLETE.sh debug
+./scripts/BUILD_AND_RUN_COMPLETE.sh debug
 ```
 
 ---
@@ -200,8 +200,8 @@ source /e/projects/ia/jarvis_cli/configure-credentials.sh
 
 | Script | Descrição |
 |--------|-----------|
-| `BUILD_AND_RUN_COMPLETE.sh` | Build + Config + Run (completo) |
-| `RUN_JARVIS.sh` | Apenas Run (assume build já feito) |
+| `scripts/BUILD_AND_RUN_COMPLETE.sh` | Build + Config + Run (completo) |
+| `scripts/RUN_JARVIS.sh` | Apenas Run (assume build já feito) |
 | `TEST_NOW.sh` | Teste rápido com release build |
 | `TEST_DATABRICKS_COMPLETE.sh` | Teste com provider + modelo |
 | `configure-credentials.sh` | Exporta variáveis de ambiente |
@@ -214,8 +214,8 @@ source /e/projects/ia/jarvis_cli/configure-credentials.sh
 ```bash
 # 1. Build completo
 cd /e/projects/ia/jarvis_cli
-chmod +x BUILD_AND_RUN_COMPLETE.sh
-./BUILD_AND_RUN_COMPLETE.sh
+chmod +x scripts/BUILD_AND_RUN_COMPLETE.sh
+./scripts/BUILD_AND_RUN_COMPLETE.sh
 
 # Aguardar compilação (~10-15 min)
 ```
@@ -223,7 +223,7 @@ chmod +x BUILD_AND_RUN_COMPLETE.sh
 ### Uso Diário (Sem mudanças no código)
 ```bash
 cd /e/projects/ia/jarvis_cli
-./RUN_JARVIS.sh
+./scripts/RUN_JARVIS.sh
 ```
 
 ### Desenvolvimento (Com mudanças no código)
@@ -234,7 +234,7 @@ cargo build --package jarvis-cli
 
 # Testar
 cd ..
-./RUN_JARVIS.sh
+./scripts/RUN_JARVIS.sh
 
 # Quando tudo funcionar, fazer build release:
 cd jarvis-rs
@@ -279,8 +279,8 @@ stat /e/projects/ia/jarvis_cli/jarvis-rs/target/release/jarvis.exe
 2. **Configure aliases** no `.bashrc`:
    ```bash
    alias jarvis-build="cd /e/projects/ia/jarvis_cli/jarvis-rs && cargo build --package jarvis-cli --release"
-   alias jarvis-run="cd /e/projects/ia/jarvis_cli && ./RUN_JARVIS.sh"
-   alias jarvis-all="cd /e/projects/ia/jarvis_cli && ./BUILD_AND_RUN_COMPLETE.sh"
+   alias jarvis-run="cd /e/projects/ia/jarvis_cli && ./scripts/RUN_JARVIS.sh"
+   alias jarvis-all="cd /e/projects/ia/jarvis_cli && ./scripts/BUILD_AND_RUN_COMPLETE.sh"
    ```
 3. **Use cargo check** antes de build completo (mais rápido)
 4. **Limpe target/** periodicamente para economizar espaço
@@ -302,12 +302,12 @@ Antes de executar, certifique-se:
 
 **Para primeira execução ou após mudanças no código:**
 ```bash
-cd /e/projects/ia/jarvis_cli && ./BUILD_AND_RUN_COMPLETE.sh
+cd /e/projects/ia/jarvis_cli && ./scripts/BUILD_AND_RUN_COMPLETE.sh
 ```
 
 **Para uso diário (build já feito):**
 ```bash
-cd /e/projects/ia/jarvis_cli && ./RUN_JARVIS.sh
+cd /e/projects/ia/jarvis_cli && ./scripts/RUN_JARVIS.sh
 ```
 
 **One-liner absoluto (tudo de uma vez):**

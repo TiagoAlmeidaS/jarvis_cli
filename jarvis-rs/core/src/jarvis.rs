@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt::Debug;
 use std::path::PathBuf;
@@ -39,6 +39,9 @@ use crate::user_notification::UserNotifier;
 use crate::util::error_or_panic;
 use async_channel::Receiver;
 use async_channel::Sender;
+use futures::future::BoxFuture;
+use futures::prelude::*;
+use futures::stream::FuturesOrdered;
 use jarvis_protocol::ThreadId;
 use jarvis_protocol::approvals::ExecPolicyAmendment;
 use jarvis_protocol::config_types::ModeKind;
@@ -69,9 +72,6 @@ use jarvis_protocol::request_user_input::RequestUserInputArgs;
 use jarvis_protocol::request_user_input::RequestUserInputResponse;
 use jarvis_rmcp_client::ElicitationResponse;
 use jarvis_rmcp_client::OAuthCredentialsStoreMode;
-use futures::future::BoxFuture;
-use futures::prelude::*;
-use futures::stream::FuturesOrdered;
 use rmcp::model::ListResourceTemplatesResult;
 use rmcp::model::ListResourcesResult;
 use rmcp::model::PaginatedRequestParam;
@@ -101,7 +101,6 @@ use crate::client::ModelClient;
 use crate::client::ModelClientSession;
 use crate::client_common::Prompt;
 use crate::client_common::ResponseEvent;
-use crate::jarvis_thread::ThreadConfigSnapshot;
 use crate::compact::collect_user_messages;
 use crate::config::Config;
 use crate::config::Constrained;
@@ -120,9 +119,10 @@ use crate::exec_policy::ExecPolicyUpdateError;
 use crate::feedback_tags;
 use crate::git_info::get_git_repo_root;
 use crate::instructions::UserInstructions;
-use crate::mcp::jarvis_APPS_MCP_SERVER_NAME;
+use crate::jarvis_thread::ThreadConfigSnapshot;
 use crate::mcp::auth::compute_auth_statuses;
 use crate::mcp::effective_mcp_servers;
+use crate::mcp::jarvis_APPS_MCP_SERVER_NAME;
 use crate::mcp::maybe_prompt_and_install_mcp_dependencies;
 use crate::mcp::with_codex_apps_mcp;
 use crate::mcp_connection_manager::McpConnectionManager;
@@ -213,8 +213,8 @@ use jarvis_protocol::models::DeveloperInstructions;
 use jarvis_protocol::models::ResponseInputItem;
 use jarvis_protocol::models::ResponseItem;
 use jarvis_protocol::openai_models::ReasoningEffort as ReasoningEffortConfig;
-use jarvis_protocol::protocol::JarvisErrorInfo;
 use jarvis_protocol::protocol::InitialHistory;
+use jarvis_protocol::protocol::JarvisErrorInfo;
 use jarvis_protocol::user_input::UserInput;
 use jarvis_utils_readiness::Readiness;
 use jarvis_utils_readiness::ReadinessFlag;
@@ -311,36 +311,39 @@ impl Jarvis {
 
         // Respect thread-start tools. When missing (resumed/forked threads), read from the db
         // first, then fall back to rollout-file tools.
-        let persisted_tools = if dynamic_tools.is_empty()
-            && config.features.enabled(Feature::Sqlite)
-        {
-            let thread_id = match &conversation_history {
-                InitialHistory::Resumed(resumed) => Some(resumed.conversation_id),
-                InitialHistory::Forked(_) => conversation_history.forked_from_id(),
-                InitialHistory::New => None,
-            };
-            match thread_id {
-                Some(thread_id) => {
-                    #[cfg(feature = "state")]
-                    {
-                        let state_db_ctx = state_db::open_if_present(
-                            config.jarvis_home.as_path(),
-                            config.model_provider_id.as_str(),
-                        )
-                        .await;
-                        state_db::get_dynamic_tools(state_db_ctx.as_deref(), thread_id, "jarvis_spawn")
+        let persisted_tools =
+            if dynamic_tools.is_empty() && config.features.enabled(Feature::Sqlite) {
+                let thread_id = match &conversation_history {
+                    InitialHistory::Resumed(resumed) => Some(resumed.conversation_id),
+                    InitialHistory::Forked(_) => conversation_history.forked_from_id(),
+                    InitialHistory::New => None,
+                };
+                match thread_id {
+                    Some(thread_id) => {
+                        #[cfg(feature = "state")]
+                        {
+                            let state_db_ctx = state_db::open_if_present(
+                                config.jarvis_home.as_path(),
+                                config.model_provider_id.as_str(),
+                            )
+                            .await;
+                            state_db::get_dynamic_tools(
+                                state_db_ctx.as_deref(),
+                                thread_id,
+                                "jarvis_spawn",
+                            )
                             .await
+                        }
+                        #[cfg(not(feature = "state"))]
+                        {
+                            None
+                        }
                     }
-                    #[cfg(not(feature = "state"))]
-                    {
-                        None
-                    }
+                    None => None,
                 }
-                None => None,
-            }
-        } else {
-            None
-        };
+            } else {
+                None
+            };
         let dynamic_tools = if dynamic_tools.is_empty() {
             persisted_tools
                 .or_else(|| conversation_history.get_dynamic_tools())
@@ -976,15 +979,18 @@ impl Session {
                 otel_manager.clone(),
             );
         }
-        let thread_name =
-            match session_index::find_thread_name_by_id(&config.jarvis_home, &conversation_id).await
-            {
-                Ok(name) => name,
-                Err(err) => {
-                    warn!("Failed to read session index for thread name: {err}");
-                    None
-                }
-            };
+        let thread_name = match session_index::find_thread_name_by_id(
+            &config.jarvis_home,
+            &conversation_id,
+        )
+        .await
+        {
+            Ok(name) => name,
+            Err(err) => {
+                warn!("Failed to read session index for thread name: {err}");
+                None
+            }
+        };
         session_configuration.thread_name = thread_name.clone();
         let state = SessionState::new(session_configuration.clone());
 
@@ -2620,10 +2626,10 @@ async fn submission_loop(sess: Arc<Session>, config: Arc<Config>, rx_sub: Receiv
 
 /// Operation handlers
 mod handlers {
+    use super::SessionSettingsUpdate;
+    use super::spawn_review_thread;
     use crate::Session;
     use crate::TurnContext;
-    use super::spawn_review_thread;
-    use super::SessionSettingsUpdate;
     use crate::config::Config;
 
     use crate::mcp::auth::compute_auth_statuses;
@@ -2636,10 +2642,10 @@ mod handlers {
     use crate::tasks::UndoTask;
     use crate::tasks::UserShellCommandTask;
     use jarvis_protocol::custom_prompts::CustomPrompt;
-    use jarvis_protocol::protocol::JarvisErrorInfo;
     use jarvis_protocol::protocol::ErrorEvent;
     use jarvis_protocol::protocol::Event;
     use jarvis_protocol::protocol::EventMsg;
+    use jarvis_protocol::protocol::JarvisErrorInfo;
     use jarvis_protocol::protocol::ListCustomPromptsResponseEvent;
     use jarvis_protocol::protocol::ListRemoteSkillsResponseEvent;
     use jarvis_protocol::protocol::ListSkillsResponseEvent;
@@ -4655,9 +4661,9 @@ pub fn get_last_assistant_message_from_turn(responses: &[ResponseItem]) -> Optio
 }
 
 #[cfg(test)]
-pub use tests::make_session_and_context_with_rx;
-#[cfg(test)]
 pub use tests::make_session_and_context;
+#[cfg(test)]
+pub use tests::make_session_and_context_with_rx;
 
 #[cfg(test)]
 mod tests {

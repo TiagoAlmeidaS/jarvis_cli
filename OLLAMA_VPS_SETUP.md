@@ -44,7 +44,7 @@ ssh user@your-vps-ip
 
 **Na máquina local:**
 ```bash
-scp setup-ollama-vps.sh user@your-vps-ip:/tmp/
+scp scripts/setup-ollama-vps.sh user@your-vps-ip:/tmp/
 ```
 
 **Ou criar manualmente na VPS:**
@@ -88,8 +88,8 @@ O script mostrará algo como:
 
 ```bash
 cd /e/projects/ia/jarvis_cli
-chmod +x configure-ollama-remote.sh
-./configure-ollama-remote.sh
+chmod +x scripts/configure-ollama-remote.sh
+./scripts/configure-ollama-remote.sh
 ```
 
 O script vai pedir o IP Tailscale da VPS.
@@ -328,7 +328,7 @@ sudo journalctl -u ollama -f
 
 ```bash
 # Configurar
-./configure-ollama-remote.sh
+./scripts/configure-ollama-remote.sh
 
 # Testar conexão
 curl http://100.x.x.x:11434/api/tags

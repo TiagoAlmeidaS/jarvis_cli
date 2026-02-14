@@ -56,8 +56,7 @@ impl StateRuntime {
     pub async fn init(
         jarvis_home: PathBuf,
         default_provider: String,
-        #[cfg(feature = "otel")]
-        otel: Option<OtelManager>,
+        #[cfg(feature = "otel")] otel: Option<OtelManager>,
     ) -> anyhow::Result<Arc<Self>> {
         tokio::fs::create_dir_all(&jarvis_home).await?;
         remove_legacy_state_files(&jarvis_home).await;
@@ -67,10 +66,10 @@ impl StateRuntime {
             Ok(db) => Arc::new(db),
             Err(err) => {
                 warn!("failed to open state db at {}: {err}", state_path.display());
-            #[cfg(feature = "otel")]
-            if let Some(otel) = otel.as_ref() {
-                otel.counter(METRIC_DB_INIT, 1, &[("status", "open_error")]);
-            }
+                #[cfg(feature = "otel")]
+                if let Some(otel) = otel.as_ref() {
+                    otel.counter(METRIC_DB_INIT, 1, &[("status", "open_error")]);
+                }
                 return Err(err);
             }
         };
@@ -588,8 +587,7 @@ ON CONFLICT(thread_id, position) DO NOTHING
         &self,
         builder: &ThreadMetadataBuilder,
         items: &[RolloutItem],
-        #[cfg(feature = "otel")]
-        otel: Option<&jarvis_otel::OtelManager>,
+        #[cfg(feature = "otel")] otel: Option<&jarvis_otel::OtelManager>,
     ) -> anyhow::Result<()> {
         if items.is_empty() {
             return Ok(());

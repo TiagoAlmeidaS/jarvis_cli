@@ -2,11 +2,15 @@
 # ============================================================================
 # Build Script for Jarvis CLI
 # ============================================================================
-# Usage: ./build-jarvis.sh [release|debug]
+# Usage: ./scripts/build-jarvis.sh [release|debug]
 # Default: debug
 # ============================================================================
 
 set -e  # Exit on error
+
+# Navegar para a raiz do projeto (pai do diretório scripts/)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
 BUILD_TYPE="${1:-debug}"
 
@@ -25,7 +29,7 @@ NC='\033[0m' # No Color
 # Verificar se estamos no diretório correto
 if [ ! -d "jarvis-rs" ]; then
     echo -e "${RED}❌ Erro: Diretório jarvis-rs não encontrado!${NC}"
-    echo -e "${YELLOW}Execute este script da raiz do projeto${NC}"
+    echo -e "${YELLOW}Verifique que o script está dentro da pasta scripts/ do projeto${NC}"
     exit 1
 fi
 
@@ -83,7 +87,7 @@ if [ -f "jarvis-rs/$BINARY_PATH" ]; then
     echo -e "${GREEN}⏱️  Tempo:${NC} ${MINUTES}m ${SECONDS}s"
     echo ""
     echo -e "${BLUE}Para executar:${NC}"
-    echo "  ./run-jarvis.sh"
+    echo "  ./scripts/run-jarvis.sh"
     echo ""
     echo -e "${BLUE}Ou manualmente:${NC}"
     echo "  export OLLAMA_BASE_URL=\"http://100.98.213.86:11434/v1\""

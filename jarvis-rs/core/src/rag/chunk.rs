@@ -97,7 +97,10 @@ impl TextChunker {
             chunks.push(chunk);
 
             // Move start position with overlap, ensuring progress
-            let overlap = self.config.chunk_overlap.min(chunk_text.saturating_sub(start));
+            let overlap = self
+                .config
+                .chunk_overlap
+                .min(chunk_text.saturating_sub(start));
             start = if chunk_text >= text.len() {
                 // Last chunk, we're done
                 text.len()

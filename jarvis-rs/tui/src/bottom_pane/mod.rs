@@ -1,4 +1,4 @@
-﻿//! The bottom pane is the interactive footer of the chat UI.
+//! The bottom pane is the interactive footer of the chat UI.
 //!
 //! The pane owns the [`ChatComposer`] (editable prompt input) and a stack of transient
 //! [`BottomPaneView`]s (popups/modals) that temporarily replace the composer for focused
@@ -27,13 +27,13 @@ use crate::render::renderable::Renderable;
 use crate::render::renderable::RenderableItem;
 use crate::tui::FrameRequester;
 use bottom_pane_view::BottomPaneView;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
 use jarvis_core::features::Features;
 use jarvis_core::skills::model::SkillMetadata;
 use jarvis_file_search::FileMatch;
 use jarvis_protocol::request_user_input::RequestUserInputEvent;
 use jarvis_protocol::user_input::TextElement;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyEvent;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use std::time::Duration;
@@ -879,10 +879,10 @@ impl Renderable for BottomPane {
 mod tests {
     use super::*;
     use crate::app_event::AppEvent;
-    use jarvis_core::protocol::Op;
-    use jarvis_protocol::protocol::SkillScope;
     use crossterm::event::KeyModifiers;
     use insta::assert_snapshot;
+    use jarvis_core::protocol::Op;
+    use jarvis_protocol::protocol::SkillScope;
     use ratatui::buffer::Buffer;
     use ratatui::layout::Rect;
     use std::cell::Cell;

@@ -1,8 +1,11 @@
-﻿use std::time::Duration;
+use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
+use futures::StreamExt;
+use http::HeaderMap;
+use http::StatusCode;
 use jarvis_api::AggregateStreamExt;
 use jarvis_api::AuthProvider;
 use jarvis_api::Provider;
@@ -16,9 +19,6 @@ use jarvis_client::StreamResponse;
 use jarvis_client::TransportError;
 use jarvis_protocol::models::ContentItem;
 use jarvis_protocol::models::ResponseItem;
-use futures::StreamExt;
-use http::HeaderMap;
-use http::StatusCode;
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 

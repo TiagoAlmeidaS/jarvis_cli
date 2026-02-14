@@ -1,4 +1,4 @@
-﻿use jarvis_app_server_protocol::AuthMode;
+use jarvis_app_server_protocol::AuthMode;
 use jarvis_common::CliConfigOverrides;
 use jarvis_core::JarvisAuth;
 use jarvis_core::auth::AuthCredentialsStoreMode;
@@ -13,10 +13,8 @@ use std::io::IsTerminal;
 use std::io::Read;
 use std::path::PathBuf;
 
-const GOOGLE_LOGIN_DISABLED_MESSAGE: &str =
-    "Google login is disabled. Use API key login instead.";
-const API_KEY_LOGIN_DISABLED_MESSAGE: &str =
-    "API key login is disabled. Use Google login instead.";
+const GOOGLE_LOGIN_DISABLED_MESSAGE: &str = "Google login is disabled. Use API key login instead.";
+const API_KEY_LOGIN_DISABLED_MESSAGE: &str = "API key login is disabled. Use Google login instead.";
 const LOGIN_SUCCESS_MESSAGE: &str = "Successfully logged in";
 
 fn print_login_server_start(actual_port: u16, auth_url: &str) {
@@ -217,7 +215,8 @@ pub async fn run_login_with_device_code_fallback_to_browser(
 pub async fn run_login_status(cli_config_overrides: CliConfigOverrides) -> ! {
     let config = load_config_or_exit(cli_config_overrides).await;
 
-    match JarvisAuth::from_auth_storage(&config.jarvis_home, config.cli_auth_credentials_store_mode) {
+    match JarvisAuth::from_auth_storage(&config.jarvis_home, config.cli_auth_credentials_store_mode)
+    {
         Ok(Some(auth)) => match auth.api_auth_mode() {
             AuthMode::ApiKey => match auth.get_token() {
                 Ok(api_key) => {

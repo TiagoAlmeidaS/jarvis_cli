@@ -1,4 +1,4 @@
-﻿#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)]
 use std::io;
 use std::net::SocketAddr;
 use std::net::TcpListener;
@@ -7,10 +7,10 @@ use std::time::Duration;
 
 use anyhow::Result;
 use base64::Engine;
+use core_test_support::skip_if_no_network;
 use jarvis_core::auth::AuthCredentialsStoreMode;
 use jarvis_login::ServerOptions;
 use jarvis_login::run_login_server;
-use core_test_support::skip_if_no_network;
 use tempfile::tempdir;
 
 // See spawn.rs for details

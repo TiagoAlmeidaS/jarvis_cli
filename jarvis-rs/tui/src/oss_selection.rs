@@ -1,11 +1,6 @@
-﻿use std::io;
+use std::io;
 use std::sync::LazyLock;
 
-use jarvis_core::DEFAULT_LMSTUDIO_PORT;
-use jarvis_core::DEFAULT_OLLAMA_PORT;
-use jarvis_core::LMSTUDIO_OSS_PROVIDER_ID;
-use jarvis_core::OLLAMA_OSS_PROVIDER_ID;
-use jarvis_core::config::set_default_oss_provider;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
@@ -16,6 +11,11 @@ use crossterm::terminal::EnterAlternateScreen;
 use crossterm::terminal::LeaveAlternateScreen;
 use crossterm::terminal::disable_raw_mode;
 use crossterm::terminal::enable_raw_mode;
+use jarvis_core::DEFAULT_LMSTUDIO_PORT;
+use jarvis_core::DEFAULT_OLLAMA_PORT;
+use jarvis_core::LMSTUDIO_OSS_PROVIDER_ID;
+use jarvis_core::OLLAMA_OSS_PROVIDER_ID;
+use jarvis_core::config::set_default_oss_provider;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::buffer::Buffer;

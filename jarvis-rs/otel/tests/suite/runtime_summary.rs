@@ -1,4 +1,5 @@
-﻿use jarvis_app_server_protocol::AuthMode;
+use eventsource_stream::Event as StreamEvent;
+use jarvis_app_server_protocol::AuthMode;
 use jarvis_otel::OtelManager;
 use jarvis_otel::RuntimeMetricTotals;
 use jarvis_otel::RuntimeMetricsSummary;
@@ -7,7 +8,6 @@ use jarvis_otel::metrics::MetricsConfig;
 use jarvis_otel::metrics::Result;
 use jarvis_protocol::ThreadId;
 use jarvis_protocol::protocol::SessionSource;
-use eventsource_stream::Event as StreamEvent;
 use opentelemetry_sdk::metrics::InMemoryMetricExporter;
 use pretty_assertions::assert_eq;
 use std::time::Duration;

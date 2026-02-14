@@ -170,11 +170,12 @@ impl RuleBasedIntentDetector {
             .find("crie uma")
             .or_else(|| input.to_lowercase().find("create a"))
         {
-            let desc_start = pos + if input[pos..].starts_with("crie uma") {
-                8
-            } else {
-                8
-            };
+            let desc_start = pos
+                + if input[pos..].starts_with("crie uma") {
+                    8
+                } else {
+                    8
+                };
             if desc_start < input.len() {
                 params.description = Some(input[desc_start..].trim().to_string());
             }
@@ -188,7 +189,14 @@ impl RuleBasedIntentDetector {
         let mut params = IntentParameters::default();
 
         // Try to extract skill name after "execute", "run", "use skill"
-        let patterns = ["execute", "executar", "run", "rode", "use skill", "usar skill"];
+        let patterns = [
+            "execute",
+            "executar",
+            "run",
+            "rode",
+            "use skill",
+            "usar skill",
+        ];
         for pattern in &patterns {
             if let Some(pos) = input.to_lowercase().find(pattern) {
                 let start = pos + pattern.len();

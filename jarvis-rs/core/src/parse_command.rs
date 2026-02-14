@@ -1,4 +1,4 @@
-﻿use crate::bash::extract_bash_command;
+use crate::bash::extract_bash_command;
 use crate::bash::try_parse_shell;
 use crate::bash::try_parse_word_only_commands_sequence;
 use crate::powershell::extract_powershell_command;
@@ -670,7 +670,8 @@ mod tests {
 
     #[test]
     fn supports_single_string_script_with_cd_and_pipe() {
-        let inner = r#"cd /Users/pakrym/code/Jarvis && rg -n "jarvis_api" Jarvis-rs -S | head -n 50"#;
+        let inner =
+            r#"cd /Users/pakrym/code/Jarvis && rg -n "jarvis_api" Jarvis-rs -S | head -n 50"#;
         assert_parsed(
             &vec_str(&["bash", "-lc", inner]),
             vec![ParsedCommand::Search {

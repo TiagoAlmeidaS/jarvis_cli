@@ -7,6 +7,8 @@ pub mod base;
 pub mod learning;
 pub mod persistent;
 
-pub use base::{Knowledge, KnowledgeBase, KnowledgeError, KnowledgeType, InMemoryKnowledgeBase};
-pub use learning::{Interaction, LearningPattern, LearningSystem, Outcome, PatternType, RuleBasedLearningSystem};
+pub use base::{InMemoryKnowledgeBase, Knowledge, KnowledgeBase, KnowledgeError, KnowledgeType};
+pub use learning::{
+    Interaction, LearningPattern, LearningSystem, Outcome, PatternType, RuleBasedLearningSystem,
+};
 pub use persistent::PersistentKnowledgeBase;

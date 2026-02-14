@@ -1,4 +1,4 @@
-﻿use std::pin::Pin;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use jarvis_protocol::config_types::ModeKind;
@@ -14,10 +14,10 @@ use crate::parse_turn_item;
 use crate::proposed_plan_parser::strip_proposed_plan_blocks;
 use crate::tools::parallel::ToolCallRuntime;
 use crate::tools::router::ToolRouter;
+use futures::Future;
 use jarvis_protocol::models::FunctionCallOutputPayload;
 use jarvis_protocol::models::ResponseInputItem;
 use jarvis_protocol::models::ResponseItem;
-use futures::Future;
 use tracing::debug;
 use tracing::instrument;
 

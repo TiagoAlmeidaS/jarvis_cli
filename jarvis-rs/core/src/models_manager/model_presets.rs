@@ -1,10 +1,10 @@
-﻿use crate::auth::AuthMode;
+use crate::auth::AuthMode;
+use indoc::indoc;
 use jarvis_protocol::openai_models::ModelPreset;
 use jarvis_protocol::openai_models::ModelUpgrade;
 use jarvis_protocol::openai_models::ReasoningEffort;
 use jarvis_protocol::openai_models::ReasoningEffortPreset;
 use jarvis_protocol::openai_models::default_input_modalities;
-use indoc::indoc;
 use once_cell::sync::Lazy;
 
 pub const HIDE_GPT5_1_MIGRATION_PROMPT_CONFIG: &str = "hide_gpt5_1_migration_prompt";

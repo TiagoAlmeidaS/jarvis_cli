@@ -1,4 +1,4 @@
-﻿use crate::bespoke_event_handling::apply_bespoke_event_handling;
+use crate::bespoke_event_handling::apply_bespoke_event_handling;
 use crate::error_code::INTERNAL_ERROR_CODE;
 use crate::error_code::INVALID_REQUEST_ERROR_CODE;
 use crate::fuzzy_file_search::run_fuzzy_file_search;
@@ -141,10 +141,10 @@ use jarvis_app_server_protocol::build_turns_from_event_msgs;
 use jarvis_backend_client::Client as BackendClient;
 use jarvis_chatgpt::connectors;
 use jarvis_core::AuthManager;
-use jarvis_core::JarvisAuth;
-use jarvis_core::JarvisThread;
 use jarvis_core::Cursor as RolloutCursor;
 use jarvis_core::InitialHistory;
+use jarvis_core::JarvisAuth;
+use jarvis_core::JarvisThread;
 use jarvis_core::NewThread;
 use jarvis_core::RolloutRecorder;
 use jarvis_core::SessionMeta;
@@ -1815,29 +1815,32 @@ impl CodexMessageProcessor {
             }
         };
 
-        let rollout_path =
-            match find_thread_path_by_id_str(&self.config.jarvis_home, &thread_id.to_string()).await
-            {
-                Ok(Some(p)) => p,
-                Ok(None) => {
-                    let error = JSONRPCErrorError {
-                        code: INVALID_REQUEST_ERROR_CODE,
-                        message: format!("no rollout found for thread id {thread_id}"),
-                        data: None,
-                    };
-                    self.outgoing.send_error(request_id, error).await;
-                    return;
-                }
-                Err(err) => {
-                    let error = JSONRPCErrorError {
-                        code: INVALID_REQUEST_ERROR_CODE,
-                        message: format!("failed to locate thread id {thread_id}: {err}"),
-                        data: None,
-                    };
-                    self.outgoing.send_error(request_id, error).await;
-                    return;
-                }
-            };
+        let rollout_path = match find_thread_path_by_id_str(
+            &self.config.jarvis_home,
+            &thread_id.to_string(),
+        )
+        .await
+        {
+            Ok(Some(p)) => p,
+            Ok(None) => {
+                let error = JSONRPCErrorError {
+                    code: INVALID_REQUEST_ERROR_CODE,
+                    message: format!("no rollout found for thread id {thread_id}"),
+                    data: None,
+                };
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+            Err(err) => {
+                let error = JSONRPCErrorError {
+                    code: INVALID_REQUEST_ERROR_CODE,
+                    message: format!("failed to locate thread id {thread_id}: {err}"),
+                    data: None,
+                };
+                self.outgoing.send_error(request_id, error).await;
+                return;
+            }
+        };
 
         match self.archive_thread_common(thread_id, &rollout_path).await {
             Ok(()) => {

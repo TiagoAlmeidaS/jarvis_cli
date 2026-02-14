@@ -1,4 +1,4 @@
-﻿use jarvis_otel::metrics::MetricsClient;
+use jarvis_otel::metrics::MetricsClient;
 use jarvis_otel::metrics::MetricsConfig;
 use jarvis_otel::metrics::MetricsError;
 use jarvis_otel::metrics::Result;
@@ -6,7 +6,8 @@ use opentelemetry_sdk::metrics::InMemoryMetricExporter;
 
 fn build_in_memory_client() -> Result<MetricsClient> {
     let exporter = InMemoryMetricExporter::default();
-    let config = MetricsConfig::in_memory("test", "Jarvis-cli", env!("CARGO_PKG_VERSION"), exporter);
+    let config =
+        MetricsConfig::in_memory("test", "Jarvis-cli", env!("CARGO_PKG_VERSION"), exporter);
     MetricsClient::new(config)
 }
 

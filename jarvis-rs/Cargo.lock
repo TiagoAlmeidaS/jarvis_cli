@@ -3970,8 +3970,10 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "assert_matches",
+ "chrono",
  "clap",
  "clap_complete",
+ "dirs",
  "jarvis-app-server",
  "jarvis-app-server-protocol",
  "jarvis-app-server-test-client",
@@ -3980,6 +3982,7 @@ dependencies = [
  "jarvis-cloud-tasks",
  "jarvis-common",
  "jarvis-core",
+ "jarvis-daemon-common",
  "jarvis-exec",
  "jarvis-execpolicy",
  "jarvis-login",
@@ -4218,6 +4221,51 @@ dependencies = [
  "wiremock",
  "zip",
  "zstd",
+]
+
+[[package]]
+name = "jarvis-daemon"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "clap",
+ "dirs",
+ "hex",
+ "jarvis-daemon-common",
+ "pretty_assertions",
+ "regex-lite",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tracing-subscriber",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
+name = "jarvis-daemon-common"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "hex",
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "sha2",
+ "sqlx",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

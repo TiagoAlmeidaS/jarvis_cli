@@ -3,16 +3,16 @@
 // Provides database connectivity and repository pattern implementation
 // for persistent storage of users, conversations, messages, and more.
 
-mod database;
-mod repository;
-mod models;
-mod user_repository;
 mod conversation_repository;
+mod database;
 mod migrations;
+mod models;
+mod repository;
+mod user_repository;
 
-pub use database::Database;
-pub use repository::Repository;
-pub use models::{User, Conversation, Message};
-pub use user_repository::UserRepository;
 pub use conversation_repository::ConversationRepository;
+pub use database::Database;
 pub use migrations::Migrator;
+pub use models::{Conversation, Message, User};
+pub use repository::Repository;
+pub use user_repository::UserRepository;

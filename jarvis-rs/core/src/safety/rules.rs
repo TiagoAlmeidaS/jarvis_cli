@@ -59,10 +59,7 @@ impl SafetyRules {
 
     /// Gets risk threshold for a category.
     pub fn get_risk_threshold(&self, category: &str) -> f32 {
-        self.risk_thresholds
-            .get(category)
-            .copied()
-            .unwrap_or(0.7)
+        self.risk_thresholds.get(category).copied().unwrap_or(0.7)
     }
 }
 

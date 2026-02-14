@@ -1,4 +1,4 @@
-﻿use crate::config::Config;
+use crate::config::Config;
 use crate::protocol::SandboxPolicy;
 use jarvis_protocol::openai_models::ReasoningEffort;
 use serde::Deserialize;
@@ -249,10 +249,7 @@ mod tests {
 
         assert!(config.base_instructions.is_some());
         assert_ne!(config.base_instructions, original_instructions);
-        assert_eq!(
-            config.base_instructions.as_ref().unwrap(),
-            PLANNER_PROMPT
-        );
+        assert_eq!(config.base_instructions.as_ref().unwrap(), PLANNER_PROMPT);
     }
 
     #[test]
@@ -266,10 +263,7 @@ mod tests {
 
         assert!(config.base_instructions.is_some());
         assert_ne!(config.base_instructions, original_instructions);
-        assert_eq!(
-            config.base_instructions.as_ref().unwrap(),
-            DEVELOPER_PROMPT
-        );
+        assert_eq!(config.base_instructions.as_ref().unwrap(), DEVELOPER_PROMPT);
     }
 
     #[test]
@@ -283,10 +277,7 @@ mod tests {
 
         assert!(config.base_instructions.is_some());
         assert_ne!(config.base_instructions, original_instructions);
-        assert_eq!(
-            config.base_instructions.as_ref().unwrap(),
-            REVIEWER_PROMPT
-        );
+        assert_eq!(config.base_instructions.as_ref().unwrap(), REVIEWER_PROMPT);
     }
 
     #[test]

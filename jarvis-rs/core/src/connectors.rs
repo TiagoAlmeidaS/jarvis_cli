@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 
@@ -11,8 +11,8 @@ use crate::AuthManager;
 use crate::SandboxState;
 use crate::config::Config;
 use crate::features::Feature;
-use crate::mcp::jarvis_APPS_MCP_SERVER_NAME;
 use crate::mcp::auth::compute_auth_statuses;
+use crate::mcp::jarvis_APPS_MCP_SERVER_NAME;
 use crate::mcp::with_codex_apps_mcp;
 use crate::mcp_connection_manager::DEFAULT_STARTUP_TIMEOUT;
 use crate::mcp_connection_manager::McpConnectionManager;

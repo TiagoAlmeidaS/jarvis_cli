@@ -1,4 +1,4 @@
-﻿use jarvis_core::AuthManager;
+use jarvis_core::AuthManager;
 use std::path::Path;
 use std::sync::LazyLock;
 use std::sync::RwLock;
@@ -23,8 +23,11 @@ pub async fn init_chatgpt_token_from_auth(
     jarvis_home: &Path,
     auth_credentials_store_mode: AuthCredentialsStoreMode,
 ) -> std::io::Result<()> {
-    let auth_manager =
-        AuthManager::new(jarvis_home.to_path_buf(), false, auth_credentials_store_mode);
+    let auth_manager = AuthManager::new(
+        jarvis_home.to_path_buf(),
+        false,
+        auth_credentials_store_mode,
+    );
     if let Some(auth) = auth_manager.auth().await {
         let token_data = auth.get_token_data()?;
         set_chatgpt_token_data(token_data);

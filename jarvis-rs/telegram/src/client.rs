@@ -16,16 +16,14 @@ impl TelegramClient {
     }
 
     pub async fn send_message(&self, message: OutgoingMessage) -> anyhow::Result<MessageId> {
-        let url = format!("https://api.telegram.org/bot{}/sendMessage", self.config.bot_token);
+        let url = format!(
+            "https://api.telegram.org/bot{}/sendMessage",
+            self.config.bot_token
+        );
 
         let payload = self.build_message_payload(&message)?;
 
-        let response = self
-            .client
-            .post(&url)
-            .json(&payload)
-            .send()
-            .await?;
+        let response = self.client.post(&url).json(&payload).send().await?;
 
         if !response.status().is_success() {
             let status = response.status();

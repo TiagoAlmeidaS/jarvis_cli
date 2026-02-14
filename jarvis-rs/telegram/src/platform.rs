@@ -31,10 +31,7 @@ impl MessagingPlatform for TelegramPlatform {
         Ok(Vec::new())
     }
 
-    async fn start_webhook_server(
-        &self,
-        handler: Box<dyn MessageHandler>,
-    ) -> anyhow::Result<()> {
+    async fn start_webhook_server(&self, handler: Box<dyn MessageHandler>) -> anyhow::Result<()> {
         use crate::webhook::TelegramWebhookServer;
         let server = TelegramWebhookServer::new(handler, self.config.clone());
         server.start().await

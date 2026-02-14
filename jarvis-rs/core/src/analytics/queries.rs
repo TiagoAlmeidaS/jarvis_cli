@@ -14,7 +14,11 @@ impl AnalyticsQueries {
     }
 
     /// Get slow commands (avg execution time > threshold_ms)
-    pub async fn get_slow_commands(&self, threshold_ms: i32, limit: i32) -> Result<Vec<CommandMetrics>> {
+    pub async fn get_slow_commands(
+        &self,
+        threshold_ms: i32,
+        limit: i32,
+    ) -> Result<Vec<CommandMetrics>> {
         let mut client = self.db.get_client().await?;
 
         let query = format!(
@@ -47,7 +51,11 @@ impl AnalyticsQueries {
     }
 
     /// Get commands with low success rate
-    pub async fn get_unreliable_commands(&self, min_executions: i32, limit: i32) -> Result<Vec<CommandMetrics>> {
+    pub async fn get_unreliable_commands(
+        &self,
+        min_executions: i32,
+        limit: i32,
+    ) -> Result<Vec<CommandMetrics>> {
         let mut client = self.db.get_client().await?;
 
         let query = format!(
@@ -80,7 +88,11 @@ impl AnalyticsQueries {
     }
 
     /// Get frequent errors
-    pub async fn get_frequent_errors(&self, min_occurrences: i32, limit: i32) -> Result<Vec<ErrorMetrics>> {
+    pub async fn get_frequent_errors(
+        &self,
+        min_occurrences: i32,
+        limit: i32,
+    ) -> Result<Vec<ErrorMetrics>> {
         let mut client = self.db.get_client().await?;
 
         let query = format!(

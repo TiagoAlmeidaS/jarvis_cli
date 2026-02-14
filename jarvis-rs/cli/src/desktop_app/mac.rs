@@ -1,4 +1,4 @@
-﻿use anyhow::Context as _;
+use anyhow::Context as _;
 use std::path::Path;
 use std::path::PathBuf;
 use tempfile::Builder;
@@ -66,7 +66,9 @@ async fn open_jarvis_app(app_path: &Path, workspace: &Path) -> anyhow::Result<()
     );
 }
 
-async fn download_and_install_jarvis_to_user_applications(dmg_url: &str) -> anyhow::Result<PathBuf> {
+async fn download_and_install_jarvis_to_user_applications(
+    dmg_url: &str,
+) -> anyhow::Result<PathBuf> {
     let temp_dir = Builder::new()
         .prefix("Jarvis-app-installer-")
         .tempdir()

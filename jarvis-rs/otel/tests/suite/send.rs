@@ -1,4 +1,4 @@
-﻿use crate::harness::attributes_to_map;
+use crate::harness::attributes_to_map;
 use crate::harness::build_metrics_with_defaults;
 use crate::harness::find_metric;
 use crate::harness::histogram_data;
@@ -48,16 +48,16 @@ fn send_builds_payload_with_tags_and_histograms() -> Result<()> {
     assert_eq!(count, 1);
 
     let histogram_attrs = attributes_to_map(
-        match find_metric(&resource_metrics, "Jarvis.tool_latency").and_then(|metric| {
-            match metric.data() {
-                opentelemetry_sdk::metrics::data::AggregatedMetrics::F64(
-                    opentelemetry_sdk::metrics::data::MetricData::Histogram(histogram),
-                ) => histogram
-                    .data_points()
-                    .next()
-                    .map(opentelemetry_sdk::metrics::data::HistogramDataPoint::attributes),
-                _ => None,
-            }
+        match find_metric(&resource_metrics, "Jarvis.tool_latency").and_then(|metric| match metric
+            .data()
+        {
+            opentelemetry_sdk::metrics::data::AggregatedMetrics::F64(
+                opentelemetry_sdk::metrics::data::MetricData::Histogram(histogram),
+            ) => histogram
+                .data_points()
+                .next()
+                .map(opentelemetry_sdk::metrics::data::HistogramDataPoint::attributes),
+            _ => None,
         }) {
             Some(attrs) => attrs,
             None => panic!("histogram attributes missing"),

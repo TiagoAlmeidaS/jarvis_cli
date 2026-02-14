@@ -45,7 +45,12 @@ pub trait DocumentIndexer: Send + Sync {
     async fn index_document(&self, path: &Path) -> Result<IndexedDocument>;
 
     /// Indexes text content directly.
-    async fn index_text(&self, text: &str, source: &str, metadata: Option<DocumentMetadata>) -> Result<IndexedDocument>;
+    async fn index_text(
+        &self,
+        text: &str,
+        source: &str,
+        metadata: Option<DocumentMetadata>,
+    ) -> Result<IndexedDocument>;
 
     /// Gets an indexed document by ID.
     async fn get_document(&self, id: &str) -> Result<Option<IndexedDocument>>;
@@ -116,11 +121,11 @@ impl DocumentIndexer for InMemoryDocumentIndexer {
     async fn index_document(&self, path: &Path) -> Result<IndexedDocument> {
         // Read file content
         let content = tokio::fs::read_to_string(path).await?;
-        
+
         // Extract metadata
         let doc_type = self.detect_doc_type(path);
         let title = self.extract_title(&content, path);
-        
+
         let metadata = DocumentMetadata {
             doc_type: doc_type.clone(),
             language: doc_type,
@@ -129,13 +134,19 @@ impl DocumentIndexer for InMemoryDocumentIndexer {
         };
 
         // Index as text
-        self.index_text(&content, &path.to_string_lossy(), Some(metadata)).await
+        self.index_text(&content, &path.to_string_lossy(), Some(metadata))
+            .await
     }
 
-    async fn index_text(&self, text: &str, source: &str, metadata: Option<DocumentMetadata>) -> Result<IndexedDocument> {
+    async fn index_text(
+        &self,
+        text: &str,
+        source: &str,
+        metadata: Option<DocumentMetadata>,
+    ) -> Result<IndexedDocument> {
         let doc_id = format!("doc-{}", uuid::Uuid::new_v4());
         let path = PathBuf::from(source);
-        
+
         let title = metadata
             .as_ref()
             .and_then(|m| Some("Document".to_string()))
@@ -155,7 +166,10 @@ impl DocumentIndexer for InMemoryDocumentIndexer {
             .map(|mut chunk| {
                 chunk.metadata.title = Some(title.clone());
                 chunk.metadata.language = metadata.as_ref().and_then(|m| m.language.clone());
-                chunk.metadata.tags = metadata.as_ref().map(|m| m.tags.clone()).unwrap_or_default();
+                chunk.metadata.tags = metadata
+                    .as_ref()
+                    .map(|m| m.tags.clone())
+                    .unwrap_or_default();
                 chunk
             })
             .collect();
@@ -207,9 +221,9 @@ mod tests {
     async fn test_index_text() {
         let indexer = InMemoryDocumentIndexer::default();
         let text = "This is a test document. ".repeat(50);
-        
+
         let doc = indexer.index_text(&text, "test.txt", None).await.unwrap();
-        
+
         assert!(!doc.id.is_empty());
         assert!(!doc.chunks.is_empty());
     }
@@ -219,11 +233,11 @@ mod tests {
         let indexer = InMemoryDocumentIndexer::default();
         let temp_dir = TempDir::new().unwrap();
         let file_path = temp_dir.path().join("test.md");
-        
+
         fs::write(&file_path, "# Test Document\n\nThis is a test.").unwrap();
-        
+
         let doc = indexer.index_document(&file_path).await.unwrap();
-        
+
         assert_eq!(doc.title, "Test Document");
         assert!(!doc.chunks.is_empty());
     }
@@ -232,10 +246,10 @@ mod tests {
     async fn test_get_document() {
         let indexer = InMemoryDocumentIndexer::default();
         let text = "Test content";
-        
+
         let doc = indexer.index_text(text, "test.txt", None).await.unwrap();
         let retrieved = indexer.get_document(&doc.id).await.unwrap();
-        
+
         assert!(retrieved.is_some());
         assert_eq!(retrieved.unwrap().id, doc.id);
     }

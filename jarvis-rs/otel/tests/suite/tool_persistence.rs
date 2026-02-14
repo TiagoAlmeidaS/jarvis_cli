@@ -1,8 +1,8 @@
 use crate::harness::build_metrics_with_defaults;
-use jarvis_protocol::protocol::SessionSource;
-use jarvis_protocol::ThreadId;
 use jarvis_otel::OtelManager;
 use jarvis_otel::metrics::MetricsClient;
+use jarvis_protocol::ThreadId;
+use jarvis_protocol::protocol::SessionSource;
 use jarvis_state::StateRuntime;
 use jarvis_state::ToolOperationBuilder;
 use pretty_assertions::assert_eq;

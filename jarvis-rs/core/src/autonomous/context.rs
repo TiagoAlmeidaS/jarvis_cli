@@ -37,7 +37,11 @@ pub struct Entity {
 #[async_trait::async_trait]
 pub trait ContextAnalyzer: Send + Sync {
     /// Analyzes context from user input and current state.
-    async fn analyze(&self, input: &str, current_state: &HashMap<String, String>) -> Result<AnalyzedContext, ContextAnalysisError>;
+    async fn analyze(
+        &self,
+        input: &str,
+        current_state: &HashMap<String, String>,
+    ) -> Result<AnalyzedContext, ContextAnalysisError>;
 }
 
 /// Error types for context analysis.
@@ -72,7 +76,10 @@ impl RuleBasedContextAnalyzer {
             if input_lower.contains(pattern) {
                 // Simple extraction - in production, use proper parsing
                 if let Some(start) = input_lower.find(pattern) {
-                    let file_name = input[..start + pattern.len()].split_whitespace().last().unwrap_or("");
+                    let file_name = input[..start + pattern.len()]
+                        .split_whitespace()
+                        .last()
+                        .unwrap_or("");
                     if !file_name.is_empty() {
                         entities.push(Entity {
                             entity_type: "file".to_string(),
@@ -85,7 +92,10 @@ impl RuleBasedContextAnalyzer {
         }
 
         // Extract function/method references
-        if input_lower.contains("function") || input_lower.contains("fn ") || input_lower.contains("def ") {
+        if input_lower.contains("function")
+            || input_lower.contains("fn ")
+            || input_lower.contains("def ")
+        {
             entities.push(Entity {
                 entity_type: "function".to_string(),
                 value: "function".to_string(),
@@ -183,7 +193,9 @@ impl ContextAnalyzer for RuleBasedContextAnalyzer {
         current_state: &HashMap<String, String>,
     ) -> Result<AnalyzedContext, ContextAnalysisError> {
         if input.trim().is_empty() {
-            return Err(ContextAnalysisError::InvalidInput("Empty input".to_string()));
+            return Err(ContextAnalysisError::InvalidInput(
+                "Empty input".to_string(),
+            ));
         }
 
         let entities = self.extract_entities(input);

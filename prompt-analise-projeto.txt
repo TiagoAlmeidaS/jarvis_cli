@@ -1,0 +1,18 @@
+Por favor, analise este projeto Jarvis CLI:
+
+1. Leia os seguintes arquivos principais:
+   - README.md (raiz do projeto)
+   - jarvis-rs/README.md
+   - jarvis-rs/Cargo.toml
+   - jarvis-rs/cli/Cargo.toml
+   - jarvis-rs/cli/src/main.rs
+
+2. Depois de ler, me explique:
+   - Qual é o propósito deste projeto?
+   - Qual a arquitetura principal?
+   - Quais são os principais componentes?
+   - Como ele funciona?
+   - Quais tecnologias usa?
+
+Use as ferramentas Read, Glob e Grep para explorar o código-fonte.
+Não faça busca na web - use apenas os arquivos locais.

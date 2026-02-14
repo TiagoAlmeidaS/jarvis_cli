@@ -1,11 +1,11 @@
-﻿use std::path::PathBuf;
+use std::path::PathBuf;
 
-use jarvis_core::config::set_project_trust_level;
-use jarvis_core::git_info::resolve_root_git_project_for_trust;
-use jarvis_protocol::config_types::TrustLevel;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
+use jarvis_core::config::set_project_trust_level;
+use jarvis_core::git_info::resolve_root_git_project_for_trust;
+use jarvis_protocol::config_types::TrustLevel;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Stylize;

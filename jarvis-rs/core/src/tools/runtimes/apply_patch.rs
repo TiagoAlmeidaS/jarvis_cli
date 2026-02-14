@@ -1,11 +1,11 @@
-﻿//! Apply Patch runtime: executes verified patches under the orchestrator.
+//! Apply Patch runtime: executes verified patches under the orchestrator.
 //!
 //! Assumes `apply_patch` verification/approval happened upstream. Reuses that
 //! decision to avoid re-prompting, builds the self-invocation command for
 //! `Jarvis --Jarvis-run-as-apply-patch`, and runs under the current
 //! `SandboxAttempt` with a minimal environment.
-use crate::jarvis_APPLY_PATCH_ARG1;
 use crate::exec::ExecToolCallOutput;
+use crate::jarvis_APPLY_PATCH_ARG1;
 use crate::sandboxing::CommandSpec;
 use crate::sandboxing::SandboxPermissions;
 use crate::sandboxing::execute_env;
@@ -19,12 +19,12 @@ use crate::tools::sandboxing::ToolCtx;
 use crate::tools::sandboxing::ToolError;
 use crate::tools::sandboxing::ToolRuntime;
 use crate::tools::sandboxing::with_cached_approval;
+use futures::future::BoxFuture;
 use jarvis_apply_patch::ApplyPatchAction;
 use jarvis_protocol::protocol::AskForApproval;
 use jarvis_protocol::protocol::FileChange;
 use jarvis_protocol::protocol::ReviewDecision;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use futures::future::BoxFuture;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
@@ -57,7 +57,10 @@ impl ApplyPatchRuntime {
         let program = exe.to_string_lossy().to_string();
         Ok(CommandSpec {
             program,
-            args: vec![jarvis_APPLY_PATCH_ARG1.to_string(), req.action.patch.clone()],
+            args: vec![
+                jarvis_APPLY_PATCH_ARG1.to_string(),
+                req.action.patch.clone(),
+            ],
             cwd: req.action.cwd.clone(),
             expiration: req.timeout_ms.into(),
             // Run apply_patch with a minimal environment for determinism and to avoid leaks.

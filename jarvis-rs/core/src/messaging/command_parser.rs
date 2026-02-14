@@ -8,23 +8,12 @@ use jarvis_messaging::message::MessageType;
 /// Comando identificado a partir de uma mensagem
 #[derive(Debug, Clone)]
 pub enum ParsedCommand {
-    Exec {
-        command: String,
-        args: Vec<String>,
-    },
-    Read {
-        path: String,
-    },
-    List {
-        path: String,
-    },
-    Search {
-        query: String,
-    },
+    Exec { command: String, args: Vec<String> },
+    Read { path: String },
+    List { path: String },
+    Search { query: String },
     Help,
-    Unknown {
-        text: String,
-    },
+    Unknown { text: String },
 }
 
 /// Parser de comandos de mensageria

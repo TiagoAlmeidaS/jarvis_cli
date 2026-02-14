@@ -9,15 +9,10 @@ pub enum GitHubError {
     Http(#[from] reqwest::Error),
 
     #[error("GitHub API error: {status} - {message}")]
-    Api {
-        status: u16,
-        message: String,
-    },
+    Api { status: u16, message: String },
 
     #[error("Rate limit exceeded. Reset at: {reset_at:?}")]
-    RateLimit {
-        reset_at: Option<u64>,
-    },
+    RateLimit { reset_at: Option<u64> },
 
     #[error("Authentication failed: {0}")]
     Authentication(String),

@@ -1,4 +1,4 @@
-﻿#![cfg(target_os = "macos")]
+#![cfg(target_os = "macos")]
 
 use std::collections::HashMap;
 use std::ffi::CStr;
@@ -7,8 +7,8 @@ use std::path::PathBuf;
 use tokio::process::Child;
 
 use crate::protocol::SandboxPolicy;
-use crate::spawn::jarvis_SANDBOX_ENV_VAR;
 use crate::spawn::StdioPolicy;
+use crate::spawn::jarvis_SANDBOX_ENV_VAR;
 use crate::spawn::spawn_child_async;
 
 const MACOS_SEATBELT_BASE_POLICY: &str = include_str!("seatbelt_base_policy.sbpl");

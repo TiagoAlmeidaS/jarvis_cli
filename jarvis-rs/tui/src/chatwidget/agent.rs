@@ -50,12 +50,14 @@ pub(crate) fn spawn_agent(
             tokio::spawn(async move {
                 // Aguardar um pouco para garantir que a thread está totalmente inicializada
                 tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                
+
                 // Inicializar os servidores de mensageria usando o thread
                 if let Err(e) = jarvis_core::messaging::initialize_messaging_servers_from_thread(
                     &config_for_messaging,
                     thread_for_messaging,
-                ).await {
+                )
+                .await
+                {
                     tracing::error!("Failed to initialize messaging servers: {}", e);
                 } else {
                     tracing::info!("Messaging servers initialized successfully");

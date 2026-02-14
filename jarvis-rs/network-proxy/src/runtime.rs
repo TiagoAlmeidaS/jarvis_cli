@@ -1,4 +1,4 @@
-﻿use crate::config::NetworkMode;
+use crate::config::NetworkMode;
 use crate::config::NetworkProxyConfig;
 use crate::policy::Host;
 use crate::policy::is_loopback_host;
@@ -12,8 +12,8 @@ use crate::state::build_config_state;
 use crate::state::validate_policy_against_constraints;
 use anyhow::Context;
 use anyhow::Result;
-use jarvis_utils_absolute_path::AbsolutePathBuf;
 use globset::GlobSet;
+use jarvis_utils_absolute_path::AbsolutePathBuf;
 use serde::Serialize;
 use std::collections::HashSet;
 use std::collections::VecDeque;

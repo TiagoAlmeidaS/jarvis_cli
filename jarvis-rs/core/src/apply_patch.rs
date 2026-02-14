@@ -1,5 +1,5 @@
-﻿use crate::jarvis::TurnContext;
 use crate::function_tool::FunctionCallError;
+use crate::jarvis::TurnContext;
 use crate::protocol::FileChange;
 use crate::safety_legacy::SafetyCheck;
 use crate::safety_legacy::assess_patch_safety;

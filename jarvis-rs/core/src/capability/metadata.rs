@@ -157,7 +157,10 @@ impl CapabilityMetadata {
 
     /// Checks if capability is available for use.
     pub fn is_available(&self) -> bool {
-        matches!(self.status, CapabilityStatus::Active | CapabilityStatus::Experimental)
+        matches!(
+            self.status,
+            CapabilityStatus::Active | CapabilityStatus::Experimental
+        )
     }
 
     /// Increments usage count.

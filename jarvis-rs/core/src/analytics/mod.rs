@@ -4,13 +4,11 @@
 // identify areas for improvement, and provide actionable insights.
 
 mod metrics;
-mod self_improvement;
 mod queries;
+mod self_improvement;
 mod suggestions;
 
-pub use metrics::{
-    CacheMetrics, CommandMetrics, PerformanceMetrics, SkillMetrics, SystemMetrics,
-};
-pub use self_improvement::SelfImprovement;
-pub use suggestions::{Improvement, ImprovementPriority, ImprovementCategory, group_by_priority};
+pub use metrics::{CacheMetrics, CommandMetrics, PerformanceMetrics, SkillMetrics, SystemMetrics};
 pub use queries::AnalyticsQueries;
+pub use self_improvement::SelfImprovement;
+pub use suggestions::{Improvement, ImprovementCategory, ImprovementPriority, group_by_priority};

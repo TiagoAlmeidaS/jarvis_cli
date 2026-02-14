@@ -1,9 +1,9 @@
-use super::{Conversation, Database, Message, Repository};
 use super::models::MessageRole;
+use super::{Conversation, Database, Message, Repository};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use time::OffsetDateTime;
 use tiberius::Row;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// Repository for Conversation entities
@@ -111,7 +111,9 @@ impl ConversationRepository {
             VALUES (@P1, @P2, @P3, @P4, CONVERT(datetime2, @P5))
         ";
 
-        let created_at_str = message.created_at.format(&time::format_description::well_known::Iso8601::DEFAULT)?;
+        let created_at_str = message
+            .created_at
+            .format(&time::format_description::well_known::Iso8601::DEFAULT)?;
 
         client
             .execute(
@@ -138,10 +140,16 @@ impl ConversationRepository {
         let created_at_str: &str = row.get(3).context("Missing created_at column")?;
         let updated_at_str: &str = row.get(4).context("Missing updated_at column")?;
 
-        let created_at = OffsetDateTime::parse(created_at_str, &time::format_description::well_known::Iso8601::DEFAULT)
-            .context("Failed to parse created_at")?;
-        let updated_at = OffsetDateTime::parse(updated_at_str, &time::format_description::well_known::Iso8601::DEFAULT)
-            .context("Failed to parse updated_at")?;
+        let created_at = OffsetDateTime::parse(
+            created_at_str,
+            &time::format_description::well_known::Iso8601::DEFAULT,
+        )
+        .context("Failed to parse created_at")?;
+        let updated_at = OffsetDateTime::parse(
+            updated_at_str,
+            &time::format_description::well_known::Iso8601::DEFAULT,
+        )
+        .context("Failed to parse updated_at")?;
 
         Ok(Conversation {
             id,
@@ -160,8 +168,11 @@ impl ConversationRepository {
         let content: &str = row.get(3).context("Missing content column")?;
         let created_at_str: &str = row.get(4).context("Missing created_at column")?;
 
-        let created_at = OffsetDateTime::parse(created_at_str, &time::format_description::well_known::Iso8601::DEFAULT)
-            .context("Failed to parse created_at")?;
+        let created_at = OffsetDateTime::parse(
+            created_at_str,
+            &time::format_description::well_known::Iso8601::DEFAULT,
+        )
+        .context("Failed to parse created_at")?;
 
         Ok(Message {
             id,
@@ -234,8 +245,12 @@ impl Repository<Conversation, Uuid> for ConversationRepository {
             VALUES (@P1, @P2, @P3, CONVERT(datetime2, @P4), CONVERT(datetime2, @P5))
         ";
 
-        let created_at_str = conversation.created_at.format(&time::format_description::well_known::Iso8601::DEFAULT)?;
-        let updated_at_str = conversation.updated_at.format(&time::format_description::well_known::Iso8601::DEFAULT)?;
+        let created_at_str = conversation
+            .created_at
+            .format(&time::format_description::well_known::Iso8601::DEFAULT)?;
+        let updated_at_str = conversation
+            .updated_at
+            .format(&time::format_description::well_known::Iso8601::DEFAULT)?;
 
         client
             .execute(

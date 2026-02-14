@@ -1,4 +1,4 @@
-﻿use crate::common::Reasoning;
+use crate::common::Reasoning;
 use crate::common::ResponsesApiRequest;
 use crate::common::TextControls;
 use crate::error::ApiError;
@@ -6,9 +6,9 @@ use crate::provider::Provider;
 use crate::requests::headers::build_conversation_headers;
 use crate::requests::headers::insert_header;
 use crate::requests::headers::subagent_header;
+use http::HeaderMap;
 use jarvis_protocol::models::ResponseItem;
 use jarvis_protocol::protocol::SessionSource;
-use http::HeaderMap;
 use serde_json::Value;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -169,6 +169,11 @@ impl<'a> ResponsesRequestBuilder<'a> {
         let path = if provider.name.to_lowercase() == "databricks" {
             // For Databricks, construct path: serving-endpoints/{model}/invocations
             format!("serving-endpoints/{}/invocations", model)
+        } else if provider.is_azure_responses_endpoint()
+            && Self::should_use_chat_completions(provider)
+        {
+            // For Azure Chat Completions: deployments/{model}/chat/completions
+            format!("deployments/{}/chat/completions", model)
         } else if Self::should_use_chat_completions(provider) {
             // For providers using Chat Completions API (e.g., Ollama)
             "chat/completions".to_string()
@@ -235,7 +240,9 @@ fn convert_to_chat_format(
                     }));
                 }
             }
-            ResponseItem::FunctionCall { name, arguments, .. } => {
+            ResponseItem::FunctionCall {
+                name, arguments, ..
+            } => {
                 // Convert function call to assistant message with tool call
                 messages.push(json!({
                     "role": "assistant",
@@ -328,20 +335,18 @@ fn extract_content_from_item(item: &ResponseItem) -> Option<String> {
                 if text.is_empty() { None } else { Some(text) }
             })
         }
-        ResponseItem::WebSearchCall { action, .. } => {
-            action.as_ref().and_then(|a| match a {
-                jarvis_protocol::models::WebSearchAction::Search { query, queries, .. } => {
-                    if let Some(q) = query {
-                        Some(format!("Web search: {}", q))
-                    } else if let Some(qs) = queries {
-                        Some(format!("Web searches: {}", qs.join(", ")))
-                    } else {
-                        None
-                    }
+        ResponseItem::WebSearchCall { action, .. } => action.as_ref().and_then(|a| match a {
+            jarvis_protocol::models::WebSearchAction::Search { query, queries, .. } => {
+                if let Some(q) = query {
+                    Some(format!("Web search: {}", q))
+                } else if let Some(qs) = queries {
+                    Some(format!("Web searches: {}", qs.join(", ")))
+                } else {
+                    None
                 }
-                _ => None,
-            })
-        }
+            }
+            _ => None,
+        }),
         ResponseItem::LocalShellCall { action, .. } => match action {
             jarvis_protocol::models::LocalShellAction::Exec(exec) => {
                 Some(format!("Shell: {}", exec.command.join(" ")))
@@ -386,8 +391,8 @@ fn attach_item_ids(payload_json: &mut Value, original_items: &[ResponseItem]) {
 mod tests {
     use super::*;
     use crate::provider::RetryConfig;
-    use jarvis_protocol::protocol::SubAgentSource;
     use http::HeaderValue;
+    use jarvis_protocol::protocol::SubAgentSource;
     use pretty_assertions::assert_eq;
     use std::time::Duration;
 

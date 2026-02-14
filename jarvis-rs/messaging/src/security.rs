@@ -13,9 +13,9 @@ pub fn validate_telegram_signature(
 ) -> anyhow::Result<bool> {
     let mut mac = HmacSha256::new_from_slice(secret.as_bytes())
         .map_err(|e| anyhow::anyhow!("Invalid secret: {}", e))?;
-    
+
     mac.update(payload);
-    
+
     let expected_signature = hex::encode(mac.finalize().into_bytes());
     Ok(expected_signature == signature)
 }
@@ -39,12 +39,12 @@ mod tests {
     fn test_telegram_signature_validation() {
         let secret = "test_secret";
         let payload = b"test_payload";
-        
+
         // Criar assinatura válida
         let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
         mac.update(payload);
         let valid_signature = hex::encode(mac.finalize().into_bytes());
-        
+
         assert!(validate_telegram_signature(secret, payload, &valid_signature).unwrap());
         assert!(!validate_telegram_signature(secret, payload, "invalid").unwrap());
     }

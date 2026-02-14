@@ -8,5 +8,5 @@ pub mod classifier;
 pub mod rules;
 
 pub use assessment::{RiskLevel, SafetyAssessment};
-pub use classifier::{ProposedAction, SafetyClassifier, RuleBasedSafetyClassifier};
+pub use classifier::{ProposedAction, RuleBasedSafetyClassifier, SafetyClassifier};
 pub use rules::SafetyRules;

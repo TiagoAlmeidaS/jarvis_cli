@@ -60,7 +60,10 @@ pub trait KnowledgeBase: Send + Sync {
     async fn get_by_category(&self, category: &str) -> Result<Vec<Knowledge>, KnowledgeError>;
 
     /// Gets knowledge by type.
-    async fn get_by_type(&self, knowledge_type: &KnowledgeType) -> Result<Vec<Knowledge>, KnowledgeError>;
+    async fn get_by_type(
+        &self,
+        knowledge_type: &KnowledgeType,
+    ) -> Result<Vec<Knowledge>, KnowledgeError>;
 
     /// Updates knowledge.
     async fn update_knowledge(&self, knowledge: Knowledge) -> Result<(), KnowledgeError>;
@@ -149,7 +152,9 @@ impl InMemoryKnowledgeBase {
             .iter()
             .filter(|k| {
                 k.content.to_lowercase().contains(&query_lower)
-                    || k.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+                    || k.tags
+                        .iter()
+                        .any(|tag| tag.to_lowercase().contains(&query_lower))
                     || k.category.to_lowercase().contains(&query_lower)
             })
             .cloned()
@@ -191,12 +196,14 @@ impl KnowledgeBase for InMemoryKnowledgeBase {
         drop(kb);
 
         let mut results = self.search_knowledge(&all_knowledge, query);
-        
+
         // Sort by relevance (confidence + access count)
         results.sort_by(|a, b| {
             let score_a = a.confidence + (a.access_count as f32 / 1000.0).min(0.3);
             let score_b = b.confidence + (b.access_count as f32 / 1000.0).min(0.3);
-            score_b.partial_cmp(&score_a).unwrap_or(std::cmp::Ordering::Equal)
+            score_b
+                .partial_cmp(&score_a)
+                .unwrap_or(std::cmp::Ordering::Equal)
         });
 
         Ok(results.into_iter().take(limit).collect())
@@ -208,25 +215,22 @@ impl KnowledgeBase for InMemoryKnowledgeBase {
         drop(by_category);
 
         let kb = self.knowledge.read().await;
-        let results: Vec<Knowledge> = ids
-            .iter()
-            .filter_map(|id| kb.get(id).cloned())
-            .collect();
+        let results: Vec<Knowledge> = ids.iter().filter_map(|id| kb.get(id).cloned()).collect();
 
         Ok(results)
     }
 
-    async fn get_by_type(&self, knowledge_type: &KnowledgeType) -> Result<Vec<Knowledge>, KnowledgeError> {
+    async fn get_by_type(
+        &self,
+        knowledge_type: &KnowledgeType,
+    ) -> Result<Vec<Knowledge>, KnowledgeError> {
         let by_type = self.by_type.read().await;
         let type_key = format!("{:?}", knowledge_type);
         let ids = by_type.get(&type_key).cloned().unwrap_or_default();
         drop(by_type);
 
         let kb = self.knowledge.read().await;
-        let results: Vec<Knowledge> = ids
-            .iter()
-            .filter_map(|id| kb.get(id).cloned())
-            .collect();
+        let results: Vec<Knowledge> = ids.iter().filter_map(|id| kb.get(id).cloned()).collect();
 
         Ok(results)
     }

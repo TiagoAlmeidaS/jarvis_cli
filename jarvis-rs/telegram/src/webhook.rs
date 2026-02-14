@@ -1,17 +1,17 @@
 use axum::{
+    Router,
     extract::State,
     http::{HeaderMap, StatusCode},
     response::Json,
     routing::post,
-    Router,
 };
-use std::sync::Arc;
 use jarvis_messaging::handler::MessageHandler;
 use jarvis_messaging::message::{Contact, IncomingMessage, MessageType, Platform};
 use jarvis_messaging::rate_limit::RateLimiter;
 use serde::Deserialize;
+use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 
 use crate::config::TelegramConfig;
 
@@ -84,9 +84,9 @@ impl TelegramWebhookServer {
     pub async fn start(&self) -> anyhow::Result<()> {
         let app = self.create_router();
         let addr = format!("0.0.0.0:{}", self.config.webhook_port);
-        
+
         tracing::info!("Starting Telegram webhook server on {}", addr);
-        
+
         // Inicia limpeza periódica do rate limiter
         let rate_limiter = Arc::clone(&self.rate_limiter);
         tokio::spawn(async move {
@@ -99,7 +99,7 @@ impl TelegramWebhookServer {
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;
         axum::serve(listener, app).await?;
-        
+
         Ok(())
     }
 }
@@ -144,15 +144,19 @@ async fn handle_webhook(
                 return StatusCode::TOO_MANY_REQUESTS;
             }
 
-            let from = message.from.as_ref().map(|u| Contact {
-                id: u.id.to_string(),
-                name: Some(u.first_name.clone()),
-                username: u.username.clone(),
-            }).unwrap_or_else(|| Contact {
-                id: message.chat.id.to_string(),
-                name: None,
-                username: None,
-            });
+            let from = message
+                .from
+                .as_ref()
+                .map(|u| Contact {
+                    id: u.id.to_string(),
+                    name: Some(u.first_name.clone()),
+                    username: u.username.clone(),
+                })
+                .unwrap_or_else(|| Contact {
+                    id: message.chat.id.to_string(),
+                    name: None,
+                    username: None,
+                });
 
             let incoming = IncomingMessage {
                 id: message.message_id.to_string(),

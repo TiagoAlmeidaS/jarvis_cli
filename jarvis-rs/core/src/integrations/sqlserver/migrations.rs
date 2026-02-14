@@ -229,7 +229,9 @@ mod tests {
 
         // Verify indexes
         assert!(sql.contains("CREATE INDEX idx_conversations_user_id ON conversations(user_id)"));
-        assert!(sql.contains("CREATE INDEX idx_conversations_updated_at ON conversations(updated_at)"));
+        assert!(
+            sql.contains("CREATE INDEX idx_conversations_updated_at ON conversations(updated_at)")
+        );
     }
 
     #[test]
@@ -247,10 +249,14 @@ mod tests {
         assert!(sql.contains("created_at DATETIME2 NOT NULL DEFAULT GETUTCDATE()"));
 
         // Verify foreign key
-        assert!(sql.contains("FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE"));
+        assert!(sql.contains(
+            "FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE"
+        ));
 
         // Verify indexes
-        assert!(sql.contains("CREATE INDEX idx_messages_conversation_id ON messages(conversation_id)"));
+        assert!(
+            sql.contains("CREATE INDEX idx_messages_conversation_id ON messages(conversation_id)")
+        );
         assert!(sql.contains("CREATE INDEX idx_messages_created_at ON messages(created_at)"));
     }
 

@@ -1,6 +1,6 @@
-﻿use crate::rate_limits::RateLimitError;
-use jarvis_client::TransportError;
+use crate::rate_limits::RateLimitError;
 use http::StatusCode;
+use jarvis_client::TransportError;
 use std::time::Duration;
 use thiserror::Error;
 

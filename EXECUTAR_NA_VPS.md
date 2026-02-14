@@ -23,7 +23,7 @@ ssh root@76.13.96.99
 ```bash
 # Na máquina local (outro terminal)
 cd /e/projects/ia/jarvis_cli
-scp deploy-ollama-vps.sh root@76.13.96.99:/tmp/
+scp scripts/deploy-ollama-vps.sh root@76.13.96.99:/tmp/
 ```
 
 **Opção B: Criar Manualmente na VPS**
@@ -31,7 +31,7 @@ scp deploy-ollama-vps.sh root@76.13.96.99:/tmp/
 ```bash
 # Já conectado na VPS
 nano /tmp/deploy-ollama-vps.sh
-# Cole o conteúdo do arquivo deploy-ollama-vps.sh
+# Cole o conteúdo do arquivo scripts/deploy-ollama-vps.sh
 # Ctrl+X, Y, Enter para salvar
 ```
 
@@ -94,7 +94,7 @@ curl http://localhost:11434/api/tags
 cd /e/projects/ia/jarvis_cli
 
 # Executar script de configuração
-./configure-ollama-remote.sh
+./scripts/configure-ollama-remote.sh
 # Digite o IP Tailscale quando solicitado
 ```
 
@@ -237,10 +237,10 @@ ufw status
 | Etapa | Comando | Local |
 |-------|---------|-------|
 | Conectar | `ssh root@76.13.96.99` | Local |
-| Copiar script | `scp deploy-ollama-vps.sh root@76.13.96.99:/tmp/` | Local |
+| Copiar script | `scp scripts/deploy-ollama-vps.sh root@76.13.96.99:/tmp/` | Local |
 | Executar | `./deploy-ollama-vps.sh` | VPS |
 | Configurar Tailscale | `tailscale up` | VPS |
-| Configurar local | `./configure-ollama-remote.sh` | Local |
+| Configurar local | `./scripts/configure-ollama-remote.sh` | Local |
 | Testar | `./target/debug/jarvis.exe chat` | Local |
 
 ---

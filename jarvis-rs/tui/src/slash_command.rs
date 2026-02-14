@@ -1,4 +1,4 @@
-﻿use strum::IntoEnumIterator;
+use strum::IntoEnumIterator;
 use strum_macros::AsRefStr;
 use strum_macros::EnumIter;
 use strum_macros::EnumString;
@@ -43,6 +43,10 @@ pub enum SlashCommand {
     Ps,
     Personality,
     TestApproval,
+    #[strum(serialize = "approve-all")]
+    ApproveAll,
+    #[strum(serialize = "approve-default")]
+    ApproveDefault,
 }
 
 impl SlashCommand {
@@ -78,6 +82,8 @@ impl SlashCommand {
             SlashCommand::Logout => "log out of Jarvis",
             SlashCommand::Rollout => "print the rollout file path",
             SlashCommand::TestApproval => "test approval request",
+            SlashCommand::ApproveAll => "auto-approve all actions (yolo mode)",
+            SlashCommand::ApproveDefault => "restore default approval policy",
         }
     }
 
@@ -128,6 +134,8 @@ impl SlashCommand {
             SlashCommand::TestApproval => true,
             SlashCommand::Collab => true,
             SlashCommand::Agent => true,
+            SlashCommand::ApproveAll => true,
+            SlashCommand::ApproveDefault => true,
         }
     }
 
@@ -136,6 +144,14 @@ impl SlashCommand {
             SlashCommand::Rollout | SlashCommand::TestApproval => cfg!(debug_assertions),
             _ => true,
         }
+    }
+
+    /// Whether this command is an instant-action that doesn't open a popup.
+    pub fn is_instant_action(self) -> bool {
+        matches!(
+            self,
+            SlashCommand::ApproveAll | SlashCommand::ApproveDefault
+        )
     }
 }
 

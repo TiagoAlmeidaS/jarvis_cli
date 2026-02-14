@@ -225,7 +225,11 @@ fn print_skill_result(
                 println!("  {:3} | {}", i + 1, line.dimmed());
             }
             if test_lines.len() > 10 {
-                println!("  {} ({} more lines)", "...".dimmed(), test_lines.len() - 10);
+                println!(
+                    "  {} ({} more lines)",
+                    "...".dimmed(),
+                    test_lines.len() - 10
+                );
             }
         }
     }
@@ -427,8 +431,14 @@ fn print_evaluation_result(
 async fn list_skills(_args: ListArgs) -> Result<()> {
     println!("\n{}", "Available Skills".bold().cyan());
     println!("{}", "─".repeat(50).dimmed());
-    println!("\n{}", "Note: Skill listing from manager not yet implemented.".yellow());
-    println!("Use {} to explore skills directory.", "jarvis agent explore".cyan());
+    println!(
+        "\n{}",
+        "Note: Skill listing from manager not yet implemented.".yellow()
+    );
+    println!(
+        "Use {} to explore skills directory.",
+        "jarvis agent explore".cyan()
+    );
     println!();
     Ok(())
 }

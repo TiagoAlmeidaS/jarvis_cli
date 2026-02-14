@@ -81,10 +81,7 @@ pub struct RuleBasedExploreAgent {
 
 impl RuleBasedExploreAgent {
     /// Creates a new explore agent.
-    pub fn new(
-        session_manager: Arc<dyn AgentSessionManager>,
-        base_dir: PathBuf,
-    ) -> Self {
+    pub fn new(session_manager: Arc<dyn AgentSessionManager>, base_dir: PathBuf) -> Self {
         Self {
             session_manager,
             base_dir,
@@ -198,10 +195,10 @@ impl ExploreAgent for RuleBasedExploreAgent {
             "files_explored".to_string(),
             files_explored.len().to_string(),
         );
-        session.context.progress.insert(
-            "findings".to_string(),
-            all_findings.len().to_string(),
-        );
+        session
+            .context
+            .progress
+            .insert("findings".to_string(), all_findings.len().to_string());
 
         Ok(ExploreAgentResult {
             summary,

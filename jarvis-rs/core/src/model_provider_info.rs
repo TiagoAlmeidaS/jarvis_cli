@@ -1,4 +1,4 @@
-﻿//! Registry of model providers supported by Jarvis.
+//! Registry of model providers supported by Jarvis.
 //!
 //! Providers can be defined in two places:
 //!   1. Built-in defaults compiled into the binary so Jarvis works out-of-the-box.
@@ -7,12 +7,12 @@
 
 use crate::auth::AuthMode;
 use crate::error::EnvVarError;
-use jarvis_api::Provider as ApiProvider;
-use jarvis_api::is_azure_responses_wire_base_url;
-use jarvis_api::provider::RetryConfig as ApiRetryConfig;
 use http::HeaderMap;
 use http::header::HeaderName;
 use http::header::HeaderValue;
+use jarvis_api::Provider as ApiProvider;
+use jarvis_api::is_azure_responses_wire_base_url;
+use jarvis_api::provider::RetryConfig as ApiRetryConfig;
 use schemars::JsonSchema;
 use serde::Deserialize;
 use serde::Serialize;
@@ -29,6 +29,8 @@ const MAX_STREAM_MAX_RETRIES: u64 = 100;
 const MAX_REQUEST_MAX_RETRIES: u64 = 100;
 
 const OPENAI_PROVIDER_NAME: &str = "OpenAI";
+const AZURE_OPENAI_PROVIDER_NAME: &str = "Azure OpenAI";
+const DEFAULT_AZURE_OPENAI_API_VERSION: &str = "2024-08-01-preview";
 const CHAT_WIRE_API_REMOVED_ERROR: &str = "`wire_api = \"chat\"` is no longer supported.\nHow to fix: set `wire_api = \"responses\"` in your provider config.\nMore info: https://github.com/openai/Jarvis/discussions/7782";
 pub(crate) const LEGACY_OLLAMA_CHAT_PROVIDER_ID: &str = "ollama-chat";
 pub(crate) const OLLAMA_CHAT_PROVIDER_REMOVED_ERROR: &str = "`ollama-chat` is no longer supported.\nHow to fix: replace `ollama-chat` with `ollama` in `model_provider`, `oss_provider`, or `--local-provider`.\nMore info: https://github.com/openai/Jarvis/discussions/7782";
@@ -285,6 +287,8 @@ pub const DEFAULT_OLLAMA_PORT: u16 = 11434;
 
 pub const LMSTUDIO_OSS_PROVIDER_ID: &str = "lmstudio";
 pub const OLLAMA_OSS_PROVIDER_ID: &str = "ollama";
+pub const OPENROUTER_PROVIDER_ID: &str = "openrouter";
+pub const GOOGLE_PROVIDER_ID: &str = "google";
 
 /// Built-in default provider list.
 pub fn built_in_model_providers() -> HashMap<String, ModelProviderInfo> {
@@ -297,12 +301,14 @@ pub fn built_in_model_providers() -> HashMap<String, ModelProviderInfo> {
         ("openai", P::create_openai_provider()),
         (
             OLLAMA_OSS_PROVIDER_ID,
-            create_ollama_provider(None),  // Use dedicated Ollama provider
+            create_ollama_provider(None), // Use dedicated Ollama provider
         ),
         (
             LMSTUDIO_OSS_PROVIDER_ID,
             create_oss_provider(DEFAULT_LMSTUDIO_PORT, WireApi::Responses),
         ),
+        (OPENROUTER_PROVIDER_ID, create_openrouter_provider()),
+        (GOOGLE_PROVIDER_ID, create_google_provider()),
     ]
     .into_iter()
     .map(|(k, v)| (k.to_string(), v))
@@ -377,21 +383,21 @@ pub fn create_ollama_provider(base_url: Option<String>) -> ModelProviderInfo {
     // Allow users to override the default Ollama endpoint by
     // exporting `OLLAMA_BASE_URL`. This is useful when pointing
     // Jarvis at a remote Ollama instance via Tailscale or custom setup.
-    let effective_base_url = base_url.or_else(|| {
-        std::env::var("OLLAMA_BASE_URL")
-            .ok()
-            .filter(|v| !v.trim().is_empty())
-    }).unwrap_or_else(|| {
-        format!("http://localhost:{}/v1", DEFAULT_OLLAMA_PORT)
-    });
+    let effective_base_url = base_url
+        .or_else(|| {
+            std::env::var("OLLAMA_BASE_URL")
+                .ok()
+                .filter(|v| !v.trim().is_empty())
+        })
+        .unwrap_or_else(|| format!("http://localhost:{}/v1", DEFAULT_OLLAMA_PORT));
 
     ModelProviderInfo {
         name: "Ollama".into(),
         base_url: Some(effective_base_url),
-        env_key: None,  // Ollama doesn't require auth by default
+        env_key: None, // Ollama doesn't require auth by default
         env_key_instructions: None,
         experimental_bearer_token: None,
-        wire_api: WireApi::Responses,  // Internal representation stays Responses
+        wire_api: WireApi::Responses, // Internal representation stays Responses
         query_params: None,
         http_headers: None,
         env_http_headers: None,
@@ -400,7 +406,7 @@ pub fn create_ollama_provider(base_url: Option<String>) -> ModelProviderInfo {
         stream_idle_timeout_ms: Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
         requires_openai_auth: false,
         supports_websockets: false,
-        uses_chat_completions_api: true,  // Ollama uses Chat Completions API
+        uses_chat_completions_api: true, // Ollama uses Chat Completions API
     }
 }
 
@@ -452,7 +458,86 @@ pub fn create_databricks_provider(base_url: Option<String>) -> ModelProviderInfo
         stream_idle_timeout_ms: Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
         requires_openai_auth: false,
         supports_websockets: false,
-        uses_chat_completions_api: true,  // Databricks uses Chat Completions API
+        uses_chat_completions_api: true, // Databricks uses Chat Completions API
+    }
+}
+
+/// Creates an OpenRouter provider configuration.
+///
+/// OpenRouter is an API aggregator that provides access to many LLM models
+/// (Claude, GPT-4o, Llama, Mistral, etc.) through a single API endpoint
+/// that supports the OpenAI Responses API natively.
+///
+/// The API key should be set via the `OPENROUTER_API_KEY` environment variable.
+/// Uses standard Bearer token authentication.
+///
+/// Example configuration in `~/.jarvis/config.toml`:
+/// ```toml
+/// [model_providers.openrouter]
+/// name = "OpenRouter"
+/// base_url = "https://openrouter.ai/api/v1"
+/// env_key = "OPENROUTER_API_KEY"
+/// wire_api = "responses"
+/// ```
+pub fn create_openrouter_provider() -> ModelProviderInfo {
+    ModelProviderInfo {
+        name: "OpenRouter".into(),
+        base_url: Some("https://openrouter.ai/api/v1".into()),
+        env_key: Some("OPENROUTER_API_KEY".into()),
+        env_key_instructions: Some(
+            "Set the OPENROUTER_API_KEY environment variable with your OpenRouter API key. \
+             You can get one at https://openrouter.ai/keys"
+                .into(),
+        ),
+        experimental_bearer_token: None,
+        wire_api: WireApi::Responses,
+        query_params: None,
+        http_headers: None,
+        env_http_headers: None,
+        request_max_retries: Some(DEFAULT_REQUEST_MAX_RETRIES),
+        stream_max_retries: Some(DEFAULT_STREAM_MAX_RETRIES),
+        stream_idle_timeout_ms: Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
+        requires_openai_auth: false,
+        supports_websockets: false,
+        uses_chat_completions_api: false, // OpenRouter supports Responses API natively
+    }
+}
+
+/// Creates a Google AI Studio provider configuration.
+///
+/// Google AI Studio provides free-tier access to Gemini models through an
+/// OpenAI-compatible Chat Completions API endpoint.
+///
+/// Free-tier models include: gemini-2.5-flash, gemini-2.5-flash-lite
+///
+/// The API key should be set via the `GOOGLE_API_KEY` environment variable.
+/// Get a free key at: https://ai.google.dev
+pub fn create_google_provider() -> ModelProviderInfo {
+    let effective_base_url = std::env::var("GOOGLE_BASE_URL")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or_else(|| "https://generativelanguage.googleapis.com/v1beta/openai".into());
+
+    ModelProviderInfo {
+        name: "Google AI Studio".into(),
+        base_url: Some(effective_base_url),
+        env_key: Some("GOOGLE_API_KEY".into()),
+        env_key_instructions: Some(
+            "Set the GOOGLE_API_KEY environment variable with your Google AI Studio API key. \
+             You can get a free key at https://ai.google.dev"
+                .into(),
+        ),
+        experimental_bearer_token: None,
+        wire_api: WireApi::Responses,
+        query_params: None,
+        http_headers: None,
+        env_http_headers: None,
+        request_max_retries: Some(DEFAULT_REQUEST_MAX_RETRIES),
+        stream_max_retries: Some(DEFAULT_STREAM_MAX_RETRIES),
+        stream_idle_timeout_ms: Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS),
+        requires_openai_auth: false,
+        supports_websockets: false,
+        uses_chat_completions_api: true,
     }
 }
 
@@ -571,7 +656,10 @@ wire_api = "chat"
 
     #[test]
     fn test_create_databricks_provider() {
-        let base_url = Some("https://workspace.cloud.databricks.com/serving-endpoints/endpoint/invocations".to_string());
+        let base_url = Some(
+            "https://workspace.cloud.databricks.com/serving-endpoints/endpoint/invocations"
+                .to_string(),
+        );
         let provider = create_databricks_provider(base_url.clone());
 
         assert_eq!(provider.name, "Databricks");
@@ -580,17 +668,32 @@ wire_api = "chat"
         assert!(provider.env_key_instructions.is_some());
         assert_eq!(provider.wire_api, WireApi::Responses);
         assert!(provider.http_headers.is_some());
-        assert!(provider.http_headers.as_ref().unwrap().contains_key("Content-Type"));
+        assert!(
+            provider
+                .http_headers
+                .as_ref()
+                .unwrap()
+                .contains_key("Content-Type")
+        );
         assert_eq!(
             provider.http_headers.as_ref().unwrap().get("Content-Type"),
             Some(&"application/json".to_string())
         );
-        assert_eq!(provider.request_max_retries, Some(DEFAULT_REQUEST_MAX_RETRIES));
-        assert_eq!(provider.stream_max_retries, Some(DEFAULT_STREAM_MAX_RETRIES));
-        assert_eq!(provider.stream_idle_timeout_ms, Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS));
+        assert_eq!(
+            provider.request_max_retries,
+            Some(DEFAULT_REQUEST_MAX_RETRIES)
+        );
+        assert_eq!(
+            provider.stream_max_retries,
+            Some(DEFAULT_STREAM_MAX_RETRIES)
+        );
+        assert_eq!(
+            provider.stream_idle_timeout_ms,
+            Some(DEFAULT_STREAM_IDLE_TIMEOUT_MS)
+        );
         assert!(!provider.requires_openai_auth);
         assert!(!provider.supports_websockets);
-        assert!(provider.uses_chat_completions_api);  // Databricks uses Chat Completions
+        assert!(provider.uses_chat_completions_api); // Databricks uses Chat Completions
     }
 
     #[test]
@@ -603,7 +706,10 @@ http_headers = { "Content-Type" = "application/json" }
         "#;
         let expected_provider = ModelProviderInfo {
             name: "Databricks".into(),
-            base_url: Some("https://workspace.cloud.databricks.com/serving-endpoints/endpoint/invocations".into()),
+            base_url: Some(
+                "https://workspace.cloud.databricks.com/serving-endpoints/endpoint/invocations"
+                    .into(),
+            ),
             env_key: Some("DATABRICKS_API_KEY".into()),
             env_key_instructions: None,
             experimental_bearer_token: None,
@@ -618,7 +724,7 @@ http_headers = { "Content-Type" = "application/json" }
             stream_idle_timeout_ms: None,
             requires_openai_auth: false,
             supports_websockets: false,
-            uses_chat_completions_api: false,  // Default when not specified
+            uses_chat_completions_api: false, // Default when not specified
         };
 
         let provider: ModelProviderInfo = toml::from_str(databricks_provider_toml).unwrap();

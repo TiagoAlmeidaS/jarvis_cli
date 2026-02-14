@@ -1,4 +1,6 @@
-﻿use jarvis_api::AuthProvider;
+use http::HeaderMap;
+use http::Method;
+use jarvis_api::AuthProvider;
 use jarvis_api::ModelsClient;
 use jarvis_api::provider::Provider;
 use jarvis_api::provider::RetryConfig;
@@ -11,8 +13,6 @@ use jarvis_protocol::openai_models::ReasoningEffort;
 use jarvis_protocol::openai_models::ReasoningEffortPreset;
 use jarvis_protocol::openai_models::TruncationPolicyConfig;
 use jarvis_protocol::openai_models::default_input_modalities;
-use http::HeaderMap;
-use http::Method;
 use wiremock::Mock;
 use wiremock::MockServer;
 use wiremock::ResponseTemplate;

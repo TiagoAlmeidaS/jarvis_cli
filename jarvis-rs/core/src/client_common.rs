@@ -1,10 +1,10 @@
-﻿use crate::client_common::tools::ToolSpec;
+use crate::client_common::tools::ToolSpec;
 use crate::config::types::Personality;
 use crate::error::Result;
+use futures::Stream;
 pub use jarvis_api::common::ResponseEvent;
 use jarvis_protocol::models::BaseInstructions;
 use jarvis_protocol::models::ResponseItem;
-use futures::Stream;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashSet;

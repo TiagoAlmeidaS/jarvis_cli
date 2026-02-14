@@ -1,4 +1,4 @@
-﻿use bytes::BytesMut;
+use bytes::BytesMut;
 use futures::StreamExt;
 use futures::stream::BoxStream;
 use semver::Version;
@@ -47,8 +47,10 @@ impl OllamaClient {
 
     #[cfg(test)]
     async fn try_from_provider_with_base_url(base_url: &str) -> io::Result<Self> {
-        let provider =
-            jarvis_core::create_oss_provider_with_base_url(base_url, jarvis_core::WireApi::Responses);
+        let provider = jarvis_core::create_oss_provider_with_base_url(
+            base_url,
+            jarvis_core::WireApi::Responses,
+        );
         Self::try_from_provider(&provider).await
     }
 

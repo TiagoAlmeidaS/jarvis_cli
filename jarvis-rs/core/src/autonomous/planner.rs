@@ -90,20 +90,31 @@ impl RuleBasedExecutionPlanner {
     }
 
     /// Calculates relevance score for a capability.
-    fn calculate_relevance(&self, capability: &CapabilityMetadata, context: &AnalyzedContext) -> f32 {
+    fn calculate_relevance(
+        &self,
+        capability: &CapabilityMetadata,
+        context: &AnalyzedContext,
+    ) -> f32 {
         let mut score: f32 = 0.0;
 
         // Check if capability name/description matches intent
         let intent_lower = context.intent.to_lowercase();
         if capability.name.to_lowercase().contains(&intent_lower)
-            || capability.description.to_lowercase().contains(&intent_lower)
+            || capability
+                .description
+                .to_lowercase()
+                .contains(&intent_lower)
         {
             score += 0.5;
         }
 
         // Check if capability tags match entities
         for entity in &context.entities {
-            if capability.tags.iter().any(|tag| tag.to_lowercase().contains(&entity.value.to_lowercase())) {
+            if capability
+                .tags
+                .iter()
+                .any(|tag| tag.to_lowercase().contains(&entity.value.to_lowercase()))
+            {
                 score += 0.3;
             }
         }
@@ -214,7 +225,7 @@ mod tests {
     async fn test_create_plan() {
         let planner = RuleBasedExecutionPlanner::new();
         let registry = InMemoryCapabilityRegistry::new();
-        
+
         // Register a test capability
         let capability = CapabilityMetadata::new(
             "test-id".to_string(),
@@ -227,10 +238,7 @@ mod tests {
         // Analyze context
         let analyzer = RuleBasedContextAnalyzer::new();
         let state = std::collections::HashMap::new();
-        let context = analyzer
-            .analyze("Create REST API", &state)
-            .await
-            .unwrap();
+        let context = analyzer.analyze("Create REST API", &state).await.unwrap();
 
         // Create plan
         let plan = planner.create_plan(&context, &registry).await.unwrap();

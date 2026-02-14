@@ -1,6 +1,8 @@
-﻿use std::collections::BTreeMap;
+use std::collections::BTreeMap;
 use std::path::Path;
 
+use crate::Session;
+use crate::TurnContext;
 use crate::apply_patch;
 use crate::apply_patch::InternalApplyPatchInvocation;
 use crate::apply_patch::convert_apply_patch_to_protocol;
@@ -8,8 +10,6 @@ use crate::client_common::tools::FreeformTool;
 use crate::client_common::tools::FreeformToolFormat;
 use crate::client_common::tools::ResponsesApiTool;
 use crate::client_common::tools::ToolSpec;
-use crate::Session;
-use crate::TurnContext;
 use crate::function_tool::FunctionCallError;
 use crate::tools::context::SharedTurnDiffTracker;
 use crate::tools::context::ToolInvocation;

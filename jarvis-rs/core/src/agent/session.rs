@@ -73,7 +73,11 @@ pub trait AgentSessionManager: Send + Sync {
     ) -> Result<(), SessionError>;
 
     /// Records a file as read.
-    async fn record_file_read(&self, session_id: &str, file_path: &PathBuf) -> Result<(), SessionError>;
+    async fn record_file_read(
+        &self,
+        session_id: &str,
+        file_path: &PathBuf,
+    ) -> Result<(), SessionError>;
 
     /// Adds knowledge to the knowledge base.
     async fn add_knowledge(
@@ -84,7 +88,11 @@ pub trait AgentSessionManager: Send + Sync {
     ) -> Result<(), SessionError>;
 
     /// Records tool usage.
-    async fn record_tool_usage(&self, session_id: &str, tool_name: &str) -> Result<(), SessionError>;
+    async fn record_tool_usage(
+        &self,
+        session_id: &str,
+        tool_name: &str,
+    ) -> Result<(), SessionError>;
 
     /// Resumes a session (loads and returns it).
     async fn resume_session(&self, session_id: &str) -> Result<AgentSession, SessionError>;
@@ -193,7 +201,11 @@ impl AgentSessionManager for InMemoryAgentSessionManager {
         }
     }
 
-    async fn record_file_read(&self, session_id: &str, file_path: &PathBuf) -> Result<(), SessionError> {
+    async fn record_file_read(
+        &self,
+        session_id: &str,
+        file_path: &PathBuf,
+    ) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(session_id) {
             session.files_read.insert(file_path.clone());
@@ -212,7 +224,9 @@ impl AgentSessionManager for InMemoryAgentSessionManager {
     ) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(session_id) {
-            session.knowledge_base.insert(key.to_string(), value.to_string());
+            session
+                .knowledge_base
+                .insert(key.to_string(), value.to_string());
             session.updated_at = Self::current_timestamp();
             Ok(())
         } else {
@@ -220,7 +234,11 @@ impl AgentSessionManager for InMemoryAgentSessionManager {
         }
     }
 
-    async fn record_tool_usage(&self, session_id: &str, tool_name: &str) -> Result<(), SessionError> {
+    async fn record_tool_usage(
+        &self,
+        session_id: &str,
+        tool_name: &str,
+    ) -> Result<(), SessionError> {
         let mut sessions = self.sessions.write().await;
         if let Some(session) = sessions.get_mut(session_id) {
             if !session.tools_used.contains(&tool_name.to_string()) {
@@ -269,7 +287,11 @@ mod tests {
             .await
             .unwrap();
 
-        let updated = manager.get_session(&session.session_id).await.unwrap().unwrap();
+        let updated = manager
+            .get_session(&session.session_id)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(updated.history.len(), 1);
         assert_eq!(updated.history[0].role, "user");
         assert_eq!(updated.history[0].content, "Hello");
@@ -286,7 +308,11 @@ mod tests {
             .await
             .unwrap();
 
-        let updated = manager.get_session(&session.session_id).await.unwrap().unwrap();
+        let updated = manager
+            .get_session(&session.session_id)
+            .await
+            .unwrap()
+            .unwrap();
         assert!(updated.files_read.contains(&file_path));
     }
 }

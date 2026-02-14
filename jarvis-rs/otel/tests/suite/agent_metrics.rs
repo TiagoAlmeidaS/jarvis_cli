@@ -1,9 +1,9 @@
 use crate::harness::build_metrics_with_defaults;
 use crate::harness::find_metric;
-use jarvis_protocol::protocol::SessionSource;
-use jarvis_protocol::ThreadId;
 use jarvis_otel::OtelManager;
 use jarvis_otel::metrics::MetricsClient;
+use jarvis_protocol::ThreadId;
+use jarvis_protocol::protocol::SessionSource;
 use opentelemetry_sdk::metrics::InMemoryMetricExporter;
 use pretty_assertions::assert_eq;
 use std::time::Duration;
@@ -46,7 +46,7 @@ async fn record_tool_pattern() {
     manager.record_tool_pattern("shell", 3);
 
     harness.metrics.shutdown().unwrap();
-    
+
     // Get metrics from exporter
     let metrics = harness.exporter.get_finished_metrics().unwrap();
     let Some(latest) = metrics.into_iter().last() else {
@@ -55,7 +55,10 @@ async fn record_tool_pattern() {
 
     // Verify metrics were recorded
     let tool_pattern_metric = find_metric(&latest, "Jarvis.agent.tool_pattern");
-    assert!(tool_pattern_metric.is_some(), "tool_pattern metric should exist");
+    assert!(
+        tool_pattern_metric.is_some(),
+        "tool_pattern metric should exist"
+    );
 }
 
 #[tokio::test]
@@ -79,7 +82,7 @@ async fn record_operation_success_rate() {
     manager.record_operation_success_rate("api_call", true, 2);
 
     harness.metrics.shutdown().unwrap();
-    
+
     let metrics = harness.exporter.get_finished_metrics().unwrap();
     let Some(latest) = metrics.into_iter().last() else {
         panic!("no metrics exported");
@@ -113,7 +116,7 @@ async fn record_decision() {
     manager.record_decision("approved", "config", 2);
 
     harness.metrics.shutdown().unwrap();
-    
+
     let metrics = harness.exporter.get_finished_metrics().unwrap();
     let Some(latest) = metrics.into_iter().last() else {
         panic!("no metrics exported");
@@ -143,7 +146,7 @@ async fn record_conversation_duration() {
     manager.record_conversation_duration(Duration::from_millis(500));
 
     harness.metrics.shutdown().unwrap();
-    
+
     let metrics = harness.exporter.get_finished_metrics().unwrap();
     let Some(latest) = metrics.into_iter().last() else {
         panic!("no metrics exported");
@@ -177,7 +180,7 @@ async fn record_tool_chain_length() {
     manager.record_tool_chain_length(1);
 
     harness.metrics.shutdown().unwrap();
-    
+
     let metrics = harness.exporter.get_finished_metrics().unwrap();
     let Some(latest) = metrics.into_iter().last() else {
         panic!("no metrics exported");

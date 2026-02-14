@@ -1,4 +1,4 @@
-﻿use crate::auth::AuthProvider;
+use crate::auth::AuthProvider;
 use crate::common::Prompt as ApiPrompt;
 use crate::common::Reasoning;
 use crate::common::ResponseStream;
@@ -11,13 +11,13 @@ use crate::requests::ResponsesRequestBuilder;
 use crate::requests::responses::Compression;
 use crate::sse::spawn_response_stream;
 use crate::telemetry::SseTelemetry;
+use http::HeaderMap;
+use http::HeaderValue;
+use http::Method;
 use jarvis_client::HttpTransport;
 use jarvis_client::RequestCompression;
 use jarvis_client::RequestTelemetry;
 use jarvis_protocol::protocol::SessionSource;
-use http::HeaderMap;
-use http::HeaderValue;
-use http::Method;
 use serde_json::Value;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -128,19 +128,13 @@ impl<T: HttpTransport, A: AuthProvider> ResponsesClient<T, A> {
 
         let stream_response = self
             .session
-            .stream_with(
-                Method::POST,
-                &path,
-                extra_headers,
-                Some(body),
-                |req| {
-                    req.headers.insert(
-                        http::header::ACCEPT,
-                        HeaderValue::from_static("text/event-stream"),
-                    );
-                    req.compression = request_compression;
-                },
-            )
+            .stream_with(Method::POST, &path, extra_headers, Some(body), |req| {
+                req.headers.insert(
+                    http::header::ACCEPT,
+                    HeaderValue::from_static("text/event-stream"),
+                );
+                req.compression = request_compression;
+            })
             .await?;
 
         Ok(spawn_response_stream(

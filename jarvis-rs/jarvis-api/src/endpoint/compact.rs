@@ -1,13 +1,13 @@
-﻿use crate::auth::AuthProvider;
+use crate::auth::AuthProvider;
 use crate::common::CompactionInput;
 use crate::endpoint::session::EndpointSession;
 use crate::error::ApiError;
 use crate::provider::Provider;
+use http::HeaderMap;
+use http::Method;
 use jarvis_client::HttpTransport;
 use jarvis_client::RequestTelemetry;
 use jarvis_protocol::models::ResponseItem;
-use http::HeaderMap;
-use http::Method;
 use serde::Deserialize;
 use serde_json::to_value;
 use std::sync::Arc;

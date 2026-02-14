@@ -1,8 +1,8 @@
-﻿use jarvis_protocol::account::PlanType;
+use http::HeaderMap;
+use jarvis_protocol::account::PlanType;
 use jarvis_protocol::protocol::CreditsSnapshot;
 use jarvis_protocol::protocol::RateLimitSnapshot;
 use jarvis_protocol::protocol::RateLimitWindow;
-use http::HeaderMap;
 use serde::Deserialize;
 use std::fmt::Display;
 

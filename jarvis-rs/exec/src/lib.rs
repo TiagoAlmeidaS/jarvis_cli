@@ -1,4 +1,4 @@
-﻿// - In the default output mode, it is paramount that the only thing written to
+// - In the default output mode, it is paramount that the only thing written to
 //   stdout is the final message (if any).
 // - In --json mode, stdout must be valid JSONL, one event per line.
 // For both modes, any other output must be written to stderr.
@@ -13,6 +13,8 @@ pub mod exec_events;
 pub use cli::Cli;
 pub use cli::Command;
 pub use cli::ReviewArgs;
+use event_processor_with_human_output::EventProcessorWithHumanOutput;
+use event_processor_with_jsonl_output::EventProcessorWithJsonOutput;
 use jarvis_cloud_requirements::cloud_requirements_loader;
 use jarvis_common::oss::ensure_oss_provider_ready;
 use jarvis_common::oss::get_default_model_for_oss_provider;
@@ -43,8 +45,6 @@ use jarvis_protocol::approvals::ElicitationAction;
 use jarvis_protocol::config_types::SandboxMode;
 use jarvis_protocol::user_input::UserInput;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use event_processor_with_human_output::EventProcessorWithHumanOutput;
-use event_processor_with_jsonl_output::EventProcessorWithJsonOutput;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::io::IsTerminal;
@@ -62,7 +62,7 @@ use tracing_subscriber::prelude::*;
 use uuid::Uuid;
 
 // RAG integration imports
-use jarvis_core::rag::{create_rag_injector, inject_rag_context, is_rag_ready, RagContextConfig};
+use jarvis_core::rag::{RagContextConfig, create_rag_injector, inject_rag_context, is_rag_ready};
 
 use crate::cli::Command as ExecCommand;
 use crate::event_processor::CodexStatus;
@@ -91,7 +91,10 @@ struct ThreadEventEnvelope {
 
 pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<()> {
     if let Err(err) = set_default_originator("jarvis_exec".to_string()) {
-        tracing::warn!(?err, "Failed to set Jarvis exec originator override {err:?}");
+        tracing::warn!(
+            ?err,
+            "Failed to set Jarvis exec originator override {err:?}"
+        );
     }
 
     let Cli {

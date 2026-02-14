@@ -82,7 +82,7 @@ impl LLMSkillDevelopmentService {
             .collect::<String>()
             .replace(' ', "_")
             .replace(|c: char| !c.is_alphanumeric() && c != '_', "");
-        
+
         if name.is_empty() {
             "generated_skill".to_string()
         } else {
@@ -91,12 +91,7 @@ impl LLMSkillDevelopmentService {
     }
 
     /// Generates basic code template based on language and type.
-    fn generate_code_template(
-        &self,
-        language: &str,
-        skill_type: &str,
-        name: &str,
-    ) -> String {
+    fn generate_code_template(&self, language: &str, skill_type: &str, name: &str) -> String {
         match (language, skill_type) {
             ("rust", "api") => format!(
                 r#"// {} API Skill

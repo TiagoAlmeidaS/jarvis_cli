@@ -1,15 +1,15 @@
-﻿use crate::auth::AuthProvider;
+use crate::auth::AuthProvider;
 use crate::auth::add_auth_headers;
 use crate::error::ApiError;
 use crate::provider::Provider;
 use crate::telemetry::run_with_request_telemetry;
+use http::HeaderMap;
+use http::Method;
 use jarvis_client::HttpTransport;
 use jarvis_client::Request;
 use jarvis_client::RequestTelemetry;
 use jarvis_client::Response;
 use jarvis_client::StreamResponse;
-use http::HeaderMap;
-use http::Method;
 use serde_json::Value;
 use std::sync::Arc;
 

@@ -1,4 +1,4 @@
-﻿use crate::auth::AuthProvider;
+use crate::auth::AuthProvider;
 use crate::auth::add_auth_headers_to_header_map;
 use crate::common::ResponseEvent;
 use crate::common::ResponseStream;
@@ -9,10 +9,10 @@ use crate::rate_limits::parse_rate_limit_event;
 use crate::sse::responses::ResponsesStreamEvent;
 use crate::sse::responses::process_responses_event;
 use crate::telemetry::WebsocketTelemetry;
-use jarvis_client::TransportError;
 use futures::SinkExt;
 use futures::StreamExt;
 use http::HeaderMap;
+use jarvis_client::TransportError;
 use serde_json::Value;
 use std::sync::Arc;
 use std::sync::OnceLock;

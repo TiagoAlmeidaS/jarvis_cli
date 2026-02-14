@@ -12,6 +12,9 @@ REM ============================================================================
 
 setlocal enabledelayedexpansion
 
+REM Navegar para a raiz do projeto (pai do diretório scripts/)
+cd /d "%~dp0.."
+
 REM Configurações
 set "DEFAULT_MODEL=llama3.2:3b"
 set "OLLAMA_VPS=http://100.98.213.86:11434/v1"
@@ -41,13 +44,13 @@ if exist "%BINARY_RELEASE%" (
     echo ❌ Erro: Binário não encontrado!
     echo.
     echo Execute primeiro:
-    echo   build-jarvis.bat
+    echo   scripts\build-jarvis.bat
     echo.
     pause
     exit /b 1
 )
 
-echo ✓ Binário encontrado: %BINARY% (%BUILD_TYPE%)
+echo ✓ Binário encontrado: %BINARY% [%BUILD_TYPE%]
 echo ✓ Ollama VPS: %OLLAMA_VPS%
 echo ✓ Modelo: %MODEL%
 echo.
@@ -63,14 +66,14 @@ echo 🎨 Abrindo modo chat interativo...
 echo.
 echo Dicas:
 echo   • Ctrl+C para sair
-echo   • Primeira resposta pode demorar ~20-30s (warm-up)
-echo   • Respostas seguintes serão rápidas
+echo   • Primeira resposta pode demorar ~20-30s
+echo   • Respostas seguintes serao rapidas
 echo.
 echo ========================================
 echo.
 
-REM Executar Jarvis
-"%BINARY%" -c "model_provider=\"ollama\"" -m "%MODEL%"
+REM Executar Jarvis (--cd aponta para a raiz do projeto, nao o subfolder jarvis-rs)
+"%BINARY%" -c "model_provider=\"ollama\"" -m "%MODEL%" --cd "%~dp0.."
 
 if errorlevel 1 (
     echo.

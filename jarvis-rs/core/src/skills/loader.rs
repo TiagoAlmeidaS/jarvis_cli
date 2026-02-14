@@ -1,4 +1,4 @@
-﻿use crate::config::Config;
+use crate::config::Config;
 use crate::config_loader::ConfigLayerStack;
 use crate::config_loader::ConfigLayerStackOrdering;
 use crate::config_loader::default_project_root_markers;
@@ -11,10 +11,10 @@ use crate::skills::model::SkillLoadOutcome;
 use crate::skills::model::SkillMetadata;
 use crate::skills::model::SkillToolDependency;
 use crate::skills::system::system_cache_root_dir;
-use jarvis_app_server_protocol::ConfigLayerSource;
-use jarvis_protocol::protocol::SkillScope;
 use dirs::home_dir;
 use dunce::canonicalize as canonicalize_path;
+use jarvis_app_server_protocol::ConfigLayerSource;
+use jarvis_protocol::protocol::SkillScope;
 use serde::Deserialize;
 use std::collections::HashSet;
 use std::collections::VecDeque;

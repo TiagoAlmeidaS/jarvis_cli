@@ -22,11 +22,7 @@ pub struct MultiLevelCache {
 
 impl MultiLevelCache {
     /// Create a new multi-level cache
-    pub fn new(
-        l2: Option<Arc<dyn DistributedCache>>,
-        l1_ttl: Duration,
-        l2_ttl: Duration,
-    ) -> Self {
+    pub fn new(l2: Option<Arc<dyn DistributedCache>>, l1_ttl: Duration, l2_ttl: Duration) -> Self {
         Self {
             l1: Arc::new(RwLock::new(HashMap::new())),
             l2,
@@ -151,7 +147,10 @@ mod tests {
 
     #[async_trait::async_trait]
     impl DistributedCache for MockDistributedCache {
-        fn get_raw<'a>(&'a self, key: &'a str) -> super::super::cache::BoxFuture<'a, Result<Option<String>>> {
+        fn get_raw<'a>(
+            &'a self,
+            key: &'a str,
+        ) -> super::super::cache::BoxFuture<'a, Result<Option<String>>> {
             Box::pin(async move {
                 let data = self.data.read().await;
                 Ok(data.get(key).cloned())
@@ -198,11 +197,8 @@ mod tests {
     #[tokio::test]
     async fn test_multi_level_cache_l1_hit() {
         let l2 = Arc::new(MockDistributedCache::new());
-        let cache = MultiLevelCache::new(
-            Some(l2),
-            Duration::from_secs(60),
-            Duration::from_secs(300),
-        );
+        let cache =
+            MultiLevelCache::new(Some(l2), Duration::from_secs(60), Duration::from_secs(300));
 
         // Store value
         cache.set("key1", &"value1").await.unwrap();
@@ -217,7 +213,9 @@ mod tests {
         let l2 = Arc::new(MockDistributedCache::new());
 
         // Pre-populate L2
-        l2.set_raw("key2", "\"value2\"".to_string(), None).await.unwrap();
+        l2.set_raw("key2", "\"value2\"".to_string(), None)
+            .await
+            .unwrap();
 
         let cache = MultiLevelCache::new(
             Some(l2.clone()),
@@ -237,11 +235,8 @@ mod tests {
     #[tokio::test]
     async fn test_multi_level_cache_both_miss() {
         let l2 = Arc::new(MockDistributedCache::new());
-        let cache = MultiLevelCache::new(
-            Some(l2),
-            Duration::from_secs(60),
-            Duration::from_secs(300),
-        );
+        let cache =
+            MultiLevelCache::new(Some(l2), Duration::from_secs(60), Duration::from_secs(300));
 
         // Both L1 and L2 miss
         let result: Option<String> = cache.get("nonexistent").await.unwrap();
@@ -250,11 +245,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_multi_level_cache_no_l2() {
-        let cache = MultiLevelCache::new(
-            None,
-            Duration::from_secs(60),
-            Duration::from_secs(300),
-        );
+        let cache = MultiLevelCache::new(None, Duration::from_secs(60), Duration::from_secs(300));
 
         // Set and get with L1 only
         cache.set("key3", &"value3").await.unwrap();
@@ -288,11 +279,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_multi_level_cache_exists_l1() {
-        let cache = MultiLevelCache::new(
-            None,
-            Duration::from_secs(60),
-            Duration::from_secs(300),
-        );
+        let cache = MultiLevelCache::new(None, Duration::from_secs(60), Duration::from_secs(300));
 
         cache.set("key5", &"value5").await.unwrap();
         assert!(cache.exists("key5").await.unwrap());
@@ -304,13 +291,12 @@ mod tests {
         let l2 = Arc::new(MockDistributedCache::new());
 
         // Pre-populate L2 only
-        l2.set_raw("key6", "\"value6\"".to_string(), None).await.unwrap();
+        l2.set_raw("key6", "\"value6\"".to_string(), None)
+            .await
+            .unwrap();
 
-        let cache = MultiLevelCache::new(
-            Some(l2),
-            Duration::from_secs(60),
-            Duration::from_secs(300),
-        );
+        let cache =
+            MultiLevelCache::new(Some(l2), Duration::from_secs(60), Duration::from_secs(300));
 
         // Should find in L2
         assert!(cache.exists("key6").await.unwrap());
@@ -342,11 +328,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_multi_level_cache_type_safety() {
-        let cache = MultiLevelCache::new(
-            None,
-            Duration::from_secs(60),
-            Duration::from_secs(300),
-        );
+        let cache = MultiLevelCache::new(None, Duration::from_secs(60), Duration::from_secs(300));
 
         // Test with different types
         #[derive(Serialize, Deserialize, PartialEq, Debug)]

@@ -1,7 +1,8 @@
-﻿pub mod agent_cmd;
+pub mod agent_cmd;
 pub mod analytics_cmd;
 pub mod autonomous_cmd;
 pub mod context_cmd;
+pub mod daemon_cmd;
 pub mod debug_sandbox;
 mod exit_status;
 pub mod intent_cmd;

@@ -317,7 +317,7 @@ mod tests {
             skill_name: "good".to_string(),
             execution_count: 20,
             avg_execution_time_ms: 1000, // < 5000
-            success_rate: 0.95, // > 0.9
+            success_rate: 0.95,          // > 0.9
             last_used_at: OffsetDateTime::now_utc(),
         };
 
@@ -348,7 +348,7 @@ mod tests {
     fn test_performance_metrics_is_healthy() {
         let healthy = PerformanceMetrics {
             total_commands: 1000,
-            total_errors: 30, // 3% error rate < 5%
+            total_errors: 30,             // 3% error rate < 5%
             avg_response_time_ms: 1500.0, // < 2000ms
             uptime_hours: 24.0,
             cache_metrics: CacheMetrics {

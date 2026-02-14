@@ -1,4 +1,4 @@
-﻿//! Prototype MCP server.
+//! Prototype MCP server.
 #![deny(clippy::print_stdout, clippy::print_stderr)]
 
 use std::io::ErrorKind;
@@ -38,10 +38,10 @@ use crate::outgoing_message::OutgoingJsonRpcMessage;
 use crate::outgoing_message::OutgoingMessage;
 use crate::outgoing_message::OutgoingMessageSender;
 
-pub use crate::jarvis_tool_config::CodexToolCallParam;
-pub use crate::jarvis_tool_config::CodexToolCallReplyParam;
 pub use crate::exec_approval::ExecApprovalElicitRequestParams;
 pub use crate::exec_approval::ExecApprovalResponse;
+pub use crate::jarvis_tool_config::CodexToolCallParam;
+pub use crate::jarvis_tool_config::CodexToolCallReplyParam;
 pub use crate::patch_approval::PatchApprovalElicitRequestParams;
 pub use crate::patch_approval::PatchApprovalResponse;
 

@@ -1,4 +1,4 @@
-﻿use base64::Engine;
+use base64::Engine;
 use serde::Deserialize;
 use serde::Serialize;
 use thiserror::Error;
@@ -137,9 +137,12 @@ pub fn parse_id_token(id_token: &str) -> Result<IdTokenInfo, IdTokenInfoError> {
 
     let payload_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD.decode(payload_b64)?;
     let claims: IdClaims = serde_json::from_slice(&payload_bytes)?;
-    let email = claims
-        .email
-        .or_else(|| claims.profile.as_ref().and_then(|profile| profile.email.clone()));
+    let email = claims.email.or_else(|| {
+        claims
+            .profile
+            .as_ref()
+            .and_then(|profile| profile.email.clone())
+    });
 
     match claims.auth {
         Some(auth) => Ok(IdTokenInfo {

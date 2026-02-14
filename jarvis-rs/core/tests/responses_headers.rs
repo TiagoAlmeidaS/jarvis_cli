@@ -1,10 +1,14 @@
-﻿use std::process::Command;
+use std::process::Command;
 use std::sync::Arc;
 
+use core_test_support::load_default_config_for_test;
+use core_test_support::responses;
+use core_test_support::test_codex::test_codex;
+use futures::StreamExt;
 use jarvis_app_server_protocol::AuthMode;
 use jarvis_core::AuthManager;
-use jarvis_core::JarvisAuth;
 use jarvis_core::ContentItem;
+use jarvis_core::JarvisAuth;
 use jarvis_core::ModelClient;
 use jarvis_core::ModelProviderInfo;
 use jarvis_core::Prompt;
@@ -20,10 +24,6 @@ use jarvis_protocol::config_types::ReasoningSummary;
 use jarvis_protocol::config_types::WebSearchMode;
 use jarvis_protocol::protocol::SessionSource;
 use jarvis_protocol::protocol::SubAgentSource;
-use core_test_support::load_default_config_for_test;
-use core_test_support::responses;
-use core_test_support::test_codex::test_codex;
-use futures::StreamExt;
 use pretty_assertions::assert_eq;
 use tempfile::TempDir;
 use wiremock::matchers::header;
@@ -244,7 +244,10 @@ async fn responses_stream_includes_web_search_eligible_header_true_by_default() 
     )
     .await;
 
-    let test = test_codex().build(&server).await.expect("build test Jarvis");
+    let test = test_codex()
+        .build(&server)
+        .await
+        .expect("build test Jarvis");
     test.submit_turn("hello").await.expect("submit test prompt");
 
     let request = request_recorder.single_request();
@@ -329,8 +332,8 @@ async fn responses_respects_model_info_overrides_from_config() {
     let config = Arc::new(config);
 
     let conversation_id = ThreadId::new();
-    let auth_mode =
-        AuthManager::from_auth_for_testing(JarvisAuth::from_api_key("Test API Key")).get_auth_mode();
+    let auth_mode = AuthManager::from_auth_for_testing(JarvisAuth::from_api_key("Test API Key"))
+        .get_auth_mode();
     let session_source =
         SessionSource::SubAgent(SubAgentSource::Other("override-check".to_string()));
     let model_info = ModelsManager::construct_model_info_offline(model.as_str(), &config);
@@ -409,7 +412,10 @@ async fn responses_stream_includes_turn_metadata_header_for_git_workspace_e2e() 
         responses::ev_completed("resp-1"),
     ]);
 
-    let test = test_codex().build(&server).await.expect("build test Jarvis");
+    let test = test_codex()
+        .build(&server)
+        .await
+        .expect("build test Jarvis");
     let cwd = test.cwd_path();
 
     let first_request = responses::mount_sse_once(&server, response_body.clone()).await;

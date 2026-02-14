@@ -1,4 +1,4 @@
-﻿mod cloud_requirements;
+mod cloud_requirements;
 mod config_requirements;
 mod diagnostics;
 mod fingerprint;
@@ -19,13 +19,13 @@ use crate::config::deserialize_config_toml_with_base;
 use crate::config_loader::config_requirements::ConfigRequirementsWithSources;
 use crate::config_loader::layer_io::LoadedConfigLayers;
 use crate::git_info::resolve_root_git_project_for_trust;
+use dunce::canonicalize as normalize_path;
 use jarvis_app_server_protocol::ConfigLayerSource;
 use jarvis_protocol::config_types::SandboxMode;
 use jarvis_protocol::config_types::TrustLevel;
 use jarvis_protocol::protocol::AskForApproval;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
 use jarvis_utils_absolute_path::AbsolutePathBufGuard;
-use dunce::canonicalize as normalize_path;
 use serde::Deserialize;
 use std::io;
 use std::path::Path;
@@ -132,7 +132,8 @@ pub async fn load_config_layers_state(
 
     // Make a best-effort to support the legacy `managed_config.toml` as a
     // requirements specification.
-    let loaded_config_layers = layer_io::load_config_layers_internal(jarvis_home, overrides).await?;
+    let loaded_config_layers =
+        layer_io::load_config_layers_internal(jarvis_home, overrides).await?;
     load_requirements_from_legacy_scheme(
         &mut config_requirements_toml,
         loaded_config_layers.clone(),

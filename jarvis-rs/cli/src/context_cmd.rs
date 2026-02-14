@@ -5,10 +5,10 @@ use clap::{Args, Subcommand};
 use jarvis_common::CliConfigOverrides;
 use jarvis_core::config::find_jarvis_home;
 use jarvis_core::rag::{
-    ChunkingConfig, DocumentIndexer, DocumentMetadata, InMemoryDocumentIndexer,
-    InMemoryVectorStore, KnowledgeRetriever, SimpleKnowledgeRetriever,
-    EmbeddingGenerator, OllamaEmbeddingGenerator, Embedding, EmbeddingMetadata, VectorStore,
-    DocumentStore, JsonFileDocumentStore,
+    ChunkingConfig, DocumentIndexer, DocumentMetadata, DocumentStore, Embedding,
+    EmbeddingGenerator, EmbeddingMetadata, InMemoryDocumentIndexer, InMemoryVectorStore,
+    JsonFileDocumentStore, KnowledgeRetriever, OllamaEmbeddingGenerator, SimpleKnowledgeRetriever,
+    VectorStore,
 };
 use owo_colors::OwoColorize;
 use serde_json;
@@ -214,7 +214,11 @@ async fn add_context(args: AddArgs) -> Result<()> {
     if args.output == OutputFormat::Human {
         println!("\n{}", "📄 Adding document to context...".bold().cyan());
         println!("{}", "─".repeat(50).dimmed());
-        println!("  {} {}", "Path:".bold(), args.path.display().to_string().cyan());
+        println!(
+            "  {} {}",
+            "Path:".bold(),
+            args.path.display().to_string().cyan()
+        );
         if let Some(ref doc_type) = args.doc_type {
             println!("  {} {}", "Type:".bold(), doc_type.yellow());
         }
@@ -248,10 +252,14 @@ async fn add_context(args: AddArgs) -> Result<()> {
 
     #[cfg(feature = "qdrant")]
     let vector_store: Arc<dyn VectorStore> = Arc::new(
-        QdrantVectorStore::from_config().await
+        QdrantVectorStore::from_config()
+            .await
             .map_err(|e| {
                 if args.output == OutputFormat::Human {
-                    eprintln!("{}", "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow());
+                    eprintln!(
+                        "{}",
+                        "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow()
+                    );
                     eprintln!("   {}", format!("Error: {}", e).dimmed());
                 }
                 e
@@ -259,7 +267,7 @@ async fn add_context(args: AddArgs) -> Result<()> {
             .unwrap_or_else(|_| {
                 // Fallback to in-memory if Qdrant fails
                 InMemoryVectorStore::new()
-            })
+            }),
     );
 
     #[cfg(not(feature = "qdrant"))]
@@ -322,7 +330,11 @@ async fn add_context(args: AddArgs) -> Result<()> {
             println!("{}", "─".repeat(50).dimmed());
             println!("  {} {}", "ID:".bold(), doc.id.yellow());
             println!("  {} {}", "Title:".bold(), doc.title);
-            println!("  {} {}", "Chunks:".bold(), doc.chunks.len().to_string().cyan());
+            println!(
+                "  {} {}",
+                "Chunks:".bold(),
+                doc.chunks.len().to_string().cyan()
+            );
             println!(
                 "  {} {} bytes",
                 "Size:".bold(),
@@ -331,7 +343,11 @@ async fn add_context(args: AddArgs) -> Result<()> {
             println!(
                 "  {} {}",
                 "Storage:".bold(),
-                if cfg!(feature = "qdrant") { "Qdrant (VPS)" } else { "In-Memory" }
+                if cfg!(feature = "qdrant") {
+                    "Qdrant (VPS)"
+                } else {
+                    "In-Memory"
+                }
             );
             println!();
         }
@@ -366,15 +382,19 @@ async fn search_context(args: SearchArgs) -> Result<()> {
     // Create vector store
     #[cfg(feature = "qdrant")]
     let vector_store: Arc<dyn VectorStore> = Arc::new(
-        QdrantVectorStore::from_config().await
+        QdrantVectorStore::from_config()
+            .await
             .map_err(|e| {
                 if args.output == OutputFormat::Human {
-                    eprintln!("{}", "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow());
+                    eprintln!(
+                        "{}",
+                        "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow()
+                    );
                     eprintln!("   {}", format!("Error: {}", e).dimmed());
                 }
                 e
             })
-            .unwrap_or_else(|_| InMemoryVectorStore::new())
+            .unwrap_or_else(|_| InMemoryVectorStore::new()),
     );
 
     #[cfg(not(feature = "qdrant"))]
@@ -410,8 +430,14 @@ async fn search_context(args: SearchArgs) -> Result<()> {
                 println!("{}", "No results found.".yellow());
                 println!();
                 println!("{}", "💡 Tips:".dimmed());
-                println!("   {} Try lowering the minimum score with --min-score", "-".dimmed());
-                println!("   {} Make sure you've added documents with 'jarvis context add'", "-".dimmed());
+                println!(
+                    "   {} Try lowering the minimum score with --min-score",
+                    "-".dimmed()
+                );
+                println!(
+                    "   {} Make sure you've added documents with 'jarvis context add'",
+                    "-".dimmed()
+                );
             } else {
                 println!(
                     "\n{} ({} results)",
@@ -425,8 +451,7 @@ async fn search_context(args: SearchArgs) -> Result<()> {
                         "{}. {} [{}]",
                         i + 1,
                         "Result".bold(),
-                        format!("{:.1}% similarity", result.similarity * 100.0)
-                            .yellow()
+                        format!("{:.1}% similarity", result.similarity * 100.0).yellow()
                     );
 
                     if args.show_source {
@@ -631,10 +656,17 @@ async fn remove_context(args: RemoveArgs) -> Result<()> {
 
         println!("{}", "✅ Document removed successfully".green().bold());
         println!();
-        println!("  {} {} chunks removed", "Cleaned:".dimmed(), doc.chunks.len());
+        println!(
+            "  {} {} chunks removed",
+            "Cleaned:".dimmed(),
+            doc.chunks.len()
+        );
     } else {
         println!("{}", "❌ Document not found".red().bold());
-        return Err(anyhow::anyhow!("Document with ID '{}' not found", args.doc_id));
+        return Err(anyhow::anyhow!(
+            "Document with ID '{}' not found",
+            args.doc_id
+        ));
     }
 
     Ok(())

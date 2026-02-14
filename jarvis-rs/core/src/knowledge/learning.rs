@@ -100,10 +100,7 @@ impl RuleBasedLearningSystem {
             if !interaction.actions.is_empty() {
                 knowledge.push(Knowledge {
                     id: format!("pattern-{}", uuid::Uuid::new_v4()),
-                    content: format!(
-                        "Successful workflow: {}",
-                        interaction.actions.join(" -> ")
-                    ),
+                    content: format!("Successful workflow: {}", interaction.actions.join(" -> ")),
                     knowledge_type: KnowledgeType::Pattern,
                     category: "workflow".to_string(),
                     tags: vec!["success".to_string(), "workflow".to_string()],
@@ -116,7 +113,8 @@ impl RuleBasedLearningSystem {
             }
 
             // Extract user preference
-            if interaction.user_input.contains("prefer") || interaction.user_input.contains("gosto") {
+            if interaction.user_input.contains("prefer") || interaction.user_input.contains("gosto")
+            {
                 knowledge.push(Knowledge {
                     id: format!("preference-{}", uuid::Uuid::new_v4()),
                     content: format!("User preference: {}", interaction.user_input),
@@ -184,7 +182,8 @@ impl LearningSystem for RuleBasedLearningSystem {
         let mut patterns = Vec::new();
 
         // Group interactions by action sequences
-        let mut action_groups: std::collections::HashMap<String, Vec<&Interaction>> = std::collections::HashMap::new();
+        let mut action_groups: std::collections::HashMap<String, Vec<&Interaction>> =
+            std::collections::HashMap::new();
 
         for interaction in interactions {
             let action_key = interaction.actions.join("->");
@@ -220,7 +219,10 @@ impl LearningSystem for RuleBasedLearningSystem {
     }
 
     async fn get_relevant_knowledge(&self, query: &str, limit: usize) -> Result<Vec<Knowledge>> {
-        self.knowledge_base.search(query, limit).await.map_err(|e| anyhow::anyhow!("{}", e))
+        self.knowledge_base
+            .search(query, limit)
+            .await
+            .map_err(|e| anyhow::anyhow!("{}", e))
     }
 }
 

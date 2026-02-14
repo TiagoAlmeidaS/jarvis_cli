@@ -1,14 +1,14 @@
-﻿use crate::auth::AuthProvider;
+use crate::auth::AuthProvider;
 use crate::endpoint::session::EndpointSession;
 use crate::error::ApiError;
 use crate::provider::Provider;
+use http::HeaderMap;
+use http::Method;
+use http::header::ETAG;
 use jarvis_client::HttpTransport;
 use jarvis_client::RequestTelemetry;
 use jarvis_protocol::openai_models::ModelInfo;
 use jarvis_protocol::openai_models::ModelsResponse;
-use http::HeaderMap;
-use http::Method;
-use http::header::ETAG;
 use std::sync::Arc;
 
 pub struct ModelsClient<T: HttpTransport, A: AuthProvider> {
@@ -72,12 +72,12 @@ mod tests {
     use super::*;
     use crate::provider::RetryConfig;
     use async_trait::async_trait;
+    use http::HeaderMap;
+    use http::StatusCode;
     use jarvis_client::Request;
     use jarvis_client::Response;
     use jarvis_client::StreamResponse;
     use jarvis_client::TransportError;
-    use http::HeaderMap;
-    use http::StatusCode;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::sync::Arc;

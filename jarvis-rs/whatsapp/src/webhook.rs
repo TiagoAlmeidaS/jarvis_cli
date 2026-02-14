@@ -1,18 +1,18 @@
 use axum::{
+    Router,
     extract::{Query, State},
     http::{HeaderMap, StatusCode},
     response::Json,
     routing::get,
-    Router,
 };
-use std::sync::Arc;
 use jarvis_messaging::handler::MessageHandler;
 use jarvis_messaging::message::{Contact, IncomingMessage, MessageType, Platform};
 use jarvis_messaging::rate_limit::RateLimiter;
 use jarvis_messaging::security::validate_whatsapp_token;
 use serde::Deserialize;
+use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{interval, Duration};
+use tokio::time::{Duration, interval};
 
 use crate::config::WhatsAppConfig;
 
@@ -102,9 +102,9 @@ impl WhatsAppWebhookServer {
     pub async fn start(&self) -> anyhow::Result<()> {
         let app = self.create_router();
         let addr = format!("0.0.0.0:{}", self.config.webhook_port);
-        
+
         tracing::info!("Starting WhatsApp webhook server on {}", addr);
-        
+
         // Inicia limpeza periódica do rate limiter
         let rate_limiter = Arc::clone(&self.rate_limiter);
         tokio::spawn(async move {
@@ -117,7 +117,7 @@ impl WhatsAppWebhookServer {
 
         let listener = tokio::net::TcpListener::bind(&addr).await?;
         axum::serve(listener, app).await?;
-        
+
         Ok(())
     }
 }
@@ -170,7 +170,9 @@ async fn handle_webhook(
 
                     if let Some(text) = msg.text {
                         // Parse timestamp
-                        let timestamp = msg.timestamp.parse::<i64>()
+                        let timestamp = msg
+                            .timestamp
+                            .parse::<i64>()
                             .ok()
                             .and_then(|ts| chrono::DateTime::from_timestamp(ts, 0))
                             .unwrap_or_else(chrono::Utc::now);

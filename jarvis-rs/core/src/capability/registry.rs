@@ -23,7 +23,10 @@ pub trait CapabilityRegistry: Send + Sync {
     async fn list(&self) -> Result<Vec<CapabilityMetadata>>;
 
     /// Lists capabilities by type.
-    async fn list_by_type(&self, capability_type: &CapabilityType) -> Result<Vec<CapabilityMetadata>>;
+    async fn list_by_type(
+        &self,
+        capability_type: &CapabilityType,
+    ) -> Result<Vec<CapabilityMetadata>>;
 
     /// Searches capabilities by query.
     async fn search(&self, query: &str) -> Result<Vec<CapabilityMetadata>>;
@@ -70,7 +73,10 @@ impl InMemoryCapabilityRegistry {
             .filter(|cap| {
                 cap.name.to_lowercase().contains(&query_lower)
                     || cap.description.to_lowercase().contains(&query_lower)
-                    || cap.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower))
+                    || cap
+                        .tags
+                        .iter()
+                        .any(|tag| tag.to_lowercase().contains(&query_lower))
             })
             .cloned()
             .collect()
@@ -117,7 +123,10 @@ impl CapabilityRegistry for InMemoryCapabilityRegistry {
         Ok(by_id.values().cloned().collect())
     }
 
-    async fn list_by_type(&self, capability_type: &CapabilityType) -> Result<Vec<CapabilityMetadata>> {
+    async fn list_by_type(
+        &self,
+        capability_type: &CapabilityType,
+    ) -> Result<Vec<CapabilityMetadata>> {
         let by_id = self.by_id.read().await;
         Ok(by_id
             .values()

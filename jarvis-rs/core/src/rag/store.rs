@@ -136,7 +136,11 @@ impl VectorStore for InMemoryVectorStore {
             .collect();
 
         // Sort by similarity (descending)
-        results.sort_by(|a, b| b.similarity.partial_cmp(&a.similarity).unwrap_or(std::cmp::Ordering::Equal));
+        results.sort_by(|a, b| {
+            b.similarity
+                .partial_cmp(&a.similarity)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         // Return top K
         Ok(results.into_iter().take(top_k).collect())
@@ -160,7 +164,7 @@ pub mod qdrant {
     use super::*;
     use qdrant_client::prelude::*;
     use qdrant_client::qdrant::{
-        vectors_config::Config, Distance, PointStruct, VectorParams, VectorsConfig,
+        Distance, PointStruct, VectorParams, VectorsConfig, vectors_config::Config,
     };
 
     /// Qdrant-based vector store implementation.
@@ -191,7 +195,11 @@ pub mod qdrant {
         /// * `url` - Qdrant server URL (e.g., "http://localhost:6333")
         /// * `collection_name` - Name of the collection to use
         /// * `vector_dimension` - Dimension of the vectors
-        pub async fn new(url: &str, collection_name: String, vector_dimension: u64) -> Result<Self> {
+        pub async fn new(
+            url: &str,
+            collection_name: String,
+            vector_dimension: u64,
+        ) -> Result<Self> {
             let client = QdrantClient::from_url(url).build()?;
 
             // Check if collection exists
@@ -254,16 +262,22 @@ pub mod qdrant {
         }
 
         /// Converts a Qdrant ScoredPoint to a SearchResult.
-        fn scored_point_to_result(&self, point: qdrant_client::qdrant::ScoredPoint) -> SearchResult {
+        fn scored_point_to_result(
+            &self,
+            point: qdrant_client::qdrant::ScoredPoint,
+        ) -> SearchResult {
             use qdrant_client::qdrant::Value;
 
-            let chunk_id = point.id.map(|id| match id.point_id_options {
-                Some(qdrant_client::qdrant::point_id::PointIdOptions::Uuid(uuid)) => uuid,
-                Some(qdrant_client::qdrant::point_id::PointIdOptions::Num(num)) => {
-                    num.to_string()
-                }
-                None => String::new(),
-            }).unwrap_or_default();
+            let chunk_id = point
+                .id
+                .map(|id| match id.point_id_options {
+                    Some(qdrant_client::qdrant::point_id::PointIdOptions::Uuid(uuid)) => uuid,
+                    Some(qdrant_client::qdrant::point_id::PointIdOptions::Num(num)) => {
+                        num.to_string()
+                    }
+                    None => String::new(),
+                })
+                .unwrap_or_default();
 
             let payload = point.payload;
 
@@ -291,14 +305,17 @@ pub mod qdrant {
                 })
                 .unwrap_or(0);
 
-            let vector = point.vectors.and_then(|v| match v.vectors_options {
-                Some(qdrant_client::qdrant::vectors_output::VectorsOptions::Vector(vec)) => {
-                    #[allow(deprecated)]
-                    let data = vec.data;
-                    Some(data)
-                }
-                _ => None,
-            }).unwrap_or_default();
+            let vector = point
+                .vectors
+                .and_then(|v| match v.vectors_options {
+                    Some(qdrant_client::qdrant::vectors_output::VectorsOptions::Vector(vec)) => {
+                        #[allow(deprecated)]
+                        let data = vec.data;
+                        Some(data)
+                    }
+                    _ => None,
+                })
+                .unwrap_or_default();
 
             let embedding = Embedding {
                 vector,
@@ -367,15 +384,16 @@ pub mod qdrant {
                 .await?;
 
             if let Some(point) = points.result.into_iter().next() {
-                let search_result = self.scored_point_to_result(qdrant_client::qdrant::ScoredPoint {
-                    id: point.id,
-                    payload: point.payload,
-                    score: 1.0,
-                    vectors: point.vectors,
-                    shard_key: None,
-                    order_value: None,
-                    version: 0,
-                });
+                let search_result =
+                    self.scored_point_to_result(qdrant_client::qdrant::ScoredPoint {
+                        id: point.id,
+                        payload: point.payload,
+                        score: 1.0,
+                        vectors: point.vectors,
+                        shard_key: None,
+                        order_value: None,
+                        version: 0,
+                    });
                 Ok(Some(search_result.embedding))
             } else {
                 Ok(None)
@@ -389,12 +407,7 @@ pub mod qdrant {
             let points_selector = vec![point_id].into();
 
             self.client
-                .delete_points(
-                    &self.collection_name,
-                    None,
-                    &points_selector,
-                    None,
-                )
+                .delete_points(&self.collection_name, None, &points_selector, None)
                 .await?;
 
             Ok(())
@@ -539,35 +552,50 @@ mod tests {
         let store = InMemoryVectorStore::new();
 
         // Add 5 embeddings with different directions
-        store.add_embedding(Embedding {
-            vector: vec![1.0, 0.0, 0.0],
-            chunk_id: "chunk0".to_string(),
-            metadata: EmbeddingMetadata::default(),
-        }).await.unwrap();
+        store
+            .add_embedding(Embedding {
+                vector: vec![1.0, 0.0, 0.0],
+                chunk_id: "chunk0".to_string(),
+                metadata: EmbeddingMetadata::default(),
+            })
+            .await
+            .unwrap();
 
-        store.add_embedding(Embedding {
-            vector: vec![0.9, 0.1, 0.0],
-            chunk_id: "chunk1".to_string(),
-            metadata: EmbeddingMetadata::default(),
-        }).await.unwrap();
+        store
+            .add_embedding(Embedding {
+                vector: vec![0.9, 0.1, 0.0],
+                chunk_id: "chunk1".to_string(),
+                metadata: EmbeddingMetadata::default(),
+            })
+            .await
+            .unwrap();
 
-        store.add_embedding(Embedding {
-            vector: vec![1.0, 0.0, 0.0], // Same as query - highest similarity
-            chunk_id: "chunk2".to_string(),
-            metadata: EmbeddingMetadata::default(),
-        }).await.unwrap();
+        store
+            .add_embedding(Embedding {
+                vector: vec![1.0, 0.0, 0.0], // Same as query - highest similarity
+                chunk_id: "chunk2".to_string(),
+                metadata: EmbeddingMetadata::default(),
+            })
+            .await
+            .unwrap();
 
-        store.add_embedding(Embedding {
-            vector: vec![0.8, 0.2, 0.0],
-            chunk_id: "chunk3".to_string(),
-            metadata: EmbeddingMetadata::default(),
-        }).await.unwrap();
+        store
+            .add_embedding(Embedding {
+                vector: vec![0.8, 0.2, 0.0],
+                chunk_id: "chunk3".to_string(),
+                metadata: EmbeddingMetadata::default(),
+            })
+            .await
+            .unwrap();
 
-        store.add_embedding(Embedding {
-            vector: vec![0.0, 1.0, 0.0],
-            chunk_id: "chunk4".to_string(),
-            metadata: EmbeddingMetadata::default(),
-        }).await.unwrap();
+        store
+            .add_embedding(Embedding {
+                vector: vec![0.0, 1.0, 0.0],
+                chunk_id: "chunk4".to_string(),
+                metadata: EmbeddingMetadata::default(),
+            })
+            .await
+            .unwrap();
 
         // Search with limit 3
         let query = vec![1.0, 0.0, 0.0];
@@ -676,7 +704,10 @@ mod tests {
                 store_clone.add_embedding(embedding).await.unwrap();
 
                 // Verify it was added
-                let retrieved = store_clone.get_embedding(&format!("chunk{}", i)).await.unwrap();
+                let retrieved = store_clone
+                    .get_embedding(&format!("chunk{}", i))
+                    .await
+                    .unwrap();
                 assert!(retrieved.is_some());
             });
             handles.push(handle);

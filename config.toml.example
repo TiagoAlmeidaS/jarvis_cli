@@ -28,13 +28,17 @@ request_max_retries = 4
 stream_max_retries = 10
 stream_idle_timeout_ms = 300000
 
-# Provedor Azure OpenAI
+# Provedor Azure OpenAI (Chat Completions API)
+# Usa header "api-key" ao invés de "Authorization: Bearer" para autenticação
+# A URL final será: base_url/deployments/{model}/chat/completions?api-version=...
 [model_providers.azure-openai]
 name = "Azure OpenAI"
-base_url = "https://your-resource.openai.azure.com/openai"
-env_key = "AZURE_OPENAI_API_KEY"
+base_url = "https://bml-openai-agents.openai.azure.com/openai"
+env_key = null
+env_http_headers = { "api-key" = "AZURE_OPENAI_API_KEY" }
 wire_api = "responses"
-query_params = { "api-version" = "2024-02-15-preview" }
+query_params = { "api-version" = "2024-08-01-preview" }
+uses_chat_completions_api = true
 request_max_retries = 4
 stream_max_retries = 10
 stream_idle_timeout_ms = 300000
@@ -66,6 +70,19 @@ name = "Anthropic"
 base_url = "https://api.anthropic.com/v1"
 env_key = "ANTHROPIC_API_KEY"
 wire_api = "responses"
+request_max_retries = 4
+stream_max_retries = 10
+stream_idle_timeout_ms = 300000
+
+# Provedor Google AI Studio (Gemini - free tier disponivel)
+# Obtenha sua API key gratuita em: https://ai.google.dev
+# Modelos gratuitos: gemini-2.5-flash, gemini-2.5-flash-lite
+[model_providers.google]
+name = "Google AI Studio"
+base_url = "https://generativelanguage.googleapis.com/v1beta/openai"
+env_key = "GOOGLE_API_KEY"
+wire_api = "responses"
+uses_chat_completions_api = true
 request_max_retries = 4
 stream_max_retries = 10
 stream_idle_timeout_ms = 300000
@@ -117,12 +134,29 @@ model = "gpt-4o"
 # Perfil usando Azure OpenAI
 [profiles.azure]
 model_provider = "azure-openai"
-model = "gpt-4"
+model = "gpt-4o"
 
-# Perfil usando OpenRouter
+# Perfil Azure com o1-mini (raciocínio)
+[profiles.azure-reasoning]
+model_provider = "azure-openai"
+model = "o1-mini"
+
+# Perfil usando OpenRouter (modelo premium)
 [profiles.openrouter]
 model_provider = "openrouter"
 model = "anthropic/claude-3.5-sonnet"
+
+# Perfil usando OpenRouter com Mistral Nemo (barato, multilingual, bom para conteudo)
+# $0.02/M input + $0.04/M output — excelente custo-beneficio
+[profiles.nemo]
+model_provider = "openrouter"
+model = "mistralai/mistral-nemo"
+
+# Perfil usando OpenRouter com DeepHermes (24B, reasoning, ainda barato)
+# $0.02/M input + $0.10/M output — melhor qualidade que nemo, com reasoning
+[profiles.hermes]
+model_provider = "openrouter"
+model = "nousresearch/deephermes-3-mistral-24b-preview"
 
 # Perfil usando Ollama local
 [profiles.ollama]

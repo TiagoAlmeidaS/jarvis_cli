@@ -1,14 +1,14 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 
 use crate::ModelProviderInfo;
 use crate::Prompt;
-use crate::client_common::ResponseEvent;
 use crate::Session;
 use crate::TurnContext;
-use crate::get_last_assistant_message_from_turn;
+use crate::client_common::ResponseEvent;
 use crate::error::JarvisErr;
 use crate::error::Result as CodexResult;
 use crate::features::Feature;
+use crate::get_last_assistant_message_from_turn;
 use crate::protocol::CompactedItem;
 use crate::protocol::EventMsg;
 use crate::protocol::TurnContextItem;
@@ -19,6 +19,7 @@ use crate::truncate::TruncationPolicy;
 use crate::truncate::approx_token_count;
 use crate::truncate::truncate_text;
 use crate::util::backoff;
+use futures::prelude::*;
 use jarvis_protocol::items::ContextCompactionItem;
 use jarvis_protocol::items::TurnItem;
 use jarvis_protocol::models::ContentItem;
@@ -26,7 +27,6 @@ use jarvis_protocol::models::ResponseInputItem;
 use jarvis_protocol::models::ResponseItem;
 use jarvis_protocol::protocol::RolloutItem;
 use jarvis_protocol::user_input::UserInput;
-use futures::prelude::*;
 use tracing::error;
 
 pub const SUMMARIZATION_PROMPT: &str = include_str!("../templates/compact/prompt.md");

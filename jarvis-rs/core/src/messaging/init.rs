@@ -3,14 +3,14 @@
 //! Este módulo inicializa os servidores de webhook para WhatsApp e Telegram
 //! quando a configuração estiver habilitada.
 
-use crate::config::Config;
-use crate::messaging::handler::MessageToJarvisHandler;
+use crate::JarvisThread;
 use crate::Session;
 use crate::TurnContext;
+use crate::config::Config;
+use crate::messaging::handler::MessageToJarvisHandler;
 use crate::tools::router::ToolRouter;
-use crate::JarvisThread;
 use std::sync::Arc;
-use tracing::{info, warn, error};
+use tracing::{error, info, warn};
 
 /// Inicializa os servidores de mensageria baseado na configuração usando um JarvisThread.
 /// Esta é a versão recomendada que cria os componentes necessários a partir do thread.
@@ -25,11 +25,11 @@ pub async fn initialize_messaging_servers_from_thread(
 
     // Obter Session do thread
     let session = thread.session();
-    
+
     // Criar um TurnContext temporário para inicialização
     // Usamos new_default_turn que cria um contexto válido baseado na configuração da sessão
     let turn_context = session.new_default_turn().await;
-    
+
     // Criar ToolRouter a partir do TurnContext
     let tool_router = Arc::new(ToolRouter::from_config(
         &turn_context.tools_config,
@@ -57,13 +57,18 @@ pub async fn initialize_messaging_servers(
     // Inicializar WhatsApp se configurado
     if let Some(whatsapp_config) = &config.messaging.whatsapp {
         if whatsapp_config.enabled {
-            info!("Initializing WhatsApp webhook server on port {}", whatsapp_config.webhook_port);
+            info!(
+                "Initializing WhatsApp webhook server on port {}",
+                whatsapp_config.webhook_port
+            );
             match initialize_whatsapp_server(
                 whatsapp_config.clone(),
                 session.clone(),
                 turn_context.clone(),
                 tool_router.clone(),
-            ).await {
+            )
+            .await
+            {
                 Ok(handle) => {
                     handles.push(handle);
                     info!("WhatsApp webhook server started successfully");
@@ -79,13 +84,18 @@ pub async fn initialize_messaging_servers(
     // Inicializar Telegram se configurado
     if let Some(telegram_config) = &config.messaging.telegram {
         if telegram_config.enabled {
-            info!("Initializing Telegram webhook server on port {}", telegram_config.webhook_port);
+            info!(
+                "Initializing Telegram webhook server on port {}",
+                telegram_config.webhook_port
+            );
             match initialize_telegram_server(
                 telegram_config.clone(),
                 session.clone(),
                 turn_context.clone(),
                 tool_router.clone(),
-            ).await {
+            )
+            .await
+            {
                 Ok(handle) => {
                     handles.push(handle);
                     info!("Telegram webhook server started successfully");
@@ -116,9 +126,9 @@ async fn initialize_whatsapp_server(
     turn_context: Arc<TurnContext>,
     tool_router: Arc<ToolRouter>,
 ) -> anyhow::Result<tokio::task::JoinHandle<()>> {
-    use jarvis_whatsapp::platform::WhatsAppPlatform;
     use jarvis_whatsapp::client::WhatsAppClient;
     use jarvis_whatsapp::config::WhatsAppConfig as WhatsAppCrateConfig;
+    use jarvis_whatsapp::platform::WhatsAppPlatform;
 
     // Converter configuração do core para configuração do crate
     let whatsapp_crate_config = WhatsAppCrateConfig {
@@ -163,9 +173,9 @@ async fn initialize_telegram_server(
     turn_context: Arc<TurnContext>,
     tool_router: Arc<ToolRouter>,
 ) -> anyhow::Result<tokio::task::JoinHandle<()>> {
-    use jarvis_telegram::platform::TelegramPlatform;
     use jarvis_telegram::client::TelegramClient;
     use jarvis_telegram::config::TelegramConfig as TelegramCrateConfig;
+    use jarvis_telegram::platform::TelegramPlatform;
 
     // Converter configuração do core para configuração do crate
     let telegram_crate_config = TelegramCrateConfig {

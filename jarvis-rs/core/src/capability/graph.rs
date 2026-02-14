@@ -77,10 +77,7 @@ impl CapabilityGraph {
     }
 
     /// Builds graph from capability registry.
-    pub async fn build_from_registry(
-        &mut self,
-        registry: &dyn CapabilityRegistry,
-    ) -> Result<()> {
+    pub async fn build_from_registry(&mut self, registry: &dyn CapabilityRegistry) -> Result<()> {
         let capabilities = registry.list().await?;
 
         for capability in capabilities {
@@ -225,13 +222,7 @@ impl CapabilityGraph {
             for rel in relationships {
                 if matches!(rel.relationship_type, RelationshipType::DependsOn) {
                     if !visited.contains(&rel.to) {
-                        self.detect_cycle_dfs(
-                            &rel.to,
-                            visited,
-                            rec_stack,
-                            path,
-                            cycles,
-                        );
+                        self.detect_cycle_dfs(&rel.to, visited, rec_stack, path, cycles);
                     } else if rec_stack.contains(&rel.to) {
                         // Found a cycle
                         let cycle_start = path.iter().position(|x| x == &rel.to).unwrap();
@@ -274,7 +265,7 @@ mod tests {
     #[test]
     fn test_circular_dependency_detection() {
         let mut graph = CapabilityGraph::new();
-        
+
         graph.add_relationship(CapabilityRelationship {
             from: "a".to_string(),
             to: "b".to_string(),

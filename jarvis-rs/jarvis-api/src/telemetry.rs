@@ -1,4 +1,5 @@
-﻿use crate::error::ApiError;
+use crate::error::ApiError;
+use http::StatusCode;
 use jarvis_client::Request;
 use jarvis_client::RequestTelemetry;
 use jarvis_client::Response;
@@ -6,7 +7,6 @@ use jarvis_client::RetryPolicy;
 use jarvis_client::StreamResponse;
 use jarvis_client::TransportError;
 use jarvis_client::run_with_retry;
-use http::StatusCode;
 use std::future::Future;
 use std::sync::Arc;
 use std::time::Duration;

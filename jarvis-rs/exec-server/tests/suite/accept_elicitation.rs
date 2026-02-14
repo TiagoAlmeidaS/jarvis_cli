@@ -1,4 +1,4 @@
-﻿#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 use std::borrow::Cow;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -7,11 +7,11 @@ use std::sync::Mutex;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::ensure;
-use jarvis_exec_server::ExecResult;
 use exec_server_test_support::InteractiveClient;
 use exec_server_test_support::create_transport;
 use exec_server_test_support::notify_readable_sandbox;
 use exec_server_test_support::write_default_execpolicy;
+use jarvis_exec_server::ExecResult;
 use maplit::hashset;
 use pretty_assertions::assert_eq;
 use rmcp::ServiceExt;

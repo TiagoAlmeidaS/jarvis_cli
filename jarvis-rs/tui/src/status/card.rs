@@ -1,4 +1,4 @@
-﻿use crate::history_cell::CompositeHistoryCell;
+use crate::history_cell::CompositeHistoryCell;
 use crate::history_cell::HistoryCell;
 use crate::history_cell::PlainHistoryCell;
 use crate::history_cell::with_border_with_inner_width;
@@ -351,7 +351,9 @@ impl StatusHistoryCell {
 impl HistoryCell for StatusHistoryCell {
     fn display_lines(&self, width: u16) -> Vec<Line<'static>> {
         let mut lines: Vec<Line<'static>> = Vec::new();
-        let provider_display = self.model_provider.as_deref()
+        let provider_display = self
+            .model_provider
+            .as_deref()
             .map(|p| format!("{} Jarvis", p.to_uppercase()))
             .unwrap_or_else(|| "Jarvis CLI".to_string());
         lines.push(Line::from(vec![

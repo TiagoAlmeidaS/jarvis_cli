@@ -1,4 +1,4 @@
-﻿//! Configuration object accepted by the `Jarvis` MCP tool-call.
+//! Configuration object accepted by the `Jarvis` MCP tool-call.
 
 use jarvis_core::config::Config;
 use jarvis_core::config::ConfigOverrides;
@@ -237,7 +237,8 @@ pub(crate) fn create_tool_for_codex_tool_call_reply_param() -> Tool {
         .into_generator()
         .into_root_schema_for::<CodexToolCallReplyParam>();
 
-    let input_schema = create_tool_input_schema(schema, "Jarvis reply tool schema should serialize");
+    let input_schema =
+        create_tool_input_schema(schema, "Jarvis reply tool schema should serialize");
 
     Tool {
         name: "Jarvis-reply".into(),

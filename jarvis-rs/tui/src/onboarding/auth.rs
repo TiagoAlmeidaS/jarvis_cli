@@ -1,5 +1,9 @@
-﻿#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)]
 
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyEventKind;
+use crossterm::event::KeyModifiers;
 use jarvis_core::AuthManager;
 use jarvis_core::auth::AuthCredentialsStoreMode;
 use jarvis_core::auth::OAuthProvider;
@@ -8,10 +12,6 @@ use jarvis_core::auth::read_openai_api_key_from_env;
 use jarvis_login::ServerOptions;
 use jarvis_login::ShutdownHandle;
 use jarvis_login::run_login_server;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyEventKind;
-use crossterm::event::KeyModifiers;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Constraint;
 use ratatui::layout::Layout;
@@ -317,7 +317,9 @@ impl AuthModeWidget {
             // Schedule a follow-up frame to keep the shimmer animation going.
             self.request_frame
                 .schedule_frame_in(std::time::Duration::from_millis(100));
-            spans.extend(shimmer_spans("Finish signing in with Google via your browser"));
+            spans.extend(shimmer_spans(
+                "Finish signing in with Google via your browser",
+            ));
         } else {
             spans.push("Finish signing in with Google via your browser".into());
         }

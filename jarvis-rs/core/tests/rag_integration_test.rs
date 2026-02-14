@@ -4,9 +4,9 @@
 //! to context injection in chat.
 
 use jarvis_core::rag::{
-    create_rag_injector, inject_rag_context, ChunkingConfig, DocumentIndexer, DocumentMetadata,
-    EmbeddingGenerator, InMemoryDocumentIndexer, InMemoryDocumentStore, InMemoryVectorStore,
-    OllamaEmbeddingGenerator, RagContextConfig, RagContextInjector, VectorStore,
+    ChunkingConfig, DocumentIndexer, DocumentMetadata, EmbeddingGenerator, InMemoryDocumentIndexer,
+    InMemoryDocumentStore, InMemoryVectorStore, OllamaEmbeddingGenerator, RagContextConfig,
+    RagContextInjector, VectorStore, create_rag_injector, inject_rag_context,
 };
 use std::sync::Arc;
 use tempfile::TempDir;
@@ -267,13 +267,11 @@ async fn test_document_store_operations() {
 #[tokio::test]
 async fn test_rag_context_injection_disabled() {
     // Create a disabled injector
-    let embedding_gen = Arc::new(
-        OllamaEmbeddingGenerator::new(
-            "http://localhost:11434".to_string(),
-            "nomic-embed-text".to_string(),
-            768,
-        )
-    );
+    let embedding_gen = Arc::new(OllamaEmbeddingGenerator::new(
+        "http://localhost:11434".to_string(),
+        "nomic-embed-text".to_string(),
+        768,
+    ));
     let vector_store = Arc::new(InMemoryVectorStore::new());
     let doc_store = Arc::new(InMemoryDocumentStore::new());
 
@@ -304,13 +302,11 @@ async fn test_rag_context_injection_disabled() {
 #[tokio::test]
 async fn test_rag_context_injection_no_documents() {
     // Create enabled injector but with no documents
-    let embedding_gen = Arc::new(
-        OllamaEmbeddingGenerator::new(
-            "http://localhost:11434".to_string(),
-            "nomic-embed-text".to_string(),
-            768,
-        )
-    );
+    let embedding_gen = Arc::new(OllamaEmbeddingGenerator::new(
+        "http://localhost:11434".to_string(),
+        "nomic-embed-text".to_string(),
+        768,
+    ));
     let vector_store = Arc::new(InMemoryVectorStore::new());
     let doc_store = Arc::new(InMemoryDocumentStore::new());
 
@@ -377,13 +373,11 @@ async fn test_context_stats() {
             .expect("Failed to save document");
     }
 
-    let embedding_gen = Arc::new(
-        OllamaEmbeddingGenerator::new(
-            "http://localhost:11434".to_string(),
-            "nomic-embed-text".to_string(),
-            768,
-        )
-    );
+    let embedding_gen = Arc::new(OllamaEmbeddingGenerator::new(
+        "http://localhost:11434".to_string(),
+        "nomic-embed-text".to_string(),
+        768,
+    ));
     let vector_store = Arc::new(InMemoryVectorStore::new());
 
     let injector = RagContextInjector::new(

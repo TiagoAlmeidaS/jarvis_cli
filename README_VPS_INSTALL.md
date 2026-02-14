@@ -51,7 +51,7 @@ O script irá:
 ```bash
 # Na máquina local
 cd /e/projects/ia/jarvis_cli
-./configure-ollama-remote.sh
+./scripts/configure-ollama-remote.sh
 # Digite o IP Tailscale quando solicitado
 ```
 

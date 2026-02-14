@@ -1,11 +1,11 @@
-﻿use crate::error::ApiError;
+use crate::error::ApiError;
+use futures::Stream;
 use jarvis_protocol::config_types::ReasoningSummary as ReasoningSummaryConfig;
 use jarvis_protocol::config_types::Verbosity as VerbosityConfig;
 use jarvis_protocol::models::ResponseItem;
 use jarvis_protocol::openai_models::ReasoningEffort as ReasoningEffortConfig;
 use jarvis_protocol::protocol::RateLimitSnapshot;
 use jarvis_protocol::protocol::TokenUsage;
-use futures::Stream;
 use serde::Deserialize;
 use serde::Serialize;
 use serde_json::Value;

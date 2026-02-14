@@ -167,12 +167,12 @@ async fn explore_codebase(args: ExploreArgs) -> Result<()> {
         println!("\n{}", "🔍 Exploring codebase...".bold().cyan());
         println!("{}", "─".repeat(50).dimmed());
         println!("  {} {}", "Query:".bold(), args.query.yellow());
-        println!("  {} {}", "Path:".bold(), args.path.display().to_string().cyan());
         println!(
-            "  {} {:?}",
-            "Thoroughness:".bold(),
-            args.thoroughness
+            "  {} {}",
+            "Path:".bold(),
+            args.path.display().to_string().cyan()
         );
+        println!("  {} {:?}", "Thoroughness:".bold(), args.thoroughness);
         println!();
     }
 
@@ -181,7 +181,9 @@ async fn explore_codebase(args: ExploreArgs) -> Result<()> {
 
     // Run exploration
     let thoroughness: Thoroughness = args.thoroughness.into();
-    let result = agent.explore(&args.query, &mut session, thoroughness).await?;
+    let result = agent
+        .explore(&args.query, &mut session, thoroughness)
+        .await?;
 
     // Output results
     match args.output {
@@ -224,7 +226,11 @@ fn print_exploration_human(result: &jarvis_core::agent::ExploreAgentResult) {
 
     // Files explored
     if !result.files_explored.is_empty() {
-        println!("\n{} ({} files):", "Files Explored:".bold(), result.files_explored.len());
+        println!(
+            "\n{} ({} files):",
+            "Files Explored:".bold(),
+            result.files_explored.len()
+        );
         for (i, file) in result.files_explored.iter().take(10).enumerate() {
             println!("  {}. {}", i + 1, file.display().to_string().cyan());
         }
@@ -239,17 +245,31 @@ fn print_exploration_human(result: &jarvis_core::agent::ExploreAgentResult) {
 
     // Findings
     if !result.findings.is_empty() {
-        println!("\n{} ({} findings):", "Key Findings:".bold(), result.findings.len());
+        println!(
+            "\n{} ({} findings):",
+            "Key Findings:".bold(),
+            result.findings.len()
+        );
         for (i, finding) in result.findings.iter().enumerate() {
-            println!("\n  {}. {} [{}]", i + 1, finding.finding_type.green().bold(),
-                     format!("{:.0}% confidence", finding.confidence * 100.0).yellow());
+            println!(
+                "\n  {}. {} [{}]",
+                i + 1,
+                finding.finding_type.green().bold(),
+                format!("{:.0}% confidence", finding.confidence * 100.0).yellow()
+            );
             println!("     {}", finding.description.dimmed());
             if !finding.files.is_empty() {
-                println!("     {} {}", "Files:".bold(),
-                         finding.files.iter()
-                             .map(|f| f.display().to_string())
-                             .collect::<Vec<_>>()
-                             .join(", ").cyan());
+                println!(
+                    "     {} {}",
+                    "Files:".bold(),
+                    finding
+                        .files
+                        .iter()
+                        .map(|f| f.display().to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                        .cyan()
+                );
             }
         }
     }
@@ -261,7 +281,11 @@ fn print_exploration_human(result: &jarvis_core::agent::ExploreAgentResult) {
             println!("  {} {}", format!("{}:", key).cyan(), value.dimmed());
         }
         if result.knowledge.len() > 5 {
-            println!("  {} ({} more entries)", "...".dimmed(), result.knowledge.len() - 5);
+            println!(
+                "  {} ({} more entries)",
+                "...".dimmed(),
+                result.knowledge.len() - 5
+            );
         }
     }
 
@@ -275,12 +299,18 @@ fn print_exploration_markdown(result: &jarvis_core::agent::ExploreAgentResult) {
     println!("{}\n", result.summary);
 
     if !result.files_explored.is_empty() {
-        println!("## Files Explored ({} files)\n", result.files_explored.len());
+        println!(
+            "## Files Explored ({} files)\n",
+            result.files_explored.len()
+        );
         for file in result.files_explored.iter().take(20) {
             println!("- `{}`", file.display());
         }
         if result.files_explored.len() > 20 {
-            println!("\n*... and {} more files*", result.files_explored.len() - 20);
+            println!(
+                "\n*... and {} more files*",
+                result.files_explored.len() - 20
+            );
         }
         println!();
     }
@@ -288,8 +318,12 @@ fn print_exploration_markdown(result: &jarvis_core::agent::ExploreAgentResult) {
     if !result.findings.is_empty() {
         println!("## Key Findings\n");
         for (i, finding) in result.findings.iter().enumerate() {
-            println!("### {}. {} ({:.0}% confidence)\n",
-                     i + 1, finding.finding_type, finding.confidence * 100.0);
+            println!(
+                "### {}. {} ({:.0}% confidence)\n",
+                i + 1,
+                finding.finding_type,
+                finding.confidence * 100.0
+            );
             println!("{}\n", finding.description);
             if !finding.files.is_empty() {
                 println!("**Related files:**");
@@ -320,7 +354,11 @@ async fn create_plan(args: PlanArgs) -> Result<()> {
     if args.output == OutputFormat::Human {
         println!("\n{}", "📋 Creating implementation plan...".bold().cyan());
         println!("{}", "─".repeat(50).dimmed());
-        println!("  {} {}", "Requirements:".bold(), args.requirements.yellow());
+        println!(
+            "  {} {}",
+            "Requirements:".bold(),
+            args.requirements.yellow()
+        );
         println!();
     }
 
@@ -380,16 +418,32 @@ fn print_plan_human(result: &jarvis_core::agent::PlanAgentResult) {
 
     // Implementation steps
     if !result.steps.is_empty() {
-        println!("\n{} ({} steps):", "Implementation Steps:".bold().cyan(), result.steps.len());
+        println!(
+            "\n{} ({} steps):",
+            "Implementation Steps:".bold().cyan(),
+            result.steps.len()
+        );
         for step in &result.steps {
             println!("\n  {}. {}", step.step_number, step.description.green());
             if !step.files.is_empty() {
-                println!("     {} {}", "Files:".dimmed(), step.files.join(", ").cyan());
+                println!(
+                    "     {} {}",
+                    "Files:".dimmed(),
+                    step.files.join(", ").cyan()
+                );
             }
             if !step.dependencies.is_empty() {
-                println!("     {} {}", "Dependencies:".dimmed(), step.dependencies.join(", "));
+                println!(
+                    "     {} {}",
+                    "Dependencies:".dimmed(),
+                    step.dependencies.join(", ")
+                );
             }
-            println!("     {} {}", "Estimated time:".dimmed(), step.estimated_time.yellow());
+            println!(
+                "     {} {}",
+                "Estimated time:".dimmed(),
+                step.estimated_time.yellow()
+            );
         }
     }
 
@@ -398,8 +452,16 @@ fn print_plan_human(result: &jarvis_core::agent::PlanAgentResult) {
         println!("\n{}", "Trade-offs:".bold().cyan());
         for (i, trade_off) in result.trade_offs.iter().enumerate() {
             println!("\n  {}. {}", i + 1, trade_off.approach.green().bold());
-            println!("     {} {}", "Pros:".bold(), trade_off.pros.join(", ").dimmed());
-            println!("     {} {}", "Cons:".bold(), trade_off.cons.join(", ").dimmed());
+            println!(
+                "     {} {}",
+                "Pros:".bold(),
+                trade_off.pros.join(", ").dimmed()
+            );
+            println!(
+                "     {} {}",
+                "Cons:".bold(),
+                trade_off.cons.join(", ").dimmed()
+            );
             if let Some(rec) = &trade_off.recommendation {
                 println!("     {} {}", "→".cyan(), rec.yellow());
             }
@@ -432,8 +494,16 @@ fn print_plan_human(result: &jarvis_core::agent::PlanAgentResult) {
 
     // Estimates
     println!("\n{}", "Estimates:".bold());
-    println!("  {} {}", "Total time:".dimmed(), result.estimates.total_time.yellow());
-    println!("  {} {}", "Complexity:".dimmed(), result.estimates.complexity);
+    println!(
+        "  {} {}",
+        "Total time:".dimmed(),
+        result.estimates.total_time.yellow()
+    );
+    println!(
+        "  {} {}",
+        "Complexity:".dimmed(),
+        result.estimates.complexity
+    );
     println!("  {} {}", "Steps:".dimmed(), result.estimates.step_count);
 
     println!();
@@ -443,7 +513,10 @@ fn print_plan_human(result: &jarvis_core::agent::PlanAgentResult) {
 async fn list_sessions(_args: SessionListArgs) -> Result<()> {
     println!("\n{}", "Agent Sessions".bold().cyan());
     println!("{}", "─".repeat(50).dimmed());
-    println!("\n{}", "Note: Session listing not yet implemented.".yellow());
+    println!(
+        "\n{}",
+        "Note: Session listing not yet implemented.".yellow()
+    );
     println!("Sessions are currently in-memory and will be lost on exit.");
     println!();
     Ok(())
@@ -454,7 +527,10 @@ async fn resume_session(args: SessionResumeArgs) -> Result<()> {
     println!("\n{}", "Resuming Session".bold().cyan());
     println!("{}", "─".repeat(50).dimmed());
     println!("  {} {}", "Session ID:".bold(), args.session_id.yellow());
-    println!("\n{}", "Note: Session resume not yet fully implemented.".yellow());
+    println!(
+        "\n{}",
+        "Note: Session resume not yet fully implemented.".yellow()
+    );
     println!("Use persistent session manager for production use.");
     println!();
     Ok(())
@@ -466,32 +542,33 @@ async fn show_session(args: SessionShowArgs) -> Result<()> {
         Arc::new(InMemoryAgentSessionManager::new());
 
     match session_manager.get_session(&args.session_id).await? {
-        Some(session) => {
-            match args.output {
-                OutputFormat::Json => {
-                    let json = serde_json::to_string_pretty(&session)?;
-                    println!("{}", json);
-                }
-                _ => {
-                    println!("\n{}", "Session Details".bold().cyan());
-                    println!("{}", "─".repeat(50).dimmed());
-                    println!("  {} {}", "ID:".bold(), session.session_id.yellow());
-                    println!("  {} {}", "Type:".bold(), session.agent_type.cyan());
-                    println!("  {} {}", "Messages:".bold(), session.history.len());
-                    println!("  {} {}", "Files Read:".bold(), session.files_read.len());
-                    println!("  {} {}", "Tools Used:".bold(), session.tools_used.len());
-
-                    if !session.history.is_empty() {
-                        println!("\n{}", "Recent Messages:".bold());
-                        for msg in session.history.iter().rev().take(5) {
-                            println!("  {} {}", format!("[{}]:", msg.role).dimmed(),
-                                     msg.content.chars().take(100).collect::<String>());
-                        }
-                    }
-                    println!();
-                }
+        Some(session) => match args.output {
+            OutputFormat::Json => {
+                let json = serde_json::to_string_pretty(&session)?;
+                println!("{}", json);
             }
-        }
+            _ => {
+                println!("\n{}", "Session Details".bold().cyan());
+                println!("{}", "─".repeat(50).dimmed());
+                println!("  {} {}", "ID:".bold(), session.session_id.yellow());
+                println!("  {} {}", "Type:".bold(), session.agent_type.cyan());
+                println!("  {} {}", "Messages:".bold(), session.history.len());
+                println!("  {} {}", "Files Read:".bold(), session.files_read.len());
+                println!("  {} {}", "Tools Used:".bold(), session.tools_used.len());
+
+                if !session.history.is_empty() {
+                    println!("\n{}", "Recent Messages:".bold());
+                    for msg in session.history.iter().rev().take(5) {
+                        println!(
+                            "  {} {}",
+                            format!("[{}]:", msg.role).dimmed(),
+                            msg.content.chars().take(100).collect::<String>()
+                        );
+                    }
+                }
+                println!();
+            }
+        },
         None => {
             println!("{} Session not found: {}", "✗".red(), args.session_id);
         }

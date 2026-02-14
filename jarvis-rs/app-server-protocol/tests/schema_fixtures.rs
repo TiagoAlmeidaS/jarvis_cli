@@ -1,4 +1,4 @@
-﻿use anyhow::Context;
+use anyhow::Context;
 use anyhow::Result;
 use jarvis_app_server_protocol::read_schema_fixture_tree;
 use jarvis_app_server_protocol::write_schema_fixtures;
@@ -75,9 +75,10 @@ fn schema_root() -> Result<std::path::PathBuf> {
         .to_path_buf();
 
     // Sanity check that the JSON fixtures resolve to the same schema root.
-    let json_bundle =
-        jarvis_utils_cargo_bin::find_resource!("schema/json/jarvis_app_server_protocol.schemas.json")
-            .context("resolve JSON schema bundle")?;
+    let json_bundle = jarvis_utils_cargo_bin::find_resource!(
+        "schema/json/jarvis_app_server_protocol.schemas.json"
+    )
+    .context("resolve JSON schema bundle")?;
     let json_root = json_bundle
         .parent()
         .and_then(|p| p.parent())

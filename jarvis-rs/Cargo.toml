@@ -6,6 +6,8 @@ members = [
     "app-server",
     "app-server-protocol",
     "app-server-test-client",
+    "daemon",
+    "daemon-common",
     "debug-client",
     "apply-patch",
     "arg0",
@@ -84,6 +86,8 @@ jarvis-chatgpt = { path = "chatgpt" }
 jarvis-cli = { path = "cli"}
 jarvis-client = { path = "jarvis-client" }
 jarvis-common = { path = "common" }
+jarvis-daemon = { path = "daemon" }
+jarvis-daemon-common = { path = "daemon-common" }
 jarvis-core = { path = "core" }
 jarvis-secrets = { path = "secrets" }
 jarvis-exec = { path = "exec" }

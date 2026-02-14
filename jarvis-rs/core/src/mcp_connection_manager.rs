@@ -1,4 +1,4 @@
-﻿//! Connection manager for Model Context Protocol (MCP) servers.
+//! Connection manager for Model Context Protocol (MCP) servers.
 //!
 //! The [`McpConnectionManager`] owns one [`jarvis_rmcp_client::RmcpClient`] per
 //! configured server (keyed by the *server name*). It offers convenience
@@ -14,12 +14,15 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::mcp::jarvis_APPS_MCP_SERVER_NAME;
 use crate::mcp::auth::McpAuthStatusEntry;
+use crate::mcp::jarvis_APPS_MCP_SERVER_NAME;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::anyhow;
 use async_channel::Sender;
+use futures::future::BoxFuture;
+use futures::future::FutureExt;
+use futures::future::Shared;
 use jarvis_async_utils::CancelErr;
 use jarvis_async_utils::OrCancelExt;
 use jarvis_protocol::approvals::ElicitationRequestEvent;
@@ -36,9 +39,6 @@ use jarvis_rmcp_client::ElicitationResponse;
 use jarvis_rmcp_client::OAuthCredentialsStoreMode;
 use jarvis_rmcp_client::RmcpClient;
 use jarvis_rmcp_client::SendElicitation;
-use futures::future::BoxFuture;
-use futures::future::FutureExt;
-use futures::future::Shared;
 use rmcp::model::ClientCapabilities;
 use rmcp::model::ElicitationCapability;
 use rmcp::model::Implementation;

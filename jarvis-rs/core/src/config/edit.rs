@@ -1,4 +1,4 @@
-﻿use crate::config::CONFIG_TOML_FILE;
+use crate::config::CONFIG_TOML_FILE;
 use crate::config::types::McpServerConfig;
 use crate::config::types::Notice;
 use crate::path_utils::resolve_symlink_write_paths;
@@ -1705,14 +1705,16 @@ model_reasoning_effort = "high"
             .set_model(Some("gpt-5.1-Jarvis"), Some(ReasoningEffort::High))
             .apply_blocking()
             .expect("persist update");
-        contents = std::fs::read_to_string(jarvis_home.join(CONFIG_TOML_FILE)).expect("read config");
+        contents =
+            std::fs::read_to_string(jarvis_home.join(CONFIG_TOML_FILE)).expect("read config");
         assert_eq!(contents, updated_expected);
 
         ConfigEditsBuilder::new(jarvis_home)
             .set_model(Some("o4-mini"), Some(ReasoningEffort::Low))
             .apply_blocking()
             .expect("persist revert");
-        contents = std::fs::read_to_string(jarvis_home.join(CONFIG_TOML_FILE)).expect("read config");
+        contents =
+            std::fs::read_to_string(jarvis_home.join(CONFIG_TOML_FILE)).expect("read config");
         assert_eq!(contents, initial_expected);
     }
 

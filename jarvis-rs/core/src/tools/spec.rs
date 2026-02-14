@@ -1,4 +1,4 @@
-﻿use crate::agent::AgentRole;
+use crate::agent::AgentRole;
 use crate::client_common::tools::ResponsesApiTool;
 use crate::client_common::tools::ToolSpec;
 use crate::features::Feature;
@@ -713,7 +713,8 @@ fn create_test_sync_tool() -> ToolSpec {
 
     ToolSpec::Function(ResponsesApiTool {
         name: "test_sync_tool".to_string(),
-        description: "Internal synchronization helper used by Jarvis integration tests.".to_string(),
+        description: "Internal synchronization helper used by Jarvis integration tests."
+            .to_string(),
         strict: false,
         parameters: JsonSchema::Object {
             properties,
@@ -1075,11 +1076,18 @@ fn create_github_comment_pr_tool() -> ToolSpec {
 
     ToolSpec::Function(ResponsesApiTool {
         name: "github_comment_pr".to_string(),
-        description: "Add a comment to a GitHub pull request. Requires a GitHub PAT token to be configured.".to_string(),
+        description:
+            "Add a comment to a GitHub pull request. Requires a GitHub PAT token to be configured."
+                .to_string(),
         strict: false,
         parameters: JsonSchema::Object {
             properties,
-            required: Some(vec!["owner".to_string(), "repo".to_string(), "pr_number".to_string(), "comment".to_string()]),
+            required: Some(vec![
+                "owner".to_string(),
+                "repo".to_string(),
+                "pr_number".to_string(),
+                "comment".to_string(),
+            ]),
             additional_properties: Some(false.into()),
         },
     })
@@ -1122,7 +1130,10 @@ fn create_github_clone_repo_tool() -> ToolSpec {
         (
             "use_ssh".to_string(),
             JsonSchema::Boolean {
-                description: Some("If true, return SSH clone URL; otherwise return HTTPS URL. Defaults to false.".to_string()),
+                description: Some(
+                    "If true, return SSH clone URL; otherwise return HTTPS URL. Defaults to false."
+                        .to_string(),
+                ),
             },
         ),
     ]);
@@ -1156,7 +1167,10 @@ fn create_github_list_issues_tool() -> ToolSpec {
         (
             "state".to_string(),
             JsonSchema::String {
-                description: Some("Filter by issue state: 'open', 'closed', or 'all'. Defaults to 'open'.".to_string()),
+                description: Some(
+                    "Filter by issue state: 'open', 'closed', or 'all'. Defaults to 'open'."
+                        .to_string(),
+                ),
             },
         ),
         (
@@ -1170,7 +1184,9 @@ fn create_github_list_issues_tool() -> ToolSpec {
 
     ToolSpec::Function(ResponsesApiTool {
         name: "github_list_issues".to_string(),
-        description: "List issues in a GitHub repository. Requires a GitHub PAT token to be configured.".to_string(),
+        description:
+            "List issues in a GitHub repository. Requires a GitHub PAT token to be configured."
+                .to_string(),
         strict: false,
         parameters: JsonSchema::Object {
             properties,
@@ -1417,6 +1433,7 @@ pub(crate) fn build_specs(
     use crate::tools::handlers::ApplyPatchHandler;
     use crate::tools::handlers::CollabHandler;
     use crate::tools::handlers::DynamicToolHandler;
+    use crate::tools::handlers::GitHubHandler;
     use crate::tools::handlers::GrepFilesHandler;
     use crate::tools::handlers::ListDirHandler;
     use crate::tools::handlers::McpHandler;
@@ -1426,7 +1443,6 @@ pub(crate) fn build_specs(
     use crate::tools::handlers::RequestUserInputHandler;
     use crate::tools::handlers::ShellCommandHandler;
     use crate::tools::handlers::ShellHandler;
-    use crate::tools::handlers::GitHubHandler;
     use crate::tools::handlers::TestSyncHandler;
     use crate::tools::handlers::UnifiedExecHandler;
     use crate::tools::handlers::ViewImageHandler;

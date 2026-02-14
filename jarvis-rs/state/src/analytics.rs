@@ -55,12 +55,15 @@ FROM tool_operations
         );
 
         if let Some(thread_id) = thread_id {
-            builder.push(" WHERE thread_id = ").push_bind(thread_id.to_string());
+            builder
+                .push(" WHERE thread_id = ")
+                .push_bind(thread_id.to_string());
         }
 
         builder.push(" GROUP BY tool_name");
 
-        let rows: Vec<sqlx::sqlite::SqliteRow> = builder.build().fetch_all(self.pool.as_ref()).await?;
+        let rows: Vec<sqlx::sqlite::SqliteRow> =
+            builder.build().fetch_all(self.pool.as_ref()).await?;
 
         let mut rates = std::collections::HashMap::new();
         for row in rows {
@@ -92,12 +95,15 @@ FROM tool_operations
         );
 
         if let Some(thread_id) = thread_id {
-            builder.push(" WHERE thread_id = ").push_bind(thread_id.to_string());
+            builder
+                .push(" WHERE thread_id = ")
+                .push_bind(thread_id.to_string());
         }
 
         builder.push(" GROUP BY tool_name");
 
-        let rows: Vec<sqlx::sqlite::SqliteRow> = builder.build().fetch_all(self.pool.as_ref()).await?;
+        let rows: Vec<sqlx::sqlite::SqliteRow> =
+            builder.build().fetch_all(self.pool.as_ref()).await?;
 
         let mut durations = std::collections::HashMap::new();
         for row in rows {
@@ -118,18 +124,19 @@ FROM tool_operations
         thread_id: ThreadId,
         min_chain_length: usize,
     ) -> anyhow::Result<Vec<Vec<String>>> {
-        let operations: Vec<crate::ToolOperation> = self.query_tool_operations(thread_id, None).await?;
-        
+        let operations: Vec<crate::ToolOperation> =
+            self.query_tool_operations(thread_id, None).await?;
+
         if operations.len() < min_chain_length {
             return Ok(Vec::new());
         }
 
         let mut chains = Vec::new();
         let mut current_chain = Vec::new();
-        
+
         for op in operations {
             current_chain.push(op.tool_name.clone());
-            
+
             // Consider a chain complete when we have enough tools
             // or when there's a significant time gap (simplified: just use min_chain_length)
             if current_chain.len() >= min_chain_length {
@@ -138,7 +145,7 @@ FROM tool_operations
                 current_chain = vec![op.tool_name];
             }
         }
-        
+
         // Add the last chain if it's long enough
         if current_chain.len() >= min_chain_length {
             chains.push(current_chain);
@@ -161,12 +168,15 @@ WHERE decision IS NOT NULL
         );
 
         if let Some(thread_id) = thread_id {
-            builder.push(" AND thread_id = ").push_bind(thread_id.to_string());
+            builder
+                .push(" AND thread_id = ")
+                .push_bind(thread_id.to_string());
         }
 
         builder.push(" GROUP BY decision");
 
-        let rows: Vec<sqlx::sqlite::SqliteRow> = builder.build().fetch_all(self.pool.as_ref()).await?;
+        let rows: Vec<sqlx::sqlite::SqliteRow> =
+            builder.build().fetch_all(self.pool.as_ref()).await?;
 
         let mut stats = std::collections::HashMap::new();
         for row in rows {
@@ -381,10 +391,7 @@ mod tests {
             runtime.insert_tool_operation(&op).await.unwrap();
         }
 
-        let rates = runtime
-            .tool_success_rates(None)
-            .await
-            .expect("get rates");
+        let rates = runtime.tool_success_rates(None).await.expect("get rates");
 
         let shell_rate = rates.get("shell").expect("shell rate");
         // Total: 8 successful out of 10 = 0.8

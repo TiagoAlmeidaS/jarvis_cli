@@ -138,7 +138,21 @@ impl ToolOperation {
     }
 
     /// Convert to a database row (for insertion).
-    pub fn to_insert_params(&self) -> (String, String, String, String, Option<String>, i64, i64, Option<String>, Option<String>, i64, i64) {
+    pub fn to_insert_params(
+        &self,
+    ) -> (
+        String,
+        String,
+        String,
+        String,
+        Option<String>,
+        i64,
+        i64,
+        Option<String>,
+        Option<String>,
+        i64,
+        i64,
+    ) {
         (
             self.thread_id.to_string(),
             self.call_id.clone(),

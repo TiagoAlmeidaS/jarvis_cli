@@ -1,4 +1,4 @@
-﻿mod device_code_auth;
+mod device_code_auth;
 mod pkce;
 mod server;
 
@@ -17,8 +17,8 @@ pub use jarvis_core::AuthManager;
 pub use jarvis_core::JarvisAuth;
 pub use jarvis_core::auth::AuthDotJson;
 pub use jarvis_core::auth::CLIENT_ID;
-pub use jarvis_core::auth::jarvis_API_KEY_ENV_VAR;
 pub use jarvis_core::auth::OPENAI_API_KEY_ENV_VAR;
+pub use jarvis_core::auth::jarvis_API_KEY_ENV_VAR;
 pub use jarvis_core::auth::login_with_api_key;
 pub use jarvis_core::auth::logout;
 pub use jarvis_core::auth::save_auth;

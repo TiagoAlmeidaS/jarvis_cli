@@ -1,4 +1,4 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 use std::sync::OnceLock;
 
 use crate::api_bridge::CoreAuthProvider;
@@ -31,6 +31,12 @@ use jarvis_api::error::ApiError;
 use jarvis_api::requests::responses::Compression;
 use jarvis_otel::OtelManager;
 
+use eventsource_stream::Event;
+use eventsource_stream::EventStreamError;
+use futures::StreamExt;
+use http::HeaderMap as ApiHeaderMap;
+use http::HeaderValue;
+use http::StatusCode as HttpStatusCode;
 use jarvis_protocol::ThreadId;
 use jarvis_protocol::config_types::ReasoningSummary as ReasoningSummaryConfig;
 use jarvis_protocol::config_types::WebSearchMode;
@@ -38,12 +44,6 @@ use jarvis_protocol::models::ResponseItem;
 use jarvis_protocol::openai_models::ModelInfo;
 use jarvis_protocol::openai_models::ReasoningEffort as ReasoningEffortConfig;
 use jarvis_protocol::protocol::SessionSource;
-use eventsource_stream::Event;
-use eventsource_stream::EventStreamError;
-use futures::StreamExt;
-use http::HeaderMap as ApiHeaderMap;
-use http::HeaderValue;
-use http::StatusCode as HttpStatusCode;
 use reqwest::StatusCode;
 use serde_json::Value;
 use std::time::Duration;

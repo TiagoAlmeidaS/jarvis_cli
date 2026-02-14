@@ -1,6 +1,6 @@
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Contexto de uma conversa
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -57,7 +57,11 @@ impl ConversationManager {
         self.conversations.get_mut(&key).unwrap()
     }
 
-    pub fn get(&self, chat_id: &str, platform: crate::message::Platform) -> Option<&ConversationContext> {
+    pub fn get(
+        &self,
+        chat_id: &str,
+        platform: crate::message::Platform,
+    ) -> Option<&ConversationContext> {
         let key = format!("{}:{}", platform.as_str(), chat_id);
         self.conversations.get(&key)
     }

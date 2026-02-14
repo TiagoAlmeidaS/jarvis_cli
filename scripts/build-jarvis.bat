@@ -8,6 +8,9 @@ REM ============================================================================
 
 setlocal enabledelayedexpansion
 
+REM Navegar para a raiz do projeto (pai do diretório scripts/)
+cd /d "%~dp0.."
+
 set "BUILD_TYPE=%1"
 if "%BUILD_TYPE%"=="" set "BUILD_TYPE=debug"
 
@@ -19,7 +22,7 @@ echo.
 REM Verificar se estamos no diretório correto
 if not exist "jarvis-rs" (
     echo ❌ Erro: Diretório jarvis-rs não encontrado!
-    echo Execute este script da raiz do projeto
+    echo Verifique que o script está dentro da pasta scripts/ do projeto
     pause
     exit /b 1
 )
@@ -38,11 +41,11 @@ echo.
 set START_TIME=%TIME%
 
 if "%BUILD_TYPE%"=="release" (
-    echo Building RELEASE (otimizado, pode levar tempo)...
+    echo Building RELEASE ^(otimizado, pode levar tempo^)...
     cargo build --release --bin jarvis
     set "BINARY_PATH=target\release\jarvis.exe"
 ) else (
-    echo Building DEBUG (mais rápido, sem otimizações)...
+    echo Building DEBUG ^(mais rapido, sem otimizacoes^)...
     cargo build --bin jarvis
     set "BINARY_PATH=target\debug\jarvis.exe"
 )
@@ -77,7 +80,7 @@ if exist "jarvis-rs\%BINARY_PATH%" (
     echo 💾 Tamanho: !BINARY_SIZE_MB! MB
     echo.
     echo Para executar:
-    echo   run-jarvis.bat
+    echo   scripts\run-jarvis.bat
     echo.
     echo Ou manualmente:
     echo   set OLLAMA_BASE_URL=http://100.98.213.86:11434/v1

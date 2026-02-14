@@ -5,15 +5,15 @@
 // - Redis: Distributed cache for performance optimization
 // - Qdrant: Vector database for RAG and semantic search
 
-pub mod sqlserver;
 pub mod redis;
+pub mod sqlserver;
 
 #[cfg(feature = "qdrant")]
 pub mod qdrant;
 
 // Re-exports for convenience
-pub use sqlserver::{Database, Repository};
 pub use redis::{DistributedCache, MultiLevelCache};
+pub use sqlserver::{Database, Repository};
 
 #[cfg(feature = "qdrant")]
-pub use qdrant::{VectorStore, QdrantVectorStore};
+pub use qdrant::{QdrantVectorStore, VectorStore};

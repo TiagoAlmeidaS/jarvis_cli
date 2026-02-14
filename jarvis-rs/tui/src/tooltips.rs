@@ -1,4 +1,4 @@
-﻿use jarvis_core::features::FEATURES;
+use jarvis_core::features::FEATURES;
 use jarvis_protocol::account::PlanType;
 use lazy_static::lazy_static;
 use rand::Rng;
@@ -7,8 +7,7 @@ const ANNOUNCEMENT_TIP_URL: &str =
     "https://raw.githubusercontent.com/openai/Jarvis/main/announcement_tip.toml";
 
 const PAID_TOOLTIP: &str = "*New* Try the **Jarvis App** with 2x rate limits until *April 2nd*. Run 'Jarvis app' or visit https://chatgpt.com/Jarvis";
-const OTHER_TOOLTIP: &str =
-    "*New* Build faster with the **Jarvis App**. Run 'Jarvis app' or visit https://chatgpt.com/Jarvis";
+const OTHER_TOOLTIP: &str = "*New* Build faster with the **Jarvis App**. Run 'Jarvis app' or visit https://chatgpt.com/Jarvis";
 const FREE_GO_TOOLTIP: &str =
     "*New* Jarvis is included in your plan for free through *March 2nd* – let’s build together.";
 

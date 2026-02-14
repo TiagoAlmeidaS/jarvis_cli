@@ -1,11 +1,11 @@
-﻿//! A live status indicator that shows the *latest* log line emitted by the
+//! A live status indicator that shows the *latest* log line emitted by the
 //! application while the agent is processing a long‑running task.
 
 use std::time::Duration;
 use std::time::Instant;
 
-use jarvis_core::protocol::Op;
 use crossterm::event::KeyCode;
+use jarvis_core::protocol::Op;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::style::Stylize;

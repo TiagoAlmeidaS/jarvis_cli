@@ -212,8 +212,8 @@ ollama pull llama3.1:8b
 
 ```bash
 cd /e/projects/ia/jarvis_cli
-chmod +x setup-ollama.sh
-./setup-ollama.sh
+chmod +x scripts/setup-ollama.sh
+./scripts/setup-ollama.sh
 ```
 
 ### Opção B: Manual

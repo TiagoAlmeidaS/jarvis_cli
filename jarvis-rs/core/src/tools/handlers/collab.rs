@@ -1,7 +1,7 @@
-﻿use crate::agent::AgentStatus;
-use crate::agent::exceeds_thread_spawn_depth_limit;
 use crate::Session;
 use crate::TurnContext;
+use crate::agent::AgentStatus;
+use crate::agent::exceeds_thread_spawn_depth_limit;
 use crate::config::Config;
 use crate::error::JarvisErr;
 use crate::features::Feature;
@@ -633,9 +633,9 @@ mod tests {
     use crate::ThreadManager;
     use crate::agent::MAX_THREAD_SPAWN_DEPTH;
     use crate::built_in_model_providers;
-    use crate::make_session_and_context;
     use crate::config::types::ShellEnvironmentPolicy;
     use crate::function_tool::FunctionCallError;
+    use crate::make_session_and_context;
     use crate::protocol::AskForApproval;
     use crate::protocol::Op;
     use crate::protocol::SandboxPolicy;

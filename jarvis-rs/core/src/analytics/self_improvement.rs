@@ -1,5 +1,5 @@
-use crate::integrations::sqlserver::Database;
 use crate::integrations::redis::MultiLevelCache;
+use crate::integrations::sqlserver::Database;
 use anyhow::Result;
 
 use super::metrics::CacheMetrics;
@@ -99,18 +99,13 @@ impl SelfImprovement {
                 title: format!("Comando '{}' tem baixa taxa de sucesso", cmd.command_name),
                 description: format!(
                     "Taxa de sucesso: {:.1}% ({} sucessos, {} falhas em {} execuções)",
-                    success_rate_pct,
-                    cmd.success_count,
-                    cmd.failure_count,
-                    cmd.execution_count
+                    success_rate_pct, cmd.success_count, cmd.failure_count, cmd.execution_count
                 ),
                 action: Some(format!(
                     "Investigar e corrigir erros em '{}'",
                     cmd.command_name
                 )),
-                impact: Some(format!(
-                    "Aumentar taxa de sucesso para >90% (meta: 95%)"
-                )),
+                impact: Some(format!("Aumentar taxa de sucesso para >90% (meta: 95%)")),
             };
 
             improvements.push(improvement);
@@ -178,10 +173,7 @@ impl SelfImprovement {
             let improvement = Improvement::medium(
                 ImprovementCategory::Cache,
                 "L1 cache hit rate baixo".to_string(),
-                format!(
-                    "L1 hit rate: {:.1}% (ideal: >70%)",
-                    l1_hit_rate * 100.0
-                ),
+                format!("L1 hit rate: {:.1}% (ideal: >70%)", l1_hit_rate * 100.0),
             )
             .with_action("Aumentar L1 TTL ou tamanho do cache".to_string())
             .with_impact(format!(

@@ -1,8 +1,8 @@
 use super::{Database, Repository, User};
 use anyhow::{Context, Result};
 use async_trait::async_trait;
-use time::OffsetDateTime;
 use tiberius::Row;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// Repository for User entities
@@ -78,10 +78,16 @@ impl UserRepository {
         let updated_at_str: &str = row.get(5).context("Missing updated_at column")?;
 
         // Parse ISO 8601 strings
-        let created_at = OffsetDateTime::parse(created_at_str, &time::format_description::well_known::Iso8601::DEFAULT)
-            .context("Failed to parse created_at")?;
-        let updated_at = OffsetDateTime::parse(updated_at_str, &time::format_description::well_known::Iso8601::DEFAULT)
-            .context("Failed to parse updated_at")?;
+        let created_at = OffsetDateTime::parse(
+            created_at_str,
+            &time::format_description::well_known::Iso8601::DEFAULT,
+        )
+        .context("Failed to parse created_at")?;
+        let updated_at = OffsetDateTime::parse(
+            updated_at_str,
+            &time::format_description::well_known::Iso8601::DEFAULT,
+        )
+        .context("Failed to parse updated_at")?;
 
         Ok(User {
             id,
@@ -156,8 +162,12 @@ impl Repository<User, Uuid> for UserRepository {
         ";
 
         // Convert to ISO 8601 strings
-        let created_at_str = user.created_at.format(&time::format_description::well_known::Iso8601::DEFAULT)?;
-        let updated_at_str = user.updated_at.format(&time::format_description::well_known::Iso8601::DEFAULT)?;
+        let created_at_str = user
+            .created_at
+            .format(&time::format_description::well_known::Iso8601::DEFAULT)?;
+        let updated_at_str = user
+            .updated_at
+            .format(&time::format_description::well_known::Iso8601::DEFAULT)?;
 
         client
             .execute(

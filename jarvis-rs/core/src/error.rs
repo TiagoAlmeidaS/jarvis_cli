@@ -1,4 +1,4 @@
-﻿use crate::exec::ExecToolCallOutput;
+use crate::exec::ExecToolCallOutput;
 use crate::token_data::KnownPlan;
 use crate::token_data::PlanType;
 use crate::truncate::TruncationPolicy;
@@ -9,8 +9,8 @@ use chrono::Local;
 use chrono::Utc;
 use jarvis_async_utils::CancelErr;
 use jarvis_protocol::ThreadId;
-use jarvis_protocol::protocol::JarvisErrorInfo;
 use jarvis_protocol::protocol::ErrorEvent;
+use jarvis_protocol::protocol::JarvisErrorInfo;
 use jarvis_protocol::protocol::RateLimitSnapshot;
 use reqwest::StatusCode;
 use serde_json;

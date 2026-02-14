@@ -254,10 +254,7 @@ async fn test_intent_detection() -> Result<()> {
         println!();
     }
 
-    println!(
-        "\n{} All tests completed!",
-        "✓".green().bold()
-    );
+    println!("\n{} All tests completed!", "✓".green().bold());
 
     Ok(())
 }

@@ -1,10 +1,10 @@
 //! Router para executar tools através do sistema de mensageria
 
-use std::sync::Arc;
-use crate::tools::router::ToolRouter;
-use crate::tools::context::ToolInvocation;
 use crate::function_tool::FunctionCallError;
+use crate::tools::context::ToolInvocation;
+use crate::tools::router::ToolRouter;
 use jarvis_protocol::models::ResponseInputItem;
+use std::sync::Arc;
 
 /// Router que executa tools através do sistema de mensageria
 pub struct MessagingRouter {
@@ -32,18 +32,12 @@ impl MessagingRouter {
     /// Formata um ResponseInputItem como string para envio via mensageria
     fn format_response_item(item: &ResponseInputItem) -> String {
         match item {
-            ResponseInputItem::FunctionCallOutput { output, .. } => {
-                output.content.clone()
-            }
-            ResponseInputItem::CustomToolCallOutput { output, .. } => {
-                output.clone()
-            }
-            ResponseInputItem::McpToolCallOutput { result, .. } => {
-                match result {
-                    Ok(call_result) => format!("MCP Result: {:?}", call_result),
-                    Err(e) => format!("MCP Error: {}", e),
-                }
-            }
+            ResponseInputItem::FunctionCallOutput { output, .. } => output.content.clone(),
+            ResponseInputItem::CustomToolCallOutput { output, .. } => output.clone(),
+            ResponseInputItem::McpToolCallOutput { result, .. } => match result {
+                Ok(call_result) => format!("MCP Result: {:?}", call_result),
+                Err(e) => format!("MCP Error: {}", e),
+            },
             _ => {
                 format!("Resultado: {:?}", item)
             }

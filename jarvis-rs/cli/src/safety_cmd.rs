@@ -188,8 +188,12 @@ async fn check_action_safety(args: CheckArgs) -> Result<()> {
     let action = ProposedAction {
         action_type: args.action.clone(),
         files: args.files.clone(),
-        change: args.context.unwrap_or_else(|| "No description provided".to_string()),
-        impact: args.impact.unwrap_or_else(|| "Impact not specified".to_string()),
+        change: args
+            .context
+            .unwrap_or_else(|| "No description provided".to_string()),
+        impact: args
+            .impact
+            .unwrap_or_else(|| "Impact not specified".to_string()),
         category: args.category.clone(),
     };
 
@@ -232,7 +236,10 @@ async fn verify_command_safety(args: VerifyArgs) -> Result<()> {
         action_type: action_type.clone(),
         files: files.clone(),
         change: format!("Execute command: {}", args.command),
-        impact: format!("Command execution in {:?}", args.cwd.unwrap_or_else(|| ".".to_string())),
+        impact: format!(
+            "Command execution in {:?}",
+            args.cwd.unwrap_or_else(|| ".".to_string())
+        ),
         category: Some(categorize_command(&action_type)),
     };
 
@@ -311,12 +318,21 @@ async fn analyze_file_safety(args: AnalyzeArgs) -> Result<()> {
 
             if args.detailed {
                 println!("\n{}", "Detailed Analysis:".bold());
-                println!("  {} {}", "Is Production Code:".dimmed(),
-                    is_production_file(&args.path));
-                println!("  {} {}", "Is Test File:".dimmed(),
-                    is_test_file(&args.path));
-                println!("  {} {}", "Is Config File:".dimmed(),
-                    is_config_file(&args.path));
+                println!(
+                    "  {} {}",
+                    "Is Production Code:".dimmed(),
+                    is_production_file(&args.path)
+                );
+                println!(
+                    "  {} {}",
+                    "Is Test File:".dimmed(),
+                    is_test_file(&args.path)
+                );
+                println!(
+                    "  {} {}",
+                    "Is Config File:".dimmed(),
+                    is_config_file(&args.path)
+                );
             }
         }
     }
@@ -372,7 +388,11 @@ async fn manage_safety_rules(args: RulesArgs) -> Result<()> {
             println!("{} Added '{}' to whitelist", "✓".green(), action.green());
         }
         Some(RulesSubcommand::AddProhibited { action }) => {
-            println!("{} Added '{}' to prohibited list", "✓".green(), action.red());
+            println!(
+                "{} Added '{}' to prohibited list",
+                "✓".green(),
+                action.red()
+            );
         }
     }
 
@@ -398,7 +418,9 @@ async fn assess_proposed_change(args: AssessArgs) -> Result<()> {
         action_type: "code_change".to_string(),
         files: args.files.clone(),
         change: args.description.clone(),
-        impact: args.impact.unwrap_or_else(|| "Impact not specified".to_string()),
+        impact: args
+            .impact
+            .unwrap_or_else(|| "Impact not specified".to_string()),
         category: None,
     };
 
@@ -470,11 +492,23 @@ fn print_safety_assessment(assessment: &SafetyAssessment) {
 
     // Recommendation
     if assessment.is_safe_to_execute_autonomously {
-        println!("{} {}", "✓".green(), "This action can be executed autonomously".green());
+        println!(
+            "{} {}",
+            "✓".green(),
+            "This action can be executed autonomously".green()
+        );
     } else if assessment.requires_human_approval {
-        println!("{} {}", "⚠".yellow(), "Human review and approval required before execution".yellow());
+        println!(
+            "{} {}",
+            "⚠".yellow(),
+            "Human review and approval required before execution".yellow()
+        );
     } else {
-        println!("{} {}", "✗".red(), "This action should not be executed".red());
+        println!(
+            "{} {}",
+            "✗".red(),
+            "This action should not be executed".red()
+        );
     }
     println!();
 }

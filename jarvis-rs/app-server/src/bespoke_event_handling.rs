@@ -1,4 +1,6 @@
-﻿use crate::jarvismessage_processor::ApiVersion;
+use crate::error_code::INTERNAL_ERROR_CODE;
+use crate::error_code::INVALID_REQUEST_ERROR_CODE;
+use crate::jarvismessage_processor::ApiVersion;
 use crate::jarvismessage_processor::PendingInterrupts;
 use crate::jarvismessage_processor::PendingRollbacks;
 use crate::jarvismessage_processor::TurnSummary;
@@ -6,14 +8,11 @@ use crate::jarvismessage_processor::TurnSummaryStore;
 use crate::jarvismessage_processor::read_event_msgs_from_rollout;
 use crate::jarvismessage_processor::read_summary_from_rollout;
 use crate::jarvismessage_processor::summary_to_thread;
-use crate::error_code::INTERNAL_ERROR_CODE;
-use crate::error_code::INVALID_REQUEST_ERROR_CODE;
 use crate::outgoing_message::OutgoingMessageSender;
 use jarvis_app_server_protocol::AccountRateLimitsUpdatedNotification;
 use jarvis_app_server_protocol::AgentMessageDeltaNotification;
 use jarvis_app_server_protocol::ApplyPatchApprovalParams;
 use jarvis_app_server_protocol::ApplyPatchApprovalResponse;
-use jarvis_app_server_protocol::JarvisErrorInfo as V2CodexErrorInfo;
 use jarvis_app_server_protocol::CollabAgentState as V2CollabAgentStatus;
 use jarvis_app_server_protocol::CollabAgentTool;
 use jarvis_app_server_protocol::CollabAgentToolCallStatus as V2CollabToolCallStatus;
@@ -39,6 +38,7 @@ use jarvis_app_server_protocol::InterruptConversationResponse;
 use jarvis_app_server_protocol::ItemCompletedNotification;
 use jarvis_app_server_protocol::ItemStartedNotification;
 use jarvis_app_server_protocol::JSONRPCErrorError;
+use jarvis_app_server_protocol::JarvisErrorInfo as V2CodexErrorInfo;
 use jarvis_app_server_protocol::McpToolCallError;
 use jarvis_app_server_protocol::McpToolCallResult;
 use jarvis_app_server_protocol::McpToolCallStatus;
@@ -73,12 +73,12 @@ use jarvis_app_server_protocol::build_turns_from_event_msgs;
 use jarvis_core::JarvisThread;
 use jarvis_core::parse_command::shlex_join;
 use jarvis_core::protocol::ApplyPatchApprovalRequestEvent;
-use jarvis_core::protocol::JarvisErrorInfo as CoreCodexErrorInfo;
 use jarvis_core::protocol::Event;
 use jarvis_core::protocol::EventMsg;
 use jarvis_core::protocol::ExecApprovalRequestEvent;
 use jarvis_core::protocol::ExecCommandEndEvent;
 use jarvis_core::protocol::FileChange as CoreFileChange;
+use jarvis_core::protocol::JarvisErrorInfo as CoreCodexErrorInfo;
 use jarvis_core::protocol::McpToolCallBeginEvent;
 use jarvis_core::protocol::McpToolCallEndEvent;
 use jarvis_core::protocol::Op;
@@ -405,7 +405,9 @@ pub(crate) async fn apply_bespoke_event_handling(
             let has_receiver = end_event.new_thread_id.is_some();
             let status = match &end_event.status {
                 jarvis_protocol::protocol::AgentStatus::Errored(_)
-                | jarvis_protocol::protocol::AgentStatus::NotFound => V2CollabToolCallStatus::Failed,
+                | jarvis_protocol::protocol::AgentStatus::NotFound => {
+                    V2CollabToolCallStatus::Failed
+                }
                 _ if has_receiver => V2CollabToolCallStatus::Completed,
                 _ => V2CollabToolCallStatus::Failed,
             };
@@ -461,7 +463,9 @@ pub(crate) async fn apply_bespoke_event_handling(
         EventMsg::CollabAgentInteractionEnd(end_event) => {
             let status = match &end_event.status {
                 jarvis_protocol::protocol::AgentStatus::Errored(_)
-                | jarvis_protocol::protocol::AgentStatus::NotFound => V2CollabToolCallStatus::Failed,
+                | jarvis_protocol::protocol::AgentStatus::NotFound => {
+                    V2CollabToolCallStatus::Failed
+                }
                 _ => V2CollabToolCallStatus::Completed,
             };
             let receiver_id = end_event.receiver_thread_id.to_string();
@@ -566,7 +570,9 @@ pub(crate) async fn apply_bespoke_event_handling(
         EventMsg::CollabCloseEnd(end_event) => {
             let status = match &end_event.status {
                 jarvis_protocol::protocol::AgentStatus::Errored(_)
-                | jarvis_protocol::protocol::AgentStatus::NotFound => V2CollabToolCallStatus::Failed,
+                | jarvis_protocol::protocol::AgentStatus::NotFound => {
+                    V2CollabToolCallStatus::Failed
+                }
                 _ => V2CollabToolCallStatus::Completed,
             };
             let receiver_id = end_event.receiver_thread_id.to_string();

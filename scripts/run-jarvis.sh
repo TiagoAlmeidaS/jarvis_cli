@@ -2,17 +2,21 @@
 # ============================================================================
 # Run Script for Jarvis CLI with Ollama Integration
 # ============================================================================
-# Usage: ./run-jarvis.sh [model] [mode]
+# Usage: ./scripts/run-jarvis.sh [model] [mode]
 #   model: llama3.2:3b (default), gemma2:2b, qwen2.5:7b, etc.
 #   mode: chat (default), exec
 #
 # Examples:
-#   ./run-jarvis.sh                          # Chat com llama3.2:3b
-#   ./run-jarvis.sh gemma2:2b                # Chat com gemma2:2b
-#   ./run-jarvis.sh llama3.1:8b exec "Hello" # Exec mode
+#   ./scripts/run-jarvis.sh                          # Chat com llama3.2:3b
+#   ./scripts/run-jarvis.sh gemma2:2b                # Chat com gemma2:2b
+#   ./scripts/run-jarvis.sh llama3.1:8b exec "Hello" # Exec mode
 # ============================================================================
 
 set -e  # Exit on error
+
+# Navegar para a raiz do projeto (pai do diretório scripts/)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$SCRIPT_DIR/.."
 
 # Configurações
 DEFAULT_MODEL="llama3.2:3b"
@@ -49,7 +53,7 @@ else
     echo -e "${RED}❌ Erro: Binário não encontrado!${NC}"
     echo ""
     echo -e "${YELLOW}Execute primeiro:${NC}"
-    echo "  ./build-jarvis.sh"
+    echo "  ./scripts/build-jarvis.sh"
     echo ""
     exit 1
 fi
@@ -93,14 +97,14 @@ if [ "$MODE" = "exec" ]; then
         echo -e "${RED}❌ Erro: Prompt é necessário para modo exec${NC}"
         echo ""
         echo -e "${YELLOW}Exemplo:${NC}"
-        echo "  ./run-jarvis.sh llama3.2:3b exec \"Olá, como está?\""
+        echo "  ./scripts/run-jarvis.sh llama3.2:3b exec \"Olá, como está?\""
         echo ""
         exit 1
     fi
 
     echo -e "${BLUE}Executando comando único...${NC}"
     echo ""
-    ./"$BINARY" exec -c "model_provider=\"ollama\"" -m "$MODEL" "$PROMPT"
+    ./"$BINARY" exec -c "model_provider=\"ollama\"" -m "$MODEL" --cd "$SCRIPT_DIR/.." "$PROMPT"
 
 elif [ "$MODE" = "chat" ]; then
     echo -e "${BLUE}🎨 Abrindo modo chat interativo...${NC}"
@@ -113,7 +117,7 @@ elif [ "$MODE" = "chat" ]; then
     echo "========================================"
     echo ""
 
-    ./"$BINARY" -c "model_provider=\"ollama\"" -m "$MODEL"
+    ./"$BINARY" -c "model_provider=\"ollama\"" -m "$MODEL" --cd "$SCRIPT_DIR/.."
 
 else
     echo -e "${RED}❌ Erro: Modo inválido: $MODE${NC}"

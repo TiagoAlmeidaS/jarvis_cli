@@ -1,13 +1,13 @@
-﻿use std::collections::VecDeque;
+use std::collections::VecDeque;
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::Result;
 use base64::Engine;
-use jarvis_protocol::openai_models::ModelsResponse;
 use futures::SinkExt;
 use futures::StreamExt;
+use jarvis_protocol::openai_models::ModelsResponse;
 use serde_json::Value;
 use tokio::net::TcpListener;
 use tokio::sync::oneshot;

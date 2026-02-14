@@ -118,7 +118,9 @@ impl Improvement {
 }
 
 /// Group improvements by priority
-pub fn group_by_priority(improvements: Vec<Improvement>) -> Vec<(ImprovementPriority, Vec<Improvement>)> {
+pub fn group_by_priority(
+    improvements: Vec<Improvement>,
+) -> Vec<(ImprovementPriority, Vec<Improvement>)> {
     let mut critical = Vec::new();
     let mut high = Vec::new();
     let mut medium = Vec::new();
@@ -232,22 +234,10 @@ mod tests {
 
     #[test]
     fn test_priority_display() {
-        assert_eq!(
-            ImprovementPriority::Critical.to_string(),
-            "🔴 CRÍTICO"
-        );
-        assert_eq!(
-            ImprovementPriority::High.to_string(),
-            "🟠 ALTA"
-        );
-        assert_eq!(
-            ImprovementPriority::Medium.to_string(),
-            "🟡 MÉDIA"
-        );
-        assert_eq!(
-            ImprovementPriority::Low.to_string(),
-            "🟢 BAIXA"
-        );
+        assert_eq!(ImprovementPriority::Critical.to_string(), "🔴 CRÍTICO");
+        assert_eq!(ImprovementPriority::High.to_string(), "🟠 ALTA");
+        assert_eq!(ImprovementPriority::Medium.to_string(), "🟡 MÉDIA");
+        assert_eq!(ImprovementPriority::Low.to_string(), "🟢 BAIXA");
     }
 
     #[test]
@@ -260,22 +250,10 @@ mod tests {
             ImprovementCategory::Reliability.to_string(),
             "🛡️ Confiabilidade"
         );
-        assert_eq!(
-            ImprovementCategory::Cache.to_string(),
-            "💾 Cache"
-        );
-        assert_eq!(
-            ImprovementCategory::Skills.to_string(),
-            "🎯 Skills"
-        );
-        assert_eq!(
-            ImprovementCategory::Database.to_string(),
-            "🗄️ Database"
-        );
-        assert_eq!(
-            ImprovementCategory::General.to_string(),
-            "📋 Geral"
-        );
+        assert_eq!(ImprovementCategory::Cache.to_string(), "💾 Cache");
+        assert_eq!(ImprovementCategory::Skills.to_string(), "🎯 Skills");
+        assert_eq!(ImprovementCategory::Database.to_string(), "🗄️ Database");
+        assert_eq!(ImprovementCategory::General.to_string(), "📋 Geral");
     }
 
     #[test]
@@ -303,7 +281,11 @@ mod tests {
         // Add in random order
         let improvements = vec![
             Improvement::low(ImprovementCategory::General, "1".into(), "Low".into()),
-            Improvement::critical(ImprovementCategory::Reliability, "2".into(), "Critical".into()),
+            Improvement::critical(
+                ImprovementCategory::Reliability,
+                "2".into(),
+                "Critical".into(),
+            ),
             Improvement::medium(ImprovementCategory::Cache, "3".into(), "Medium".into()),
             Improvement::high(ImprovementCategory::Performance, "4".into(), "High".into()),
             Improvement::low(ImprovementCategory::Skills, "5".into(), "Low2".into()),

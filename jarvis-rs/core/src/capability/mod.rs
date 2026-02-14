@@ -9,7 +9,7 @@ pub mod registry;
 
 pub use graph::{CapabilityGraph, CapabilityRelationship, RelationshipType};
 pub use metadata::{
-    CapabilityMetadata, CapabilityStatus, CapabilityType, ParameterMetadata,
-    PerformanceMetadata, PerformanceProfile, ReturnMetadata,
+    CapabilityMetadata, CapabilityStatus, CapabilityType, ParameterMetadata, PerformanceMetadata,
+    PerformanceProfile, ReturnMetadata,
 };
 pub use registry::{CapabilityRegistry, InMemoryCapabilityRegistry};

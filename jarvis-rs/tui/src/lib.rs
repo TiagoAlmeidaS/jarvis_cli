@@ -1,4 +1,4 @@
-﻿// Forbid accidental stdout/stderr writes in the *library* portion of the TUI.
+// Forbid accidental stdout/stderr writes in the *library* portion of the TUI.
 // The standalone `Jarvis-tui` binary prints a short help message before the
 // alternate‑screen mode starts; that file opts‑out locally via `allow`.
 #![deny(clippy::print_stdout, clippy::print_stderr)]
@@ -7,13 +7,15 @@ use additional_dirs::add_dir_warning_message;
 use app::App;
 pub use app::AppExitInfo;
 pub use app::ExitReason;
+use cwd_prompt::CwdPromptAction;
+use cwd_prompt::CwdSelection;
 use jarvis_app_server_protocol::AuthMode;
 use jarvis_cloud_requirements::cloud_requirements_loader;
 use jarvis_common::oss::ensure_oss_provider_ready;
 use jarvis_common::oss::get_default_model_for_oss_provider;
 use jarvis_core::AuthManager;
-use jarvis_core::JarvisAuth;
 use jarvis_core::INTERACTIVE_SESSION_SOURCES;
+use jarvis_core::JarvisAuth;
 use jarvis_core::RolloutRecorder;
 use jarvis_core::ThreadSortKey;
 use jarvis_core::auth::enforce_login_restrictions;
@@ -42,8 +44,6 @@ use jarvis_protocol::protocol::RolloutLine;
 #[cfg(feature = "state")]
 use jarvis_state::log_db;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use cwd_prompt::CwdPromptAction;
-use cwd_prompt::CwdSelection;
 use std::fs::OpenOptions;
 use std::path::Path;
 use std::path::PathBuf;
@@ -387,14 +387,14 @@ pub async fn run_main(
         .with(file_layer)
         .with(feedback_layer)
         .with(feedback_metadata_layer);
-    
+
     #[cfg(feature = "state")]
     {
         if let Some(db) = jarvis_core::state_db::get_state_db(&config, None).await {
             registry = registry.with(log_db::start(db).with_filter(env_filter()));
         }
     }
-    
+
     let _ = registry
         .with(otel_logger_layer)
         .with(otel_tracing_layer)

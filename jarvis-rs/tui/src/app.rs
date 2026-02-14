@@ -32,6 +32,11 @@ use crate::resume_picker::SessionSelection;
 use crate::tui;
 use crate::tui::TuiEvent;
 use crate::update_action::UpdateAction;
+use color_eyre::eyre::Result;
+use color_eyre::eyre::WrapErr;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyEventKind;
 use jarvis_ansi_escape::ansi_escape_line;
 use jarvis_app_server_protocol::ConfigLayerSource;
 use jarvis_core::AuthManager;
@@ -70,11 +75,6 @@ use jarvis_protocol::openai_models::ModelUpgrade;
 use jarvis_protocol::openai_models::ReasoningEffort as ReasoningEffortConfig;
 use jarvis_protocol::protocol::SessionConfiguredEvent;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use color_eyre::eyre::Result;
-use color_eyre::eyre::WrapErr;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyEventKind;
 use ratatui::style::Stylize;
 use ratatui::text::Line;
 use ratatui::widgets::Paragraph;
@@ -1642,8 +1642,9 @@ impl App {
 
                     // If the elevated setup already ran on this machine, don't prompt for
                     // elevation again - just flip the config to use the elevated path.
-                    if jarvis_core::windows_sandbox::sandbox_setup_is_complete(jarvis_home.as_path())
-                    {
+                    if jarvis_core::windows_sandbox::sandbox_setup_is_complete(
+                        jarvis_home.as_path(),
+                    ) {
                         tx.send(AppEvent::EnableWindowsSandboxForAgentMode {
                             preset,
                             mode: WindowsSandboxEnableMode::Elevated,
@@ -2510,6 +2511,7 @@ mod tests {
     use crate::history_cell::HistoryCell;
     use crate::history_cell::UserHistoryCell;
     use crate::history_cell::new_session_info;
+    use insta::assert_snapshot;
     use jarvis_core::AuthManager;
     use jarvis_core::JarvisAuth;
     use jarvis_core::ThreadManager;
@@ -2525,7 +2527,6 @@ mod tests {
     use jarvis_otel::OtelManager;
     use jarvis_protocol::ThreadId;
     use jarvis_protocol::user_input::TextElement;
-    use insta::assert_snapshot;
     use pretty_assertions::assert_eq;
     use ratatui::prelude::Line;
     use std::path::PathBuf;

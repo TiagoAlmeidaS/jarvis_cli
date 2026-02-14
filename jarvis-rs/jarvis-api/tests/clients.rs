@@ -1,10 +1,12 @@
-﻿use std::sync::Arc;
+use std::sync::Arc;
 use std::sync::Mutex;
 use std::time::Duration;
 
 use anyhow::Result;
 use async_trait::async_trait;
 use bytes::Bytes;
+use http::HeaderMap;
+use http::StatusCode;
 use jarvis_api::AuthProvider;
 use jarvis_api::Provider;
 use jarvis_api::ResponsesClient;
@@ -17,8 +19,6 @@ use jarvis_client::StreamResponse;
 use jarvis_client::TransportError;
 use jarvis_protocol::models::ContentItem;
 use jarvis_protocol::models::ResponseItem;
-use http::HeaderMap;
-use http::StatusCode;
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 

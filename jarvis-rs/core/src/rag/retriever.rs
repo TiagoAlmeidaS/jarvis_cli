@@ -168,10 +168,14 @@ mod tests {
     async fn test_retrieve() {
         let indexer: Box<dyn DocumentIndexer> = Box::new(InMemoryDocumentIndexer::default());
         let vector_store: Box<dyn VectorStore> = Box::new(InMemoryVectorStore::new());
-        
+
         // Index a document first
         indexer
-            .index_text("This is about REST APIs and how they work.", "test.md", None)
+            .index_text(
+                "This is about REST APIs and how they work.",
+                "test.md",
+                None,
+            )
             .await
             .unwrap();
 
@@ -191,10 +195,7 @@ mod tests {
         let vector_store = Box::new(InMemoryVectorStore::new());
         let retriever = SimpleKnowledgeRetriever::new(indexer, vector_store, 0.0);
 
-        let relevance = retriever.calculate_relevance(
-            "This is about REST APIs",
-            "REST API",
-        );
+        let relevance = retriever.calculate_relevance("This is about REST APIs", "REST API");
 
         assert!(relevance > 0.0);
         assert!(relevance <= 1.0);

@@ -3,12 +3,14 @@
 use anyhow::{Context, Result};
 use clap::{Args, Subcommand};
 use jarvis_common::CliConfigOverrides;
-use jarvis_core::analytics::{Improvement, ImprovementPriority, SelfImprovement, group_by_priority};
+use jarvis_core::analytics::{
+    Improvement, ImprovementPriority, SelfImprovement, group_by_priority,
+};
 use jarvis_core::integrations::redis::{MultiLevelCache, RedisCache};
 use jarvis_core::integrations::sqlserver::Database;
-use std::sync::Arc;
 use owo_colors::OwoColorize;
 use serde_json;
+use std::sync::Arc;
 use std::time::Duration;
 
 /// Analytics and self-improvement commands
@@ -146,16 +148,19 @@ impl AnalyticsCli {
 
 /// Analyze system performance and suggest improvements
 async fn analyze_system(args: AnalyzeArgs) -> Result<()> {
-    let db_connection = args.db_connection
-        .context("Database connection string required (use --db-connection or JARVIS_DB_CONNECTION_STRING)")?;
+    let db_connection = args.db_connection.context(
+        "Database connection string required (use --db-connection or JARVIS_DB_CONNECTION_STRING)",
+    )?;
 
     // Initialize database
-    let db = Database::new(&db_connection).await
+    let db = Database::new(&db_connection)
+        .await
         .context("Failed to connect to database")?;
 
     // Initialize cache if Redis URL provided
     let cache = if let Some(redis_url) = args.redis_url {
-        let redis_cache = RedisCache::new(&redis_url).await
+        let redis_cache = RedisCache::new(&redis_url)
+            .await
             .context("Failed to connect to Redis")?;
         Some(MultiLevelCache::new(
             Some(Arc::new(redis_cache)),
@@ -175,12 +180,15 @@ async fn analyze_system(args: AnalyzeArgs) -> Result<()> {
         println!("{}", "─".repeat(60).dimmed());
     }
 
-    let improvements = service.analyze_and_suggest().await
+    let improvements = service
+        .analyze_and_suggest()
+        .await
         .context("Failed to analyze system")?;
 
     // Filter by minimum priority
     let filtered_improvements = if args.critical_only {
-        improvements.into_iter()
+        improvements
+            .into_iter()
             .filter(|i| i.priority == ImprovementPriority::Critical)
             .collect()
     } else {
@@ -189,7 +197,13 @@ async fn analyze_system(args: AnalyzeArgs) -> Result<()> {
 
     if filtered_improvements.is_empty() {
         if args.output == OutputFormat::Human {
-            println!("\n{} {}", "✅".green(), "No improvements needed! System is running optimally.".bold().green());
+            println!(
+                "\n{} {}",
+                "✅".green(),
+                "No improvements needed! System is running optimally."
+                    .bold()
+                    .green()
+            );
         }
         return Ok(());
     }
@@ -216,10 +230,12 @@ async fn analyze_system(args: AnalyzeArgs) -> Result<()> {
 
 /// Show system metrics dashboard
 async fn show_dashboard(args: DashboardArgs) -> Result<()> {
-    let db_connection = args.db_connection
+    let db_connection = args
+        .db_connection
         .context("Database connection string required")?;
 
-    let _db = Database::new(&db_connection).await
+    let _db = Database::new(&db_connection)
+        .await
         .context("Failed to connect to database")?;
 
     match args.output {
@@ -253,7 +269,10 @@ async fn show_cache_metrics(args: CacheArgs) -> Result<()> {
         OutputFormat::Human => {
             println!("\n{}", "💾 Cache Performance Metrics".bold().cyan());
             println!("{}", "─".repeat(60).dimmed());
-            println!("\n{}", "⚠️  Cache metrics implementation coming soon!".yellow());
+            println!(
+                "\n{}",
+                "⚠️  Cache metrics implementation coming soon!".yellow()
+            );
         }
         OutputFormat::Json => {
             let output = serde_json::json!({
@@ -272,17 +291,22 @@ async fn show_cache_metrics(args: CacheArgs) -> Result<()> {
 
 /// Show command execution metrics
 async fn show_command_metrics(args: CommandsArgs) -> Result<()> {
-    let db_connection = args.db_connection
+    let db_connection = args
+        .db_connection
         .context("Database connection string required")?;
 
-    let _db = Database::new(&db_connection).await
+    let _db = Database::new(&db_connection)
+        .await
         .context("Failed to connect to database")?;
 
     match args.output {
         OutputFormat::Human => {
             println!("\n{}", "⚡ Command Execution Metrics".bold().cyan());
             println!("{}", "─".repeat(60).dimmed());
-            println!("\n{}", "⚠️  Command metrics implementation coming soon!".yellow());
+            println!(
+                "\n{}",
+                "⚠️  Command metrics implementation coming soon!".yellow()
+            );
         }
         OutputFormat::Json => {
             let output = serde_json::json!({
@@ -301,17 +325,22 @@ async fn show_command_metrics(args: CommandsArgs) -> Result<()> {
 
 /// Show skill usage metrics
 async fn show_skill_metrics(args: SkillsArgs) -> Result<()> {
-    let db_connection = args.db_connection
+    let db_connection = args
+        .db_connection
         .context("Database connection string required")?;
 
-    let _db = Database::new(&db_connection).await
+    let _db = Database::new(&db_connection)
+        .await
         .context("Failed to connect to database")?;
 
     match args.output {
         OutputFormat::Human => {
             println!("\n{}", "🎯 Skill Usage Metrics".bold().cyan());
             println!("{}", "─".repeat(60).dimmed());
-            println!("\n{}", "⚠️  Skill metrics implementation coming soon!".yellow());
+            println!(
+                "\n{}",
+                "⚠️  Skill metrics implementation coming soon!".yellow()
+            );
         }
         OutputFormat::Json => {
             let output = serde_json::json!({
@@ -332,16 +361,26 @@ async fn show_skill_metrics(args: SkillsArgs) -> Result<()> {
 fn print_improvements_human(improvements: &[Improvement]) {
     let grouped = group_by_priority(improvements.to_vec());
 
-    println!("\n{} {} improvements found\n", "📋".bold(), improvements.len().to_string().bold().yellow());
+    println!(
+        "\n{} {} improvements found\n",
+        "📋".bold(),
+        improvements.len().to_string().bold().yellow()
+    );
 
     for (priority, items) in grouped {
         let count: usize = items.len();
-        println!("{} {} ({} items)", "▶".bold(), priority, count.to_string().bold());
+        println!(
+            "{} {} ({} items)",
+            "▶".bold(),
+            priority,
+            count.to_string().bold()
+        );
         println!("{}", "─".repeat(60).dimmed());
 
         for (idx, improvement) in items.iter().enumerate() {
             let num: usize = idx + 1;
-            println!("\n  {}. {} {}",
+            println!(
+                "\n  {}. {} {}",
                 num.to_string().bold(),
                 improvement.category,
                 improvement.title.bold()
@@ -363,7 +402,8 @@ fn print_improvements_human(improvements: &[Improvement]) {
 /// Print improvements in simple text format
 fn print_improvements_simple(improvements: &[Improvement]) {
     for improvement in improvements {
-        println!("[{}] {} - {}",
+        println!(
+            "[{}] {} - {}",
             match improvement.priority {
                 ImprovementPriority::Critical => "CRITICAL",
                 ImprovementPriority::High => "HIGH",

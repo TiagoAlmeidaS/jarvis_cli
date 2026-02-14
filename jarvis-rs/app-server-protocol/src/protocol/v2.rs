@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 use crate::protocol::common::AuthMode;
@@ -27,8 +27,8 @@ use jarvis_protocol::plan_tool::PlanItemArg as CorePlanItemArg;
 use jarvis_protocol::plan_tool::StepStatus as CorePlanStepStatus;
 use jarvis_protocol::protocol::AgentStatus as CoreAgentStatus;
 use jarvis_protocol::protocol::AskForApproval as CoreAskForApproval;
-use jarvis_protocol::protocol::JarvisErrorInfo as CoreCodexErrorInfo;
 use jarvis_protocol::protocol::CreditsSnapshot as CoreCreditsSnapshot;
+use jarvis_protocol::protocol::JarvisErrorInfo as CoreCodexErrorInfo;
 use jarvis_protocol::protocol::NetworkAccess as CoreNetworkAccess;
 use jarvis_protocol::protocol::RateLimitSnapshot as CoreRateLimitSnapshot;
 use jarvis_protocol::protocol::RateLimitWindow as CoreRateLimitWindow;

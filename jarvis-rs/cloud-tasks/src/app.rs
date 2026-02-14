@@ -1,4 +1,4 @@
-﻿use std::time::Duration;
+use std::time::Duration;
 use std::time::Instant;
 
 // Environment filter data models for the TUI
@@ -449,7 +449,8 @@ mod tests {
             &self,
             _task: TaskId,
             _turn_id: String,
-        ) -> jarvis_cloud_tasks_client::Result<Vec<jarvis_cloud_tasks_client::TurnAttempt>> {
+        ) -> jarvis_cloud_tasks_client::Result<Vec<jarvis_cloud_tasks_client::TurnAttempt>>
+        {
             Ok(Vec::new())
         }
 

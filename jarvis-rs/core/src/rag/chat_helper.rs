@@ -82,7 +82,10 @@ pub async fn create_rag_injector() -> Arc<RagContextInjector> {
     match RagContextInjector::from_config().await {
         Ok(injector) => Arc::new(injector),
         Err(e) => {
-            tracing::warn!("Failed to initialize RAG context injector: {}. RAG will be disabled.", e);
+            tracing::warn!(
+                "Failed to initialize RAG context injector: {}. RAG will be disabled.",
+                e
+            );
             // Create a disabled injector as fallback
             Arc::new(create_disabled_injector())
         }
@@ -95,14 +98,13 @@ fn create_disabled_injector() -> RagContextInjector {
     use std::sync::Arc;
 
     // Create minimal in-memory stores
-    let embedding_gen = Arc::new(
-        OllamaEmbeddingGenerator::from_config()
-            .unwrap_or_else(|_| OllamaEmbeddingGenerator::new(
-                "http://localhost:11434".to_string(),
-                "nomic-embed-text".to_string(),
-                768,
-            ))
-    );
+    let embedding_gen = Arc::new(OllamaEmbeddingGenerator::from_config().unwrap_or_else(|_| {
+        OllamaEmbeddingGenerator::new(
+            "http://localhost:11434".to_string(),
+            "nomic-embed-text".to_string(),
+            768,
+        )
+    }));
     let vector_store = Arc::new(InMemoryVectorStore::new());
     let doc_store = Arc::new(InMemoryDocumentStore::new());
 
@@ -162,18 +164,27 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(result, message, "Message should be unchanged when RAG is disabled");
+        assert_eq!(
+            result, message,
+            "Message should be unchanged when RAG is disabled"
+        );
     }
 
     #[tokio::test]
     async fn test_create_disabled_injector() {
         let injector = create_disabled_injector();
-        assert!(!injector.is_enabled(), "Disabled injector should not be enabled");
+        assert!(
+            !injector.is_enabled(),
+            "Disabled injector should not be enabled"
+        );
     }
 
     #[tokio::test]
     async fn test_is_rag_ready_for_disabled() {
         let injector = create_disabled_injector();
-        assert!(!is_rag_ready(&injector).await, "Disabled injector should not be ready");
+        assert!(
+            !is_rag_ready(&injector).await,
+            "Disabled injector should not be ready"
+        );
     }
 }

@@ -1,4 +1,4 @@
-﻿//! Backtracking and transcript overlay event routing.
+//! Backtracking and transcript overlay event routing.
 //!
 //! This file owns backtrack mode (Esc/Enter navigation in the transcript overlay) and also
 //! mediates a key rendering boundary for the transcript overlay.
@@ -33,16 +33,16 @@ use crate::history_cell::UserHistoryCell;
 use crate::pager_overlay::Overlay;
 use crate::tui;
 use crate::tui::TuiEvent;
-use jarvis_core::protocol::JarvisErrorInfo;
-use jarvis_core::protocol::ErrorEvent;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_protocol::ThreadId;
-use jarvis_protocol::user_input::TextElement;
 use color_eyre::eyre::Result;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
+use jarvis_core::protocol::ErrorEvent;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::JarvisErrorInfo;
+use jarvis_core::protocol::Op;
+use jarvis_protocol::ThreadId;
+use jarvis_protocol::user_input::TextElement;
 
 /// Aggregates all backtrack-related state used by the App.
 #[derive(Default)]

@@ -82,7 +82,11 @@ impl RuleBasedSkillEvaluator {
             "rust" => code.matches("fn ").count() + code.matches("impl ").count(),
             "python" => code.matches("def ").count() + code.matches("class ").count(),
             "javascript" => code.matches("function ").count() + code.matches("=>").count(),
-            _ => code.matches("fn ").count() + code.matches("def ").count() + code.matches("function ").count(),
+            _ => {
+                code.matches("fn ").count()
+                    + code.matches("def ").count()
+                    + code.matches("function ").count()
+            }
         }
     }
 
@@ -232,12 +236,26 @@ impl RuleBasedSkillEvaluator {
         let issues_score = if metrics.issues.is_empty() {
             1.0
         } else {
-            let high_issues = metrics.issues.iter().filter(|i| i.severity == "high").count();
-            let medium_issues = metrics.issues.iter().filter(|i| i.severity == "medium").count();
-            let low_issues = metrics.issues.iter().filter(|i| i.severity == "low").count();
+            let high_issues = metrics
+                .issues
+                .iter()
+                .filter(|i| i.severity == "high")
+                .count();
+            let medium_issues = metrics
+                .issues
+                .iter()
+                .filter(|i| i.severity == "medium")
+                .count();
+            let low_issues = metrics
+                .issues
+                .iter()
+                .filter(|i| i.severity == "low")
+                .count();
 
             // Penalize based on issue severity
-            let penalty = (high_issues as f32 * 0.3) + (medium_issues as f32 * 0.15) + (low_issues as f32 * 0.05);
+            let penalty = (high_issues as f32 * 0.3)
+                + (medium_issues as f32 * 0.15)
+                + (low_issues as f32 * 0.05);
             (1.0 - penalty.min(0.5)).max(0.5)
         };
 
@@ -254,7 +272,8 @@ impl SkillEvaluator for RuleBasedSkillEvaluator {
         let loc = self.count_lines(&skill.code);
         let function_count = self.count_functions(&skill.code, &skill.language);
         let complexity = self.calculate_complexity(&skill.code, function_count, loc);
-        let maintainability = self.calculate_maintainability(&skill.code, complexity, skill.test_code.is_some());
+        let maintainability =
+            self.calculate_maintainability(&skill.code, complexity, skill.test_code.is_some());
         let test_coverage = self.estimate_test_coverage(&skill.code, skill.test_code.as_deref());
         let issues = self.analyze_issues(skill);
 
@@ -304,10 +323,13 @@ mod tests {
     Ok("Success".to_string())
 }"#
             .to_string(),
-            test_code: Some(r#"#[test]
+            test_code: Some(
+                r#"#[test]
 fn test_execute() {
     assert!(execute().is_ok());
-}"#.to_string()),
+}"#
+                .to_string(),
+            ),
             dependencies: vec![],
             parameters: std::collections::HashMap::new(),
             version: "1.0.0".to_string(),

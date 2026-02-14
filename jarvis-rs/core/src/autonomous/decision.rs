@@ -76,16 +76,20 @@ impl RuleBasedDecisionEngine {
         }
 
         // Check for critical risks
-        let critical_risks = plan
-            .risks
-            .iter()
-            .any(|r| r.to_lowercase().contains("critical") || r.to_lowercase().contains("critical"));
+        let critical_risks = plan.risks.iter().any(|r| {
+            r.to_lowercase().contains("critical") || r.to_lowercase().contains("critical")
+        });
 
         !critical_risks
     }
 
     /// Generates reasoning for the decision.
-    fn generate_reasoning(&self, context: &AnalyzedContext, plan: &ExecutionPlan, should_execute: bool) -> String {
+    fn generate_reasoning(
+        &self,
+        context: &AnalyzedContext,
+        plan: &ExecutionPlan,
+        should_execute: bool,
+    ) -> String {
         if should_execute {
             format!(
                 "Context analyzed with {:.0}% confidence. Plan created with {} steps. Estimated time: {}. Proceeding with execution.",
@@ -187,10 +191,7 @@ mod tests {
         // Create context
         let analyzer = RuleBasedContextAnalyzer::new();
         let state = std::collections::HashMap::new();
-        let context = analyzer
-            .analyze("Create REST API", &state)
-            .await
-            .unwrap();
+        let context = analyzer.analyze("Create REST API", &state).await.unwrap();
 
         // Make decision
         let decision = engine.make_decision(&context, &registry).await.unwrap();

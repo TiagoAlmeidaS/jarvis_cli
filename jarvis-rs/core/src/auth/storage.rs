@@ -1,4 +1,4 @@
-﻿use chrono::DateTime;
+use chrono::DateTime;
 use chrono::Utc;
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -326,7 +326,9 @@ fn create_auth_storage_with_keyring_store(
         AuthCredentialsStoreMode::Keyring => {
             Arc::new(KeyringAuthStorage::new(jarvis_home, keyring_store))
         }
-        AuthCredentialsStoreMode::Auto => Arc::new(AutoAuthStorage::new(jarvis_home, keyring_store)),
+        AuthCredentialsStoreMode::Auto => {
+            Arc::new(AutoAuthStorage::new(jarvis_home, keyring_store))
+        }
         AuthCredentialsStoreMode::Ephemeral => Arc::new(EphemeralAuthStorage::new(jarvis_home)),
     }
 }
@@ -643,7 +645,8 @@ mod tests {
     fn auto_auth_storage_load_uses_file_when_keyring_empty() -> anyhow::Result<()> {
         let jarvis_home = tempdir()?;
         let mock_keyring = MockKeyringStore::default();
-        let storage = AutoAuthStorage::new(jarvis_home.path().to_path_buf(), Arc::new(mock_keyring));
+        let storage =
+            AutoAuthStorage::new(jarvis_home.path().to_path_buf(), Arc::new(mock_keyring));
 
         let expected = auth_with_prefix("file-only");
         storage.file_storage.save(&expected)?;

@@ -1,4 +1,4 @@
-﻿pub mod context;
+pub mod context;
 pub mod events;
 pub(crate) mod handlers;
 pub mod orchestrator;
@@ -8,6 +8,7 @@ pub mod router;
 pub mod runtimes;
 pub mod sandboxing;
 pub mod spec;
+pub mod text_tool_calling;
 
 use crate::exec::ExecToolCallOutput;
 use crate::truncate::TruncationPolicy;

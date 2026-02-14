@@ -1,4 +1,4 @@
-﻿use std::io::Cursor;
+use std::io::Cursor;
 use std::io::Read;
 use std::io::Write;
 use std::io::{self};
@@ -110,12 +110,7 @@ pub fn run_login_server(opts: ServerOptions) -> io::Result<LoginServer> {
     let server = Arc::new(server);
 
     let redirect_uri = format!("http://localhost:{actual_port}/auth/callback");
-    let auth_url = build_authorize_url(
-        &opts.oauth_provider,
-        &redirect_uri,
-        &pkce,
-        &state,
-    );
+    let auth_url = build_authorize_url(&opts.oauth_provider, &redirect_uri, &pkce, &state);
 
     if opts.open_browser {
         let _ = webbrowser::open(&auth_url);
@@ -247,9 +242,7 @@ async fn process_request(
                 }
             };
 
-            match exchange_code_for_tokens(&opts.oauth_provider, redirect_uri, pkce, &code)
-                .await
-            {
+            match exchange_code_for_tokens(&opts.oauth_provider, redirect_uri, pkce, &code).await {
                 Ok(tokens) => {
                     // Note: workspace restriction only applies to ChatGPT/OpenAI, not Google OAuth
                     // Obtain API key via token-exchange and persist (may not be needed for Google)

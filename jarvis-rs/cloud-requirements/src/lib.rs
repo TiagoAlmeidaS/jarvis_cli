@@ -1,4 +1,4 @@
-﻿//! Cloud-hosted config requirements for Jarvis.
+//! Cloud-hosted config requirements for Jarvis.
 //!
 //! This crate fetches `requirements.toml` data from the backend as an alternative to loading it
 //! from the local filesystem. It only applies to Business (aka Enterprise CBP) or Enterprise ChatGPT
@@ -184,7 +184,10 @@ mod tests {
     use tempfile::tempdir;
 
     fn write_auth_json(jarvis_home: &Path, value: serde_json::Value) -> std::io::Result<()> {
-        std::fs::write(jarvis_home.join("auth.json"), serde_json::to_string(&value)?)?;
+        std::fs::write(
+            jarvis_home.join("auth.json"),
+            serde_json::to_string(&value)?,
+        )?;
         Ok(())
     }
 

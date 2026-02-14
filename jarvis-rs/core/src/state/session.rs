@@ -1,11 +1,11 @@
-﻿//! Session-wide mutable state.
+//! Session-wide mutable state.
 
 use jarvis_protocol::models::ResponseItem;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use crate::jarvis::SessionConfiguration;
 use crate::context_manager::ContextManager;
+use crate::jarvis::SessionConfiguration;
 use crate::protocol::RateLimitSnapshot;
 use crate::protocol::TokenUsage;
 use crate::protocol::TokenUsageInfo;

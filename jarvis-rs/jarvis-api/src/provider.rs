@@ -1,9 +1,9 @@
-﻿use jarvis_client::Request;
+use http::Method;
+use http::header::HeaderMap;
+use jarvis_client::Request;
 use jarvis_client::RequestCompression;
 use jarvis_client::RetryOn;
 use jarvis_client::RetryPolicy;
-use http::Method;
-use http::header::HeaderMap;
 use std::collections::HashMap;
 use std::time::Duration;
 use url::Url;

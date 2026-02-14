@@ -1,4 +1,4 @@
-﻿#![expect(clippy::expect_used)]
+#![expect(clippy::expect_used)]
 
 use jarvis_utils_cargo_bin::CargoBinError;
 use tempfile::TempDir;
@@ -146,7 +146,10 @@ pub fn load_sse_fixture_with_id_from_str(raw: &str, id: &str) -> String {
         .collect()
 }
 
-pub async fn wait_for_event<F>(Jarvis: &JarvisThread, predicate: F) -> jarvis_core::protocol::EventMsg
+pub async fn wait_for_event<F>(
+    Jarvis: &JarvisThread,
+    predicate: F,
+) -> jarvis_core::protocol::EventMsg
 where
     F: FnMut(&jarvis_core::protocol::EventMsg) -> bool,
 {

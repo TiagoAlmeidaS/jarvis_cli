@@ -130,14 +130,20 @@ The requirements specify: **{}**
         vec![
             TradeOff {
                 approach: "Approach A".to_string(),
-                pros: vec!["Simple implementation".to_string(), "Fast to develop".to_string()],
+                pros: vec![
+                    "Simple implementation".to_string(),
+                    "Fast to develop".to_string(),
+                ],
                 cons: vec!["May not scale well".to_string()],
                 recommendation: Some("Use for MVP".to_string()),
             },
             TradeOff {
                 approach: "Approach B".to_string(),
                 pros: vec!["Scalable".to_string(), "Maintainable".to_string()],
-                cons: vec!["More complex".to_string(), "Longer development time".to_string()],
+                cons: vec![
+                    "More complex".to_string(),
+                    "Longer development time".to_string(),
+                ],
                 recommendation: Some("Use for production".to_string()),
             },
         ]
@@ -163,7 +169,10 @@ The requirements specify: **{}**
             ImplementationStep {
                 step_number: 3,
                 description: "Add tests and documentation".to_string(),
-                files: vec!["tests/integration_test.rs".to_string(), "README.md".to_string()],
+                files: vec![
+                    "tests/integration_test.rs".to_string(),
+                    "README.md".to_string(),
+                ],
                 dependencies: vec![],
                 estimated_time: "1 hour".to_string(),
             },
@@ -219,9 +228,23 @@ The requirements specify: **{}**
         let trade_offs_md = trade_offs
             .iter()
             .map(|to| {
-                let pros = to.pros.iter().map(|p| format!("- {}", p)).collect::<Vec<_>>().join("\n");
-                let cons = to.cons.iter().map(|c| format!("- {}", c)).collect::<Vec<_>>().join("\n");
-                let rec = to.recommendation.as_ref().map(|r| format!("\n**Recommendation**: {}", r)).unwrap_or_default();
+                let pros = to
+                    .pros
+                    .iter()
+                    .map(|p| format!("- {}", p))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let cons = to
+                    .cons
+                    .iter()
+                    .map(|c| format!("- {}", c))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let rec = to
+                    .recommendation
+                    .as_ref()
+                    .map(|r| format!("\n**Recommendation**: {}", r))
+                    .unwrap_or_default();
                 format!(
                     r#"#### {}
 
@@ -240,7 +263,11 @@ The requirements specify: **{}**
         let risks_md = risks
             .iter()
             .map(|risk| {
-                let mitigation = risk.mitigation.as_ref().map(|m| format!("\n**Mitigation**: {}", m)).unwrap_or_default();
+                let mitigation = risk
+                    .mitigation
+                    .as_ref()
+                    .map(|m| format!("\n**Mitigation**: {}", m))
+                    .unwrap_or_default();
                 format!(
                     r#"### {} Risk: {}{}
 "#,
@@ -339,10 +366,10 @@ impl PlanAgent for RuleBasedPlanAgent {
             .map_err(|e| anyhow::anyhow!("Session error: {}", e))?;
 
         session.context.current_task = Some(format!("Plan: {}", requirements));
-        session.context.progress.insert(
-            "steps".to_string(),
-            steps.len().to_string(),
-        );
+        session
+            .context
+            .progress
+            .insert("steps".to_string(), steps.len().to_string());
 
         Ok(PlanAgentResult {
             plan,

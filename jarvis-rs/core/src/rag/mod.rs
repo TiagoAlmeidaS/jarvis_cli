@@ -14,12 +14,14 @@ pub mod store;
 
 pub use chat_helper::{create_rag_injector, inject_rag_context, is_rag_ready};
 pub use chat_integration::{ContextStats, RagContextConfig, RagContextInjector};
-pub use chunk::{ChunkingConfig, ChunkMetadata, TextChunk, TextChunker};
+pub use chunk::{ChunkMetadata, ChunkingConfig, TextChunk, TextChunker};
 pub use document_store::{DocumentStore, InMemoryDocumentStore, JsonFileDocumentStore};
 pub use embeddings::{EmbeddingGenerator, OllamaEmbeddingGenerator};
-pub use indexer::{DocumentIndexer, DocumentMetadata, IndexedDocument, InMemoryDocumentIndexer};
-pub use retriever::{KnowledgeRetriever, RetrievedChunk, RetrievalResult, SimpleKnowledgeRetriever, SourceInfo};
-pub use store::{Embedding, EmbeddingMetadata, SearchResult, VectorStore, InMemoryVectorStore};
+pub use indexer::{DocumentIndexer, DocumentMetadata, InMemoryDocumentIndexer, IndexedDocument};
+pub use retriever::{
+    KnowledgeRetriever, RetrievalResult, RetrievedChunk, SimpleKnowledgeRetriever, SourceInfo,
+};
+pub use store::{Embedding, EmbeddingMetadata, InMemoryVectorStore, SearchResult, VectorStore};
 
 #[cfg(feature = "qdrant")]
 pub use store::qdrant::QdrantVectorStore;

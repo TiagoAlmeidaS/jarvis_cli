@@ -1,4 +1,4 @@
-﻿/*
+/*
 Runtime: shell
 
 Executes shell requests under the orchestrator: asks for approval when needed,
@@ -23,8 +23,8 @@ use crate::tools::sandboxing::ToolCtx;
 use crate::tools::sandboxing::ToolError;
 use crate::tools::sandboxing::ToolRuntime;
 use crate::tools::sandboxing::with_cached_approval;
-use jarvis_protocol::protocol::ReviewDecision;
 use futures::future::BoxFuture;
+use jarvis_protocol::protocol::ReviewDecision;
 use std::path::PathBuf;
 
 #[derive(Clone, Debug)]
