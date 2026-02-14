@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use jarvis_daemon_common::{DaemonDb, MetricType};
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 use super::{DataSource, SyncResult};
 
@@ -97,6 +97,72 @@ pub struct WpStatisticsPostView {
     pub link: Option<String>,
     #[serde(alias = "hits", alias = "views")]
     pub count: i64,
+}
+
+// ---------------------------------------------------------------------------
+// Jetpack Stats API response types
+// ---------------------------------------------------------------------------
+
+/// Response from the Jetpack Stats REST API `/wpcom/v2/stats/posts`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct JetpackStatsResponse {
+    /// Per-day views for the site.
+    #[serde(default)]
+    pub posts: Vec<JetpackPostStats>,
+}
+
+/// A single post's stats from Jetpack / WordPress.com.
+#[derive(Debug, Clone, Deserialize)]
+pub struct JetpackPostStats {
+    /// Post ID.
+    #[serde(alias = "ID")]
+    pub id: i64,
+    /// Post title.
+    pub title: Option<String>,
+    /// Post URL.
+    #[serde(alias = "URL")]
+    pub url: Option<String>,
+    /// Total views for this post in the period.
+    pub views: i64,
+}
+
+/// Response from the Jetpack top-posts endpoint.
+#[derive(Debug, Clone, Deserialize)]
+pub struct JetpackTopPostsResponse {
+    /// Summary stats.
+    #[serde(default)]
+    pub summary: Option<JetpackSummary>,
+    /// Per-day data.
+    #[serde(default)]
+    pub days: std::collections::HashMap<String, JetpackDayData>,
+}
+
+/// Daily data from Jetpack.
+#[derive(Debug, Clone, Deserialize)]
+pub struct JetpackDayData {
+    /// Top posts for the day.
+    #[serde(default)]
+    pub postviews: Vec<JetpackPostView>,
+    /// Total views for the day.
+    #[serde(default)]
+    pub total_views: Option<i64>,
+}
+
+/// A single post view entry from Jetpack top-posts.
+#[derive(Debug, Clone, Deserialize)]
+pub struct JetpackPostView {
+    pub id: i64,
+    pub title: Option<String>,
+    #[serde(alias = "href")]
+    pub url: Option<String>,
+    pub views: i64,
+}
+
+/// Jetpack summary stats.
+#[derive(Debug, Clone, Deserialize)]
+pub struct JetpackSummary {
+    pub views: Option<i64>,
+    pub visitors: Option<i64>,
 }
 
 /// A single post from the WP REST API `/wp/v2/posts`.
@@ -210,6 +276,123 @@ impl WordPressStatsClient {
         Ok(posts)
     }
 
+    /// Fetch per-post view stats using the Jetpack / WordPress.com Stats REST API.
+    ///
+    /// Uses two approaches:
+    /// 1. The top-posts endpoint (`/wp-json/wpcom/v2/stats/top-posts`) for per-post views.
+    /// 2. Falls back to the site-level stats endpoint if available.
+    async fn fetch_jetpack_views(&self) -> Result<Vec<WpStatisticsPostView>> {
+        let base = self.config.base_url.trim_end_matches('/');
+
+        // Try the Jetpack REST API endpoint for top posts.
+        let url = format!(
+            "{base}/wp-json/wpcom/v2/stats/top-posts?num={}&period=day",
+            self.config.sync_days
+        );
+
+        debug!("Fetching Jetpack top-posts: {url}");
+        let resp = self
+            .authenticated_get(&url)
+            .send()
+            .await
+            .context("Jetpack Stats request failed")?;
+
+        if !resp.status().is_success() {
+            // Fallback: try the WordPress.com REST API v1.1 format.
+            return self.fetch_jetpack_views_wpcom().await;
+        }
+
+        let top_posts: JetpackTopPostsResponse = resp
+            .json()
+            .await
+            .context("failed to parse Jetpack top-posts response")?;
+
+        // Aggregate views per post across all days.
+        let mut post_views: std::collections::HashMap<i64, (Option<String>, Option<String>, i64)> =
+            std::collections::HashMap::new();
+
+        for (_date, day_data) in &top_posts.days {
+            for pv in &day_data.postviews {
+                let entry = post_views
+                    .entry(pv.id)
+                    .or_insert_with(|| (pv.title.clone(), pv.url.clone(), 0));
+                entry.2 += pv.views;
+            }
+        }
+
+        let views = post_views
+            .into_iter()
+            .map(|(id, (title, url, count))| WpStatisticsPostView {
+                id,
+                title,
+                link: url,
+                count,
+            })
+            .collect();
+
+        Ok(views)
+    }
+
+    /// Fallback: Fetch Jetpack stats via WordPress.com REST API v1.1 format.
+    ///
+    /// Endpoint: `https://public-api.wordpress.com/rest/v1.1/sites/{site}/stats/top-posts`
+    async fn fetch_jetpack_views_wpcom(&self) -> Result<Vec<WpStatisticsPostView>> {
+        // Extract site identifier (domain or site ID) from base_url.
+        let site = self
+            .config
+            .base_url
+            .trim_end_matches('/')
+            .trim_start_matches("https://")
+            .trim_start_matches("http://");
+
+        let url = format!(
+            "https://public-api.wordpress.com/rest/v1.1/sites/{site}/stats/top-posts?num={}&period=day",
+            self.config.sync_days,
+        );
+
+        debug!("Fetching Jetpack stats via WP.com API: {url}");
+        let resp = self
+            .authenticated_get(&url)
+            .send()
+            .await
+            .context("Jetpack WP.com stats request failed")?;
+
+        if !resp.status().is_success() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            anyhow::bail!("Jetpack WP.com API returned {status}: {body}");
+        }
+
+        let top_posts: JetpackTopPostsResponse = resp
+            .json()
+            .await
+            .context("failed to parse Jetpack WP.com stats response")?;
+
+        let mut post_views: std::collections::HashMap<i64, (Option<String>, Option<String>, i64)> =
+            std::collections::HashMap::new();
+
+        for (_date, day_data) in &top_posts.days {
+            for pv in &day_data.postviews {
+                let entry = post_views
+                    .entry(pv.id)
+                    .or_insert_with(|| (pv.title.clone(), pv.url.clone(), 0));
+                entry.2 += pv.views;
+            }
+        }
+
+        let views = post_views
+            .into_iter()
+            .map(|(id, (title, url, count))| WpStatisticsPostView {
+                id,
+                title,
+                link: url,
+                count,
+            })
+            .collect();
+
+        Ok(views)
+    }
+
     /// Match a WordPress post view record to a `daemon_content` entry by URL or slug.
     async fn match_content(
         &self,
@@ -251,11 +434,7 @@ impl DataSource for WordPressStatsClient {
         // 1. Fetch view stats.
         let views = match self.config.stats_plugin {
             StatsPlugin::WpStatistics => self.fetch_wp_statistics_views().await?,
-            StatsPlugin::Jetpack => {
-                // Jetpack support is Phase 3 — skip for now.
-                warn!("Jetpack Stats integration not yet implemented, skipping");
-                return Ok(result);
-            }
+            StatsPlugin::Jetpack => self.fetch_jetpack_views().await?,
         };
 
         info!(
@@ -289,13 +468,17 @@ impl DataSource for WordPressStatsClient {
 
             match self.match_content(db, view, &posts_map).await {
                 Some(content) => {
+                    let source_name = match self.config.stats_plugin {
+                        StatsPlugin::WpStatistics => "wordpress_stats",
+                        StatsPlugin::Jetpack => "jetpack_stats",
+                    };
                     if let Err(e) = db
                         .insert_metric(
                             &content.pipeline_id,
                             Some(&content.id),
                             MetricType::Views,
                             view.count as f64,
-                            "wordpress_stats",
+                            source_name,
                             period_start,
                             now,
                         )
@@ -457,18 +640,74 @@ mod tests {
         assert!(client.is_ok());
     }
 
-    #[tokio::test]
-    async fn jetpack_sync_returns_early() {
-        let config = WordPressStatsConfig {
-            base_url: "https://example.com".to_string(),
-            auth: WordPressAuth::None,
-            stats_plugin: StatsPlugin::Jetpack,
-            sync_days: 7,
-        };
-        let client = WordPressStatsClient::new(config).unwrap();
-        let db = DaemonDb::open_memory().await.expect("open db");
-        let result = client.sync(&db).await.expect("sync");
-        // Jetpack is not yet implemented, should return empty result.
-        assert_eq!(result.records_synced, 0);
+    #[test]
+    fn parse_jetpack_top_posts_response() {
+        let json = serde_json::json!({
+            "summary": {"views": 500, "visitors": 200},
+            "days": {
+                "2026-02-10": {
+                    "postviews": [
+                        {"id": 1, "title": "Post A", "href": "https://blog.com/post-a", "views": 100},
+                        {"id": 2, "title": "Post B", "href": "https://blog.com/post-b", "views": 50}
+                    ],
+                    "total_views": 150
+                },
+                "2026-02-11": {
+                    "postviews": [
+                        {"id": 1, "title": "Post A", "href": "https://blog.com/post-a", "views": 80},
+                        {"id": 3, "title": "Post C", "href": "https://blog.com/post-c", "views": 30}
+                    ],
+                    "total_views": 110
+                }
+            }
+        });
+        let resp: JetpackTopPostsResponse = serde_json::from_value(json).expect("parse");
+        assert_eq!(resp.days.len(), 2);
+
+        let summary = resp.summary.as_ref().expect("summary");
+        assert_eq!(summary.views, Some(500));
+        assert_eq!(summary.visitors, Some(200));
+
+        let day = &resp.days["2026-02-10"];
+        assert_eq!(day.postviews.len(), 2);
+        assert_eq!(day.postviews[0].views, 100);
+    }
+
+    #[test]
+    fn parse_jetpack_post_view() {
+        let json = serde_json::json!({
+            "id": 42,
+            "title": "Test Article",
+            "href": "https://blog.com/test-article",
+            "views": 250
+        });
+        let pv: JetpackPostView = serde_json::from_value(json).expect("parse");
+        assert_eq!(pv.id, 42);
+        assert_eq!(pv.views, 250);
+        assert_eq!(pv.url.as_deref(), Some("https://blog.com/test-article"));
+    }
+
+    #[test]
+    fn parse_jetpack_response_empty_days() {
+        let json = serde_json::json!({
+            "days": {}
+        });
+        let resp: JetpackTopPostsResponse = serde_json::from_value(json).expect("parse");
+        assert!(resp.days.is_empty());
+        assert!(resp.summary.is_none());
+    }
+
+    #[test]
+    fn parse_jetpack_stats_response() {
+        let json = serde_json::json!({
+            "posts": [
+                {"ID": 1, "title": "First", "URL": "https://blog.com/first", "views": 100},
+                {"ID": 2, "title": "Second", "URL": "https://blog.com/second", "views": 50}
+            ]
+        });
+        let resp: JetpackStatsResponse = serde_json::from_value(json).expect("parse");
+        assert_eq!(resp.posts.len(), 2);
+        assert_eq!(resp.posts[0].id, 1);
+        assert_eq!(resp.posts[0].views, 100);
     }
 }

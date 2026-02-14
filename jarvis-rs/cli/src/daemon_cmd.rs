@@ -65,6 +65,9 @@ pub enum DaemonCommand {
 
     /// Show daemon system health information.
     Health,
+
+    /// Show a rich dashboard with metrics, goals, experiments, and pipeline status.
+    Dashboard(DashboardArgs),
 }
 
 #[derive(Debug, Args)]
@@ -367,6 +370,16 @@ pub enum MetricsCommand {
     },
 }
 
+#[derive(Debug, Args)]
+pub struct DashboardArgs {
+    /// Period in days for metrics.
+    #[arg(long, short = 'd', default_value = "30")]
+    days: i64,
+    /// Show compact version (fewer details).
+    #[arg(long)]
+    compact: bool,
+}
+
 impl DaemonCli {
     fn db_path(&self) -> PathBuf {
         self.db_path.clone().unwrap_or_else(|| {
@@ -400,6 +413,7 @@ pub async fn run_daemon_command(cli: DaemonCli) -> Result<()> {
         DaemonCommand::Experiments(args) => cmd_experiments(&db, args).await,
         DaemonCommand::Metrics(args) => cmd_metrics(&db, args).await,
         DaemonCommand::Health => cmd_health(&db).await,
+        DaemonCommand::Dashboard(args) => cmd_dashboard(&db, args).await,
     }
 }
 
@@ -1693,6 +1707,322 @@ async fn cmd_health(db: &DaemonDb) -> Result<()> {
     for s in &strategies {
         println!("    - {s}");
     }
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Dashboard subcommand
+// ---------------------------------------------------------------------------
+
+async fn cmd_dashboard(db: &DaemonDb, args: DashboardArgs) -> Result<()> {
+    let days = args.days;
+    let now = chrono::Utc::now().timestamp();
+    let since = now - (days * 86400);
+
+    // Gather all data.
+    let pipelines = db.list_pipelines(false).await?;
+    let enabled = pipelines.iter().filter(|p| p.enabled).count();
+    let running_jobs = db.count_running_jobs().await?;
+    let pending_proposals = db.count_pending_proposals().await?;
+    let revenue = db.revenue_summary(days).await?;
+
+    let views = db
+        .sum_metrics(MetricType::Views, since, None)
+        .await
+        .unwrap_or(0.0);
+    let clicks = db
+        .sum_metrics(MetricType::Clicks, since, None)
+        .await
+        .unwrap_or(0.0);
+    let impressions = db
+        .sum_metrics(MetricType::Impressions, since, None)
+        .await
+        .unwrap_or(0.0);
+    let ctr = if impressions > 0.0 {
+        (clicks / impressions) * 100.0
+    } else {
+        0.0
+    };
+
+    let goals = db
+        .list_goals(&GoalFilter {
+            status: Some(GoalStatus::Active),
+            ..Default::default()
+        })
+        .await?;
+
+    let exp_running = db
+        .list_experiments(&ExperimentFilter {
+            status: Some(ExperimentStatus::Running),
+            ..Default::default()
+        })
+        .await?;
+
+    let recent_content = db
+        .list_content(&ContentFilter {
+            since_days: Some(days),
+            status: Some(ContentStatus::Published),
+            ..Default::default()
+        })
+        .await?;
+
+    // Jobs last 24h.
+    let completed_jobs = db
+        .list_jobs(&JobFilter {
+            status: Some(JobStatus::Completed),
+            ..Default::default()
+        })
+        .await?;
+    let failed_jobs = db
+        .list_jobs(&JobFilter {
+            status: Some(JobStatus::Failed),
+            ..Default::default()
+        })
+        .await?;
+    let last_24h = now - 86400;
+    let completed_24h = completed_jobs
+        .iter()
+        .filter(|j| j.created_at > last_24h)
+        .count();
+    let failed_24h = failed_jobs
+        .iter()
+        .filter(|j| j.created_at > last_24h)
+        .count();
+
+    // Health status.
+    let at_risk_goals = goals
+        .iter()
+        .filter(|g| g.target_value > 0.0 && (g.current_value / g.target_value) < 0.4)
+        .count();
+    let health = if failed_24h > completed_24h && completed_24h > 0 {
+        "DEGRADED".red().bold().to_string()
+    } else if enabled == 0 {
+        "INACTIVE".yellow().to_string()
+    } else if at_risk_goals > 0 {
+        "AT RISK".yellow().bold().to_string()
+    } else {
+        "HEALTHY".green().bold().to_string()
+    };
+
+    // Width for the dashboard.
+    let width = 72;
+    let sep = "─".repeat(width);
+    let double_sep = "═".repeat(width);
+
+    // Header.
+    println!();
+    println!("{}", double_sep.dimmed());
+    println!(
+        "  {} {} {}",
+        "JARVIS DAEMON DASHBOARD".bold(),
+        format!("({days}d)").dimmed(),
+        format!("  Status: {health}"),
+    );
+    println!("{}", double_sep.dimmed());
+
+    // ── Metrics Overview ──
+    println!();
+    println!("  {}", "METRICS OVERVIEW".bold());
+    println!("  {}", sep.dimmed());
+    println!(
+        "  {:<20} {:<20} {:<20} {}",
+        format!("Views: {}", format!("{:.0}", views).cyan().bold()),
+        format!("Clicks: {}", format!("{:.0}", clicks).green().bold()),
+        format!("CTR: {}", format!("{:.2}%", ctr).yellow()),
+        format!(
+            "Revenue: {}",
+            format!("${:.2}", revenue.total_usd).green().bold()
+        ),
+    );
+    println!(
+        "  {:<20}",
+        format!("Impressions: {}", format!("{:.0}", impressions).cyan()),
+    );
+
+    // Revenue by source.
+    if !revenue.by_source.is_empty() {
+        println!();
+        println!("  {}", "REVENUE BY SOURCE".bold());
+        println!("  {}", sep.dimmed());
+        for sr in &revenue.by_source {
+            let bar_len = if revenue.total_usd > 0.0 {
+                ((sr.total_usd / revenue.total_usd) * 30.0) as usize
+            } else {
+                0
+            };
+            let bar = "█".repeat(bar_len);
+            let pct = if revenue.total_usd > 0.0 {
+                (sr.total_usd / revenue.total_usd) * 100.0
+            } else {
+                0.0
+            };
+            println!(
+                "  {:<15} ${:<10.2} {} {:.0}%",
+                sr.source,
+                sr.total_usd,
+                bar.green(),
+                pct,
+            );
+        }
+    }
+
+    // ── Pipelines ──
+    println!();
+    println!("  {}", "PIPELINES".bold());
+    println!("  {}", sep.dimmed());
+    println!(
+        "  {}/{} enabled  |  {} running jobs  |  {} completed (24h)  |  {} failed (24h)",
+        enabled.to_string().green(),
+        pipelines.len(),
+        running_jobs.to_string().yellow(),
+        completed_24h.to_string().green(),
+        if failed_24h > 0 {
+            failed_24h.to_string().red().to_string()
+        } else {
+            "0".to_string()
+        },
+    );
+    if !args.compact {
+        for p in &pipelines {
+            let status_icon = if p.enabled { "●" } else { "○" };
+            let status_colored = if p.enabled {
+                status_icon.green().to_string()
+            } else {
+                status_icon.dimmed().to_string()
+            };
+            println!(
+                "  {} {:<25} {:<15} {}",
+                status_colored,
+                p.name,
+                p.strategy.dimmed(),
+                p.schedule_cron.dimmed(),
+            );
+        }
+    }
+
+    // ── Goals ──
+    if !goals.is_empty() {
+        println!();
+        println!("  {}", "GOALS".bold());
+        println!("  {}", sep.dimmed());
+        for g in &goals {
+            let pct = if g.target_value > 0.0 {
+                (g.current_value / g.target_value) * 100.0
+            } else {
+                0.0
+            };
+            let bar = progress_bar(pct, 20);
+            let status_label = if pct >= 100.0 {
+                "DONE".green().bold().to_string()
+            } else if pct >= 60.0 {
+                "OK".cyan().to_string()
+            } else {
+                "RISK".yellow().bold().to_string()
+            };
+            let name_short: String = g.name.chars().take(25).collect();
+            println!(
+                "  P{} {:<25} {:.1}/{:.1} {} {} [{}]",
+                g.priority,
+                name_short,
+                g.current_value,
+                g.target_value,
+                g.target_unit,
+                bar,
+                status_label,
+            );
+        }
+    }
+
+    // ── Experiments ──
+    if !exp_running.is_empty() {
+        println!();
+        println!("  {}", "A/B EXPERIMENTS".bold());
+        println!("  {}", sep.dimmed());
+        for exp in &exp_running {
+            let id_short = if exp.id.len() > 8 {
+                &exp.id[..8]
+            } else {
+                &exp.id
+            };
+            let leader = if exp.metric_a > exp.metric_b {
+                "A".green().bold().to_string()
+            } else if exp.metric_b > exp.metric_a {
+                "B".green().bold().to_string()
+            } else {
+                "TIE".yellow().to_string()
+            };
+            println!(
+                "  {} {} A:{:.4} vs B:{:.4}  leader: {}",
+                id_short.dimmed(),
+                exp.metric,
+                exp.metric_a,
+                exp.metric_b,
+                leader,
+            );
+        }
+    }
+
+    // ── Recent Content ──
+    if !recent_content.is_empty() && !args.compact {
+        println!();
+        println!("  {}", "RECENT CONTENT".bold());
+        println!("  {}", sep.dimmed());
+        let display_count = recent_content.len().min(10);
+        for item in recent_content.iter().take(display_count) {
+            let title: String = item
+                .title
+                .as_deref()
+                .unwrap_or("(untitled)")
+                .chars()
+                .take(45)
+                .collect();
+            let published = item
+                .published_at
+                .map(format_timestamp)
+                .unwrap_or_else(|| "-".to_string());
+            let words = item
+                .word_count
+                .map(|w| format!("{w}w"))
+                .unwrap_or_else(|| "-".to_string());
+            println!(
+                "  {:<47} {:<6} {}",
+                title,
+                words.dimmed(),
+                published.dimmed(),
+            );
+        }
+        if recent_content.len() > display_count {
+            println!(
+                "  {} more...",
+                (recent_content.len() - display_count).to_string().dimmed()
+            );
+        }
+    }
+
+    // ── Pending Proposals ──
+    if pending_proposals > 0 {
+        println!();
+        println!(
+            "  {} {} pending proposals. Run '{}'",
+            "!".yellow().bold(),
+            pending_proposals,
+            "jarvis daemon proposals list".cyan(),
+        );
+    }
+
+    // ── Footer ──
+    println!();
+    println!("{}", double_sep.dimmed());
+    println!(
+        "  {} {}",
+        "Last updated:".dimmed(),
+        chrono::Utc::now()
+            .format("%Y-%m-%d %H:%M:%S UTC")
+            .to_string()
+            .dimmed(),
+    );
+    println!();
 
     Ok(())
 }

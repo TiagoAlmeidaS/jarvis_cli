@@ -77,12 +77,12 @@ o TUI funciona com modelos premium.
 | 5.1 | CLI: Experiments (list/show/cancel) | **COMPLETO** |
 | 5.2 | CLI: Metrics (summary/content) | **COMPLETO** |
 | 5.3 | CLI: Health check + system info | **COMPLETO** |
+| 5.4 | Jetpack Stats (alternativa WP Statistics) | **COMPLETO** |
+| 5.5 | Dashboard CLI (visualizacao rica de metricas) | **COMPLETO** |
 
 ## Proximos Passos (Prioridade)
 
 1. **Integrar AgentLoop no TUI** — quando houver demanda para modelos baratos
-2. **Jetpack Stats** — alternativa ao WP Statistics (stub ja existe)
-3. **Dashboard TUI** — visualizacao de metricas em tempo real no terminal
 
 ## Arquivos Criados/Modificados
 
@@ -132,3 +132,9 @@ o TUI funciona com modelos premium.
 ### Sessao 6 (CLI Management Commands)
 - `cli/src/daemon_cmd.rs` — Novos subcommands: experiments (list/show/cancel), metrics (summary/content), health
 - `docs/features/daemon-cli-management.md` — Documentacao completa de todos os subcommands do daemon CLI
+
+### Sessao 7 (Jetpack Stats + Dashboard CLI)
+- `daemon/src/data_sources/wordpress_stats.rs` — Jetpack Stats implementado (fetch_jetpack_views, fallback WP.com API, agregacao multi-dia)
+- `cli/src/daemon_cmd.rs` — Dashboard CLI com metricas, revenue, pipelines, goals, experiments, content recente
+- `docs/features/jetpack-stats.md` — Documentacao Jetpack Stats
+- `docs/features/dashboard-cli.md` — Documentacao Dashboard CLI
