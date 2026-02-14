@@ -95,6 +95,10 @@ impl PipelineRegistry {
         let ab_tester = Arc::new(crate::pipelines::ab_tester::AbTesterPipeline);
         pipelines.insert(ab_tester.strategy().to_string(), ab_tester);
 
+        // Register the prompt optimizer pipeline.
+        let prompt_opt = Arc::new(crate::pipelines::prompt_optimizer::PromptOptimizerPipeline);
+        pipelines.insert(prompt_opt.strategy().to_string(), prompt_opt);
+
         Self { pipelines }
     }
 

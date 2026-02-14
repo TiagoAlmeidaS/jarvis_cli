@@ -17,6 +17,7 @@ use jarvis_daemon_common::{
 use serde::Deserialize;
 
 use crate::data_sources::google_adsense::{AdSenseClient, AdSenseConfig};
+use crate::data_sources::google_analytics::{GoogleAnalyticsClient, GoogleAnalyticsConfig};
 use crate::data_sources::google_search_console::{SearchConsoleClient, SearchConsoleConfig};
 use crate::data_sources::wordpress_stats::{WordPressStatsClient, WordPressStatsConfig};
 use crate::pipeline::{Pipeline, PipelineContext};
@@ -42,6 +43,9 @@ pub struct MetricsCollectorConfig {
     /// Optional Google AdSense configuration for real revenue data.
     #[serde(default)]
     pub adsense: Option<AdSenseConfig>,
+    /// Optional Google Analytics 4 configuration for engagement metrics.
+    #[serde(default)]
+    pub google_analytics: Option<GoogleAnalyticsConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -71,6 +75,7 @@ impl Default for MetricsCollectorConfig {
             wordpress_stats: None,
             search_console: None,
             adsense: None,
+            google_analytics: None,
         }
     }
 }
@@ -307,6 +312,40 @@ impl Pipeline for MetricsCollectorPipeline {
                     ctx.log(
                         LogLevel::Warn,
                         &format!("Failed to create AdSense client: {e:#}"),
+                    )
+                    .await;
+                }
+            }
+        }
+
+        // 3d. Sync engagement data from Google Analytics 4.
+        if let Some(ga_config) = &config.google_analytics {
+            match GoogleAnalyticsClient::new(ga_config.clone()) {
+                Ok(ga_client) => {
+                    use crate::data_sources::DataSource as _;
+                    ctx.log_info("Syncing Google Analytics 4...").await;
+                    match ga_client.sync(db).await {
+                        Ok(sync_result) => {
+                            ctx.log_info(&format!(
+                                "GA4: {} records synced, {} errors",
+                                sync_result.records_synced,
+                                sync_result.errors.len()
+                            ))
+                            .await;
+                            for err in &sync_result.errors {
+                                ctx.log(LogLevel::Warn, &format!("GA4: {err}")).await;
+                            }
+                        }
+                        Err(e) => {
+                            ctx.log(LogLevel::Warn, &format!("GA4 sync failed: {e:#}"))
+                                .await;
+                        }
+                    }
+                }
+                Err(e) => {
+                    ctx.log(
+                        LogLevel::Warn,
+                        &format!("Failed to create GA4 client: {e:#}"),
                     )
                     .await;
                 }

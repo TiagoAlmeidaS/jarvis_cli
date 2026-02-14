@@ -31,6 +31,7 @@ fn default_scopes() -> Vec<String> {
     vec![
         "https://www.googleapis.com/auth/webmasters.readonly".to_string(),
         "https://www.googleapis.com/auth/adsense.readonly".to_string(),
+        "https://www.googleapis.com/auth/analytics.readonly".to_string(),
     ]
 }
 
@@ -234,9 +235,10 @@ mod tests {
     #[test]
     fn default_scopes_include_search_console_and_adsense() {
         let scopes = default_scopes();
-        assert_eq!(scopes.len(), 2);
+        assert_eq!(scopes.len(), 3);
         assert!(scopes[0].contains("webmasters"));
         assert!(scopes[1].contains("adsense"));
+        assert!(scopes[2].contains("analytics"));
     }
 
     #[test]
@@ -322,6 +324,6 @@ mod tests {
         }))
         .expect("parse");
         assert_eq!(config.client_id, "my-id.apps.googleusercontent.com");
-        assert_eq!(config.scopes.len(), 2); // defaults
+        assert_eq!(config.scopes.len(), 3); // defaults: webmasters + adsense + analytics
     }
 }

@@ -9,6 +9,7 @@
 //! CPC-based estimates.
 
 pub mod google_adsense;
+pub mod google_analytics;
 pub mod google_auth;
 pub mod google_search_console;
 pub mod wordpress_stats;

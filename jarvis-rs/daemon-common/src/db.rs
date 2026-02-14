@@ -666,6 +666,19 @@ impl DaemonDb {
         Ok(total.0)
     }
 
+    /// Sum a specific metric for a given content_id.
+    pub async fn sum_content_metric(&self, content_id: &str, metric_type: &str) -> Result<f64> {
+        let total: (f64,) = sqlx::query_as(
+            "SELECT COALESCE(SUM(value), 0.0) FROM daemon_metrics \
+             WHERE content_id = ?1 AND metric_type = ?2",
+        )
+        .bind(content_id)
+        .bind(metric_type)
+        .fetch_one(&self.pool)
+        .await?;
+        Ok(total.0)
+    }
+
     // -----------------------------------------------------------------------
     // Proposals
     // -----------------------------------------------------------------------
@@ -1309,6 +1322,155 @@ impl DaemonDb {
         .await?;
         Ok(rows.into_iter().map(DaemonExperiment::from).collect())
     }
+
+    // -----------------------------------------------------------------------
+    // Prompt Scores
+    // -----------------------------------------------------------------------
+
+    /// Record a new prompt score entry (metrics start at zero).
+    pub async fn create_prompt_score(&self, input: &CreatePromptScore) -> Result<PromptScore> {
+        let id = Uuid::new_v4().to_string();
+        let now = chrono::Utc::now().timestamp();
+        let params_str = serde_json::to_string(&input.params_json)?;
+
+        sqlx::query(
+            "INSERT INTO daemon_prompt_scores \
+             (id, pipeline_id, content_id, prompt_hash, params_json, \
+              avg_ctr, total_clicks, total_impressions, revenue_usd, composite_score, \
+              created_at, updated_at) \
+             VALUES (?1, ?2, ?3, ?4, ?5, 0.0, 0, 0, 0.0, 0.0, ?6, ?6)",
+        )
+        .bind(&id)
+        .bind(&input.pipeline_id)
+        .bind(&input.content_id)
+        .bind(&input.prompt_hash)
+        .bind(&params_str)
+        .bind(now)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(PromptScore {
+            id,
+            pipeline_id: input.pipeline_id.clone(),
+            content_id: input.content_id.clone(),
+            prompt_hash: input.prompt_hash.clone(),
+            params_json: input.params_json.clone(),
+            avg_ctr: 0.0,
+            total_clicks: 0,
+            total_impressions: 0,
+            revenue_usd: 0.0,
+            composite_score: 0.0,
+            created_at: now,
+            updated_at: now,
+        })
+    }
+
+    /// Update metrics for a prompt score record.
+    pub async fn update_prompt_score_metrics(
+        &self,
+        id: &str,
+        ctr: f64,
+        clicks: i64,
+        impressions: i64,
+        revenue: f64,
+    ) -> Result<()> {
+        let now = chrono::Utc::now().timestamp();
+        // Composite: weighted CTR (60%) + normalized revenue (40%).
+        let composite = compute_composite_score(ctr, clicks, revenue);
+        sqlx::query(
+            "UPDATE daemon_prompt_scores \
+             SET avg_ctr = ?1, total_clicks = ?2, total_impressions = ?3, \
+                 revenue_usd = ?4, composite_score = ?5, updated_at = ?6 \
+             WHERE id = ?7",
+        )
+        .bind(ctr)
+        .bind(clicks)
+        .bind(impressions)
+        .bind(revenue)
+        .bind(composite)
+        .bind(now)
+        .bind(id)
+        .execute(&self.pool)
+        .await?;
+        Ok(())
+    }
+
+    /// Get prompt scores for a pipeline, ordered by composite score descending.
+    pub async fn list_prompt_scores(&self, pipeline_id: &str) -> Result<Vec<PromptScore>> {
+        let rows = sqlx::query_as::<_, PromptScoreRow>(
+            "SELECT * FROM daemon_prompt_scores WHERE pipeline_id = ?1 \
+             ORDER BY composite_score DESC",
+        )
+        .bind(pipeline_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows.into_iter().map(PromptScore::from).collect())
+    }
+
+    /// Get aggregated performance per prompt_hash for a pipeline.
+    pub async fn prompt_performance_summary(
+        &self,
+        pipeline_id: &str,
+    ) -> Result<Vec<PromptPerformanceSummary>> {
+        let rows = sqlx::query_as::<_, PromptSummaryRow>(
+            "SELECT prompt_hash, params_json, \
+                    COUNT(*) as content_count, \
+                    AVG(avg_ctr) as avg_ctr, \
+                    AVG(total_clicks) as avg_clicks, \
+                    SUM(revenue_usd) as total_revenue, \
+                    AVG(composite_score) as composite_score \
+             FROM daemon_prompt_scores \
+             WHERE pipeline_id = ?1 \
+             GROUP BY prompt_hash \
+             ORDER BY composite_score DESC",
+        )
+        .bind(pipeline_id)
+        .fetch_all(&self.pool)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(PromptPerformanceSummary::from)
+            .collect())
+    }
+
+    /// Get the score for a specific content_id (if tracked).
+    pub async fn get_prompt_score_by_content(
+        &self,
+        content_id: &str,
+    ) -> Result<Option<PromptScore>> {
+        let row = sqlx::query_as::<_, PromptScoreRow>(
+            "SELECT * FROM daemon_prompt_scores WHERE content_id = ?1",
+        )
+        .bind(content_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(PromptScore::from))
+    }
+
+    /// Get the best-performing prompt hash for a pipeline.
+    pub async fn best_prompt_hash(&self, pipeline_id: &str) -> Result<Option<String>> {
+        let row: Option<(String,)> = sqlx::query_as(
+            "SELECT prompt_hash FROM daemon_prompt_scores \
+             WHERE pipeline_id = ?1 \
+             GROUP BY prompt_hash \
+             HAVING COUNT(*) >= 3 \
+             ORDER BY AVG(composite_score) DESC \
+             LIMIT 1",
+        )
+        .bind(pipeline_id)
+        .fetch_optional(&self.pool)
+        .await?;
+        Ok(row.map(|r| r.0))
+    }
+}
+
+/// Compute a composite score from CTR, clicks, and revenue.
+/// Weights: CTR 40%, clicks 30% (log-normalized), revenue 30%.
+fn compute_composite_score(ctr: f64, clicks: i64, revenue: f64) -> f64 {
+    let ctr_component = ctr * 100.0; // e.g. 3.5% -> 3.5
+    let clicks_component = (clicks as f64 + 1.0).ln() * 10.0; // log-normalize
+    let revenue_component = revenue * 10.0; // scale up small values
+    ctr_component * 0.4 + clicks_component * 0.3 + revenue_component * 0.3
 }
 
 // ---------------------------------------------------------------------------
@@ -1614,6 +1776,66 @@ impl From<ExperimentRow> for DaemonExperiment {
     }
 }
 
+#[derive(sqlx::FromRow)]
+struct PromptScoreRow {
+    id: String,
+    pipeline_id: String,
+    content_id: String,
+    prompt_hash: String,
+    params_json: String,
+    avg_ctr: f64,
+    total_clicks: i64,
+    total_impressions: i64,
+    revenue_usd: f64,
+    composite_score: f64,
+    created_at: i64,
+    updated_at: i64,
+}
+
+impl From<PromptScoreRow> for PromptScore {
+    fn from(r: PromptScoreRow) -> Self {
+        Self {
+            id: r.id,
+            pipeline_id: r.pipeline_id,
+            content_id: r.content_id,
+            prompt_hash: r.prompt_hash,
+            params_json: serde_json::from_str(&r.params_json).unwrap_or_default(),
+            avg_ctr: r.avg_ctr,
+            total_clicks: r.total_clicks,
+            total_impressions: r.total_impressions,
+            revenue_usd: r.revenue_usd,
+            composite_score: r.composite_score,
+            created_at: r.created_at,
+            updated_at: r.updated_at,
+        }
+    }
+}
+
+#[derive(sqlx::FromRow)]
+struct PromptSummaryRow {
+    prompt_hash: String,
+    params_json: String,
+    content_count: i64,
+    avg_ctr: f64,
+    avg_clicks: f64,
+    total_revenue: f64,
+    composite_score: f64,
+}
+
+impl From<PromptSummaryRow> for PromptPerformanceSummary {
+    fn from(r: PromptSummaryRow) -> Self {
+        Self {
+            prompt_hash: r.prompt_hash,
+            params_json: serde_json::from_str(&r.params_json).unwrap_or_default(),
+            content_count: r.content_count,
+            avg_ctr: r.avg_ctr,
+            avg_clicks: r.avg_clicks,
+            total_revenue: r.total_revenue,
+            composite_score: r.composite_score,
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Migration SQL
 // ---------------------------------------------------------------------------
@@ -1622,7 +1844,7 @@ const MIGRATION_SQL: &str = r#"
 CREATE TABLE IF NOT EXISTS daemon_pipelines (
     id              TEXT PRIMARY KEY,
     name            TEXT NOT NULL,
-    strategy        TEXT NOT NULL CHECK(strategy IN ('seo_blog', 'youtube_shorts', 'saas_api', 'metrics_collector', 'strategy_analyzer', 'ab_tester')),
+    strategy        TEXT NOT NULL CHECK(strategy IN ('seo_blog', 'youtube_shorts', 'saas_api', 'metrics_collector', 'strategy_analyzer', 'ab_tester', 'prompt_optimizer')),
     config_json     TEXT NOT NULL DEFAULT '{}',
     schedule_cron   TEXT NOT NULL DEFAULT '0 3 * * *',
     enabled         INTEGER NOT NULL DEFAULT 1,
@@ -1812,6 +2034,25 @@ CREATE TABLE IF NOT EXISTS daemon_experiments (
 CREATE INDEX IF NOT EXISTS idx_experiments_status ON daemon_experiments(status, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_experiments_content ON daemon_experiments(content_id);
 CREATE INDEX IF NOT EXISTS idx_experiments_pipeline ON daemon_experiments(pipeline_id);
+
+CREATE TABLE IF NOT EXISTS daemon_prompt_scores (
+    id                TEXT PRIMARY KEY,
+    pipeline_id       TEXT NOT NULL REFERENCES daemon_pipelines(id),
+    content_id        TEXT NOT NULL REFERENCES daemon_content(id),
+    prompt_hash       TEXT NOT NULL,
+    params_json       TEXT NOT NULL DEFAULT '{}',
+    avg_ctr           REAL NOT NULL DEFAULT 0.0,
+    total_clicks      INTEGER NOT NULL DEFAULT 0,
+    total_impressions INTEGER NOT NULL DEFAULT 0,
+    revenue_usd       REAL NOT NULL DEFAULT 0.0,
+    composite_score   REAL NOT NULL DEFAULT 0.0,
+    created_at        INTEGER NOT NULL,
+    updated_at        INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_prompt_scores_hash ON daemon_prompt_scores(prompt_hash);
+CREATE INDEX IF NOT EXISTS idx_prompt_scores_pipeline ON daemon_prompt_scores(pipeline_id, composite_score DESC);
+CREATE INDEX IF NOT EXISTS idx_prompt_scores_content ON daemon_prompt_scores(content_id);
 "#;
 
 // ---------------------------------------------------------------------------

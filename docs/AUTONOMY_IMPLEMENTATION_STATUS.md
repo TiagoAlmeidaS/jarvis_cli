@@ -59,16 +59,22 @@ o TUI funciona com modelos premium.
 | 3.2 | Google AdSense API | **COMPLETO** |
 | 3.3 | A/B Testing de Titulos SEO | **COMPLETO** |
 | 3.4 | Decision Engine Local (rule-based) | **COMPLETO** |
-| 3.5 | Auto-otimizacao de prompts | PENDENTE |
+| 3.5 | Auto-otimizacao de prompts | **COMPLETO** |
 | 3.6 | Conectar core/autonomous com daemon | **COMPLETO** (decision_engine.rs integrado no strategy_analyzer) |
+
+## Fase 4: Data Sources Avancados
+
+| Step | Entrega | Status |
+|------|---------|--------|
+| 4.1 | Google Analytics 4 | **COMPLETO** |
+| 4.2 | Jetpack Stats | PENDENTE (stub existe) |
+| 4.3 | Dashboard TUI | PENDENTE (requer refactor extenso) |
 
 ## Proximos Passos (Prioridade)
 
-1. **Auto-otimizacao de prompts** — analisar quais prompts geram melhor CTR/revenue
-2. **Integrar AgentLoop no TUI** — quando houver demanda para modelos baratos
-3. **Google Analytics 4** — metricas de engajamento (bounce rate, session duration)
-4. **Jetpack Stats** — alternativa ao WP Statistics (stub ja existe)
-5. **Dashboard TUI** — visualizacao de metricas em tempo real no terminal
+1. **Integrar AgentLoop no TUI** — quando houver demanda para modelos baratos
+2. **Jetpack Stats** — alternativa ao WP Statistics (stub ja existe)
+3. **Dashboard TUI** — visualizacao de metricas em tempo real no terminal
 
 ## Arquivos Criados/Modificados
 
@@ -104,3 +110,13 @@ o TUI funciona com modelos premium.
 - `daemon-common/src/db.rs` — `create_job_with_attempt()` para retry jobs + testes experiment lifecycle
 - `daemon/src/pipelines/seo_blog.rs` — Clarificacao do TODO de token tracking
 - 13 arquivos faltantes commitados (schedule.rs, executor.rs, scheduler.rs, runner.rs, etc.)
+
+### Sessao 5 (Prompt Optimizer + GA4)
+- `daemon/src/pipelines/prompt_optimizer.rs` — Pipeline de auto-otimizacao de prompts (scoring, LLM analysis, proposals)
+- `daemon-common/src/models.rs` — PromptScore, CreatePromptScore, PromptPerformanceSummary, PromptOptimizationSuggestion, Strategy::PromptOptimizer
+- `daemon-common/src/db.rs` — daemon_prompt_scores table + CRUD (create, update, list, summary, best_prompt_hash)
+- `daemon/src/data_sources/google_analytics.rs` — GA4 Data API client (sessions, engaged sessions, page views, bounce rate, avg duration)
+- `daemon/src/data_sources/google_auth.rs` — Adicionado scope analytics.readonly aos defaults
+- `daemon/src/pipelines/metrics_collector.rs` — Integracao GA4 no sync pipeline
+- `daemon/src/data_sources/mod.rs` — Registro modulo google_analytics
+- `daemon/src/pipeline.rs` — PromptOptimizerPipeline registrado no PipelineRegistry
