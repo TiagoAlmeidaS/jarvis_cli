@@ -12,7 +12,7 @@
 | G2 | **Goal System** | Nao implementado | **IMPLEMENTADO** | DB, models, CLI, integrado no analyzer + collector |
 | G3 | **Real Data Integration** | Estimativas | **IMPLEMENTADO** | WordPress + Google Search Console + Google AdSense |
 | G4 | **Tool Calling Nativo** | Dependia do modelo | **IMPLEMENTADO** | `core/src/tools/` — 30 handlers + text_tool_calling.rs |
-| G5 | **Agentic Loop** | Parcial | **IMPLEMENTADO (core)** | `core/src/agent_loop/` — loop completo com testes. TUI nao integrado. |
+| G5 | **Agentic Loop** | Parcial | **COMPLETO** | `core/src/agent_loop/` — loop + bridge para modelos text-based. Integrado via BridgeLlmClient/BridgeToolExecutor. |
 | G6 | **Sandbox Execution** | Basico | **ROBUSTO** | `core/src/tools/sandboxing.rs` + `orchestrator.rs` + `SandboxManager` |
 
 ## Fase 1: Fechar o Loop Autonomo
@@ -42,14 +42,15 @@
 | Step | Entrega | Status |
 |------|---------|--------|
 | 2.1 | Tool Calling Nativo | **COMPLETO** (30 tool handlers no core) |
-| 2.2 | Agentic Loop | **COMPLETO no core**, nao integrado no TUI |
+| 2.2 | Agentic Loop + Bridge | **COMPLETO** — Loop + Bridge (BridgeLlmClient + BridgeToolExecutor) para text-based models |
 | 2.3 | Sandbox Execution | **JA EXISTIA** (sistema sofisticado em sandboxing.rs + orchestrator.rs) |
 
-**Nota sobre 2.2**: O TUI ja possui um sistema sofisticado de tool calling via
+**Nota sobre 2.2**: O TUI possui um sistema sofisticado de tool calling via
 `ToolRegistry` + `ToolOrchestrator` + `ToolHandler` que funciona com o Responses API.
-O `AgentLoop` do core e complementar — seria usado para modelos sem function calling nativo.
-A integracao requer um refactor significativo do chatwidget e nao e prioritaria enquanto
-o TUI funciona com modelos premium.
+O `AgentLoop` + Bridge complementa isso para modelos sem function calling nativo.
+O `BridgeLlmClient` injeta tool descriptions no system prompt, parseia tool calls
+do texto, e o `BridgeToolExecutor` executa tools localmente (shell, read_file, list_directory,
+grep_search, write_new_file). Documentacao: `docs/features/agent-loop-bridge.md`.
 
 ## Fase 3: Inteligencia Avancada
 
@@ -82,7 +83,7 @@ o TUI funciona com modelos premium.
 
 ## Proximos Passos (Prioridade)
 
-1. **Integrar AgentLoop no TUI** — quando houver demanda para modelos baratos
+1. **Habilitar toggle no TUI/CLI** — Permitir usuario selecionar modo text-based via config, ativando AgentLoop+Bridge automaticamente
 
 ## Arquivos Criados/Modificados
 
@@ -138,3 +139,8 @@ o TUI funciona com modelos premium.
 - `cli/src/daemon_cmd.rs` — Dashboard CLI com metricas, revenue, pipelines, goals, experiments, content recente
 - `docs/features/jetpack-stats.md` — Documentacao Jetpack Stats
 - `docs/features/dashboard-cli.md` — Documentacao Dashboard CLI
+
+### Sessao 8 (AgentLoop Bridge — Text-Based Tool Calling)
+- `core/src/agent_loop/bridge.rs` — BridgeLlmClient (OpenAI-compat + text injection) + BridgeToolExecutor (shell, read_file, list_directory, grep_search, write_new_file)
+- `core/src/agent_loop/mod.rs` — Registro do modulo bridge
+- `docs/features/agent-loop-bridge.md` — Documentacao completa do bridge

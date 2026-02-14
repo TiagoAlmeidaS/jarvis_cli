@@ -13,6 +13,7 @@
 //! Safety: iteration count, wall-clock timeout, cancellation token, and
 //! context-window management prevent runaway loops.
 
+pub mod bridge;
 pub mod context;
 pub mod events;
 
