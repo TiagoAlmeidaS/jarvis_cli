@@ -70,6 +70,14 @@ o TUI funciona com modelos premium.
 | 4.2 | Jetpack Stats | PENDENTE (stub existe) |
 | 4.3 | Dashboard TUI | PENDENTE (requer refactor extenso) |
 
+## Fase 5: Observabilidade e CLI
+
+| Step | Entrega | Status |
+|------|---------|--------|
+| 5.1 | CLI: Experiments (list/show/cancel) | **COMPLETO** |
+| 5.2 | CLI: Metrics (summary/content) | **COMPLETO** |
+| 5.3 | CLI: Health check + system info | **COMPLETO** |
+
 ## Proximos Passos (Prioridade)
 
 1. **Integrar AgentLoop no TUI** — quando houver demanda para modelos baratos
@@ -120,3 +128,7 @@ o TUI funciona com modelos premium.
 - `daemon/src/pipelines/metrics_collector.rs` — Integracao GA4 no sync pipeline
 - `daemon/src/data_sources/mod.rs` — Registro modulo google_analytics
 - `daemon/src/pipeline.rs` — PromptOptimizerPipeline registrado no PipelineRegistry
+
+### Sessao 6 (CLI Management Commands)
+- `cli/src/daemon_cmd.rs` — Novos subcommands: experiments (list/show/cancel), metrics (summary/content), health
+- `docs/features/daemon-cli-management.md` — Documentacao completa de todos os subcommands do daemon CLI
