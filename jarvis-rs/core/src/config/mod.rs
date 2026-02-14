@@ -371,6 +371,9 @@ pub struct Config {
 
     /// Messaging integrations configuration (WhatsApp, Telegram).
     pub messaging: crate::config::types::MessagingConfig,
+
+    /// Agent loop configuration for text-based tool calling.
+    pub agent_loop: crate::config::types::AgentLoopSettings,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -990,6 +993,10 @@ pub struct ConfigToml {
     /// Messaging integrations configuration (WhatsApp, Telegram).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub messaging: Option<crate::config::types::MessagingConfigToml>,
+
+    /// Agent loop configuration for text-based tool calling with local/cheap models.
+    #[serde(default)]
+    pub agent_loop: Option<crate::config::types::AgentLoopConfigToml>,
 
     /// Tracks whether the Windows onboarding screen has been acknowledged.
     pub windows_wsl_setup_acknowledged: Option<bool>,
@@ -1725,6 +1732,7 @@ impl Config {
             },
             github: cfg.github.unwrap_or_default().into(),
             messaging: cfg.messaging.unwrap_or_default().into(),
+            agent_loop: cfg.agent_loop.unwrap_or_default().into(),
         };
         Ok(config)
     }

@@ -22,6 +22,11 @@ use crate::tools::text_tool_calling::{
     build_tool_prompt_injection, default_text_tool_specs, parse_tool_calls_from_text, TextToolSpec,
 };
 
+// Re-export for consumers outside the core crate.
+pub use crate::tools::text_tool_calling::{
+    default_text_tool_specs as default_tool_specs, TextToolSpec as ToolSpec, ToolCallingMode,
+};
+
 // ---------------------------------------------------------------------------
 // Configuration
 // ---------------------------------------------------------------------------

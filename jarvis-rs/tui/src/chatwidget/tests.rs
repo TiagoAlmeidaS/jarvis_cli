@@ -1,4 +1,4 @@
-﻿//! Exercises `ChatWidget` event handling and rendering invariants.
+//! Exercises `ChatWidget` event handling and rendering invariants.
 //!
 //! These tests treat the widget as the adapter between `jarvis_core::protocol::EventMsg` inputs and
 //! the TUI output. Many assertions are snapshot-based so that layout regressions and status/header
@@ -14,6 +14,10 @@ use crate::history_cell::UserHistoryCell;
 use crate::test_backend::VT100Backend;
 use crate::tui::FrameRequester;
 use assert_matches::assert_matches;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyModifiers;
+use insta::assert_snapshot;
 use jarvis_common::approval_presets::builtin_approval_presets;
 use jarvis_core::AuthManager;
 use jarvis_core::JarvisAuth;
@@ -79,10 +83,6 @@ use jarvis_protocol::protocol::JarvisErrorInfo;
 use jarvis_protocol::user_input::TextElement;
 use jarvis_protocol::user_input::UserInput;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyModifiers;
-use insta::assert_snapshot;
 use pretty_assertions::assert_eq;
 #[cfg(target_os = "windows")]
 use serial_test::serial;
@@ -895,6 +895,8 @@ async fn make_chatwidget_manual(
         feedback_audience: FeedbackAudience::External,
         current_rollout_path: None,
         external_editor_state: ExternalEditorState::Closed,
+        agent_loop_tx: None,
+        agent_loop_cancel: None,
     };
     widget.set_model(&resolved_model);
     (widget, rx, op_rx)
@@ -2105,7 +2107,12 @@ async fn unified_exec_wait_after_final_agent_message_snapshot() {
         }),
     });
 
-    begin_unified_exec_startup(&mut chat, "call-wait", "proc-1", "cargo test -p Jarvis-core");
+    begin_unified_exec_startup(
+        &mut chat,
+        "call-wait",
+        "proc-1",
+        "cargo test -p Jarvis-core",
+    );
     terminal_interaction(&mut chat, "call-wait-stdin", "proc-1", "");
 
     chat.handle_codex_event(Event {

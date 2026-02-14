@@ -17,10 +17,10 @@ use std::time::Duration;
 use wildmatch::WildMatchPattern;
 
 use schemars::JsonSchema;
+use serde::de::Error as SerdeError;
 use serde::Deserialize;
 use serde::Deserializer;
 use serde::Serialize;
-use serde::de::Error as SerdeError;
 
 pub const DEFAULT_OTEL_ENVIRONMENT: &str = "dev";
 
@@ -444,13 +444,16 @@ impl From<MessagingConfigToml> for MessagingConfig {
             if !w.enabled {
                 return None;
             }
-            let access_token = w.access_token
+            let access_token = w
+                .access_token
                 .or_else(|| std::env::var("WHATSAPP_ACCESS_TOKEN").ok())
                 .unwrap_or_default();
-            let verify_token = w.verify_token
+            let verify_token = w
+                .verify_token
                 .or_else(|| std::env::var("WHATSAPP_VERIFY_TOKEN").ok())
                 .unwrap_or_default();
-            let phone_number_id = w.phone_number_id
+            let phone_number_id = w
+                .phone_number_id
                 .or_else(|| std::env::var("WHATSAPP_PHONE_NUMBER_ID").ok())
                 .unwrap_or_default();
 
@@ -460,9 +463,9 @@ impl From<MessagingConfigToml> for MessagingConfig {
 
             Some(WhatsAppConfig {
                 enabled: true,
-                api_url: w.api_url.unwrap_or_else(|| {
-                    "https://graph.facebook.com/v18.0".to_string()
-                }),
+                api_url: w
+                    .api_url
+                    .unwrap_or_else(|| "https://graph.facebook.com/v18.0".to_string()),
                 access_token,
                 verify_token,
                 phone_number_id,
@@ -474,10 +477,12 @@ impl From<MessagingConfigToml> for MessagingConfig {
             if !t.enabled {
                 return None;
             }
-            let bot_token = t.bot_token
+            let bot_token = t
+                .bot_token
                 .or_else(|| std::env::var("TELEGRAM_BOT_TOKEN").ok())
                 .unwrap_or_default();
-            let webhook_secret = t.webhook_secret
+            let webhook_secret = t
+                .webhook_secret
                 .or_else(|| std::env::var("TELEGRAM_WEBHOOK_SECRET").ok());
 
             if bot_token.is_empty() {
@@ -879,6 +884,157 @@ impl Default for ShellEnvironmentPolicy {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Agent Loop configuration (text-based tool calling for cheap/local models)
+// ---------------------------------------------------------------------------
+
+/// How the agent loop should handle tool calling.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentLoopMode {
+    /// Automatically detect based on the model: if the model is known to lack
+    /// native function calling, use the text-based agent loop; otherwise use the
+    /// standard Responses API flow.
+    #[default]
+    Auto,
+    /// Always use the text-based agentic loop (useful for local Ollama models).
+    TextBased,
+    /// Always use native function calling via Responses API (the default).
+    Native,
+    /// Disable tool calling entirely.
+    Disabled,
+}
+
+/// User-facing TOML configuration for the agent loop.
+///
+/// Example `config.toml`:
+/// ```toml
+/// [agent_loop]
+/// mode = "auto"
+/// base_url = "http://localhost:11434/v1"
+/// model = "mistral"
+/// temperature = 0.7
+/// max_tokens = 4096
+/// max_iterations = 25
+/// timeout_sec = 300
+/// ```
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct AgentLoopConfigToml {
+    /// Tool calling mode: "auto", "text_based", "native", or "disabled".
+    #[serde(default)]
+    pub mode: Option<AgentLoopMode>,
+
+    /// OpenAI-compatible API base URL for text-based mode.
+    /// Defaults to "http://localhost:11434/v1" (Ollama).
+    #[serde(default)]
+    pub base_url: Option<String>,
+
+    /// API key for the LLM endpoint (can be empty for local models).
+    #[serde(default)]
+    pub api_key: Option<String>,
+
+    /// Model identifier for text-based mode (e.g. "mistral", "llama3.1").
+    /// When not set, falls back to the main `model` config field.
+    #[serde(default)]
+    pub model: Option<String>,
+
+    /// Temperature for text-based mode (0.0 - 2.0).
+    #[serde(default)]
+    pub temperature: Option<f64>,
+
+    /// Max tokens to generate per LLM call.
+    #[serde(default)]
+    pub max_tokens: Option<u32>,
+
+    /// Maximum Think→Execute→Observe iterations before forced stop.
+    #[serde(default)]
+    pub max_iterations: Option<usize>,
+
+    /// Maximum wall-clock time in seconds for the entire loop.
+    #[serde(default)]
+    pub timeout_sec: Option<u64>,
+
+    /// Maximum estimated context tokens before compaction kicks in.
+    #[serde(default)]
+    pub max_context_tokens: Option<usize>,
+}
+
+/// Effective agent loop settings after defaults are applied.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentLoopSettings {
+    pub mode: AgentLoopMode,
+    pub base_url: String,
+    pub api_key: String,
+    pub model: Option<String>,
+    pub temperature: f64,
+    pub max_tokens: u32,
+    pub max_iterations: usize,
+    pub timeout_sec: u64,
+    pub max_context_tokens: usize,
+}
+
+impl Default for AgentLoopSettings {
+    fn default() -> Self {
+        Self {
+            mode: AgentLoopMode::Auto,
+            base_url: "http://localhost:11434/v1".to_string(),
+            api_key: String::new(),
+            model: None,
+            temperature: 0.7,
+            max_tokens: 4096,
+            max_iterations: 25,
+            timeout_sec: 300,
+            max_context_tokens: 32_000,
+        }
+    }
+}
+
+impl From<AgentLoopConfigToml> for AgentLoopSettings {
+    fn from(toml: AgentLoopConfigToml) -> Self {
+        let defaults = Self::default();
+        Self {
+            mode: toml.mode.unwrap_or(defaults.mode),
+            base_url: toml.base_url.unwrap_or(defaults.base_url),
+            api_key: toml.api_key.unwrap_or(defaults.api_key),
+            model: toml.model,
+            temperature: toml.temperature.unwrap_or(defaults.temperature),
+            max_tokens: toml.max_tokens.unwrap_or(defaults.max_tokens),
+            max_iterations: toml.max_iterations.unwrap_or(defaults.max_iterations),
+            timeout_sec: toml.timeout_sec.unwrap_or(defaults.timeout_sec),
+            max_context_tokens: toml
+                .max_context_tokens
+                .unwrap_or(defaults.max_context_tokens),
+        }
+    }
+}
+
+impl AgentLoopSettings {
+    /// Determine the effective mode for a given model name.
+    ///
+    /// When mode is `Auto`, this checks the model against known text-based
+    /// model patterns and returns `TextBased` or `Native` accordingly.
+    pub fn effective_mode(&self, model_name: &str) -> AgentLoopMode {
+        match self.mode {
+            AgentLoopMode::Auto => {
+                let mode = crate::tools::text_tool_calling::ToolCallingMode::detect(model_name, "");
+                match mode {
+                    crate::tools::text_tool_calling::ToolCallingMode::TextBased => {
+                        AgentLoopMode::TextBased
+                    }
+                    crate::tools::text_tool_calling::ToolCallingMode::Native => {
+                        AgentLoopMode::Native
+                    }
+                    crate::tools::text_tool_calling::ToolCallingMode::Disabled => {
+                        AgentLoopMode::Disabled
+                    }
+                }
+            }
+            other => other,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1209,7 +1365,10 @@ mod tests {
         let telegram = cfg.telegram.expect("should have Telegram config");
         assert!(telegram.enabled);
         assert_eq!(telegram.bot_token, Some("test_bot_token".to_string()));
-        assert_eq!(telegram.webhook_url, Some("https://example.com/webhook".to_string()));
+        assert_eq!(
+            telegram.webhook_url,
+            Some("https://example.com/webhook".to_string())
+        );
         assert_eq!(telegram.webhook_port, Some(9091));
         assert_eq!(telegram.webhook_secret, Some("test_secret".to_string()));
     }
@@ -1380,5 +1539,128 @@ mod messaging_tests {
         let config: MessagingConfig = toml.into();
         assert!(!config.enabled);
         assert!(config.telegram.is_none());
+    }
+}
+
+#[cfg(test)]
+mod agent_loop_tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[test]
+    fn agent_loop_mode_default_is_auto() {
+        let mode = AgentLoopMode::default();
+        assert_eq!(mode, AgentLoopMode::Auto);
+    }
+
+    #[test]
+    fn agent_loop_mode_deserialize() {
+        let mode: AgentLoopMode = serde_json::from_str(r#""text_based""#).unwrap();
+        assert_eq!(mode, AgentLoopMode::TextBased);
+
+        let mode: AgentLoopMode = serde_json::from_str(r#""native""#).unwrap();
+        assert_eq!(mode, AgentLoopMode::Native);
+
+        let mode: AgentLoopMode = serde_json::from_str(r#""disabled""#).unwrap();
+        assert_eq!(mode, AgentLoopMode::Disabled);
+
+        let mode: AgentLoopMode = serde_json::from_str(r#""auto""#).unwrap();
+        assert_eq!(mode, AgentLoopMode::Auto);
+    }
+
+    #[test]
+    fn agent_loop_config_toml_defaults() {
+        let toml = AgentLoopConfigToml::default();
+        let settings: AgentLoopSettings = toml.into();
+        assert_eq!(settings.mode, AgentLoopMode::Auto);
+        assert_eq!(settings.base_url, "http://localhost:11434/v1");
+        assert!(settings.api_key.is_empty());
+        assert!(settings.model.is_none());
+        assert!((settings.temperature - 0.7).abs() < 0.01);
+        assert_eq!(settings.max_tokens, 4096);
+        assert_eq!(settings.max_iterations, 25);
+        assert_eq!(settings.timeout_sec, 300);
+        assert_eq!(settings.max_context_tokens, 32_000);
+    }
+
+    #[test]
+    fn agent_loop_config_toml_custom_values() {
+        let toml: AgentLoopConfigToml = serde_json::from_value(serde_json::json!({
+            "mode": "text_based",
+            "base_url": "http://custom:8080/v1",
+            "api_key": "sk-test",
+            "model": "llama3.1",
+            "temperature": 0.3,
+            "max_tokens": 2048,
+            "max_iterations": 10,
+            "timeout_sec": 60,
+            "max_context_tokens": 16000,
+        }))
+        .unwrap();
+
+        let settings: AgentLoopSettings = toml.into();
+        assert_eq!(settings.mode, AgentLoopMode::TextBased);
+        assert_eq!(settings.base_url, "http://custom:8080/v1");
+        assert_eq!(settings.api_key, "sk-test");
+        assert_eq!(settings.model, Some("llama3.1".to_string()));
+        assert!((settings.temperature - 0.3).abs() < 0.01);
+        assert_eq!(settings.max_tokens, 2048);
+        assert_eq!(settings.max_iterations, 10);
+        assert_eq!(settings.timeout_sec, 60);
+        assert_eq!(settings.max_context_tokens, 16000);
+    }
+
+    #[test]
+    fn effective_mode_auto_detects_native() {
+        let settings = AgentLoopSettings::default();
+        assert_eq!(settings.effective_mode("gpt-4o"), AgentLoopMode::Native);
+        assert_eq!(settings.effective_mode("claude-3"), AgentLoopMode::Native);
+    }
+
+    #[test]
+    fn effective_mode_auto_detects_text_based() {
+        let settings = AgentLoopSettings::default();
+        assert_eq!(
+            settings.effective_mode("mistral-nemo"),
+            AgentLoopMode::TextBased
+        );
+        assert_eq!(
+            settings.effective_mode("phi-3-mini"),
+            AgentLoopMode::TextBased
+        );
+        assert_eq!(
+            settings.effective_mode("tinyllama-1.1b"),
+            AgentLoopMode::TextBased
+        );
+    }
+
+    #[test]
+    fn effective_mode_explicit_override() {
+        let mut settings = AgentLoopSettings::default();
+        settings.mode = AgentLoopMode::TextBased;
+        // Even for a model that would normally be Native.
+        assert_eq!(settings.effective_mode("gpt-4o"), AgentLoopMode::TextBased);
+
+        settings.mode = AgentLoopMode::Disabled;
+        assert_eq!(settings.effective_mode("gpt-4o"), AgentLoopMode::Disabled);
+    }
+
+    #[test]
+    fn agent_loop_settings_default() {
+        let settings = AgentLoopSettings::default();
+        assert_eq!(
+            settings,
+            AgentLoopSettings {
+                mode: AgentLoopMode::Auto,
+                base_url: "http://localhost:11434/v1".to_string(),
+                api_key: String::new(),
+                model: None,
+                temperature: 0.7,
+                max_tokens: 4096,
+                max_iterations: 25,
+                timeout_sec: 300,
+                max_context_tokens: 32_000,
+            }
+        );
     }
 }

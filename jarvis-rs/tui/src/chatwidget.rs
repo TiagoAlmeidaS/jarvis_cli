@@ -1,4 +1,4 @@
-﻿//! The main Jarvis TUI chat surface.
+//! The main Jarvis TUI chat surface.
 //!
 //! `ChatWidget` consumes protocol events, builds and updates history cells, and drives rendering
 //! for both the main viewport and overlay UIs.
@@ -30,9 +30,15 @@ use std::time::Duration;
 use std::time::Instant;
 
 // RAG integration imports
-use jarvis_core::rag::{create_rag_injector, inject_rag_context, RagContextConfig, RagContextInjector};
+use jarvis_core::rag::{
+    RagContextConfig, RagContextInjector, create_rag_injector, inject_rag_context,
+};
 
 use crate::version::jarvis_CLI_VERSION;
+use crossterm::event::KeyCode;
+use crossterm::event::KeyEvent;
+use crossterm::event::KeyEventKind;
+use crossterm::event::KeyModifiers;
 use jarvis_backend_client::Client as BackendClient;
 use jarvis_chatgpt::connectors;
 use jarvis_core::config::Config;
@@ -52,7 +58,6 @@ use jarvis_core::protocol::AgentReasoningRawContentDeltaEvent;
 use jarvis_core::protocol::AgentReasoningRawContentEvent;
 use jarvis_core::protocol::ApplyPatchApprovalRequestEvent;
 use jarvis_core::protocol::BackgroundEventEvent;
-use jarvis_core::protocol::JarvisErrorInfo;
 use jarvis_core::protocol::CreditsSnapshot;
 use jarvis_core::protocol::DeprecationNoticeEvent;
 use jarvis_core::protocol::ErrorEvent;
@@ -64,6 +69,7 @@ use jarvis_core::protocol::ExecCommandEndEvent;
 use jarvis_core::protocol::ExecCommandOutputDeltaEvent;
 use jarvis_core::protocol::ExecCommandSource;
 use jarvis_core::protocol::ExitedReviewModeEvent;
+use jarvis_core::protocol::JarvisErrorInfo;
 use jarvis_core::protocol::ListCustomPromptsResponseEvent;
 use jarvis_core::protocol::ListSkillsResponseEvent;
 use jarvis_core::protocol::McpListToolsResponseEvent;
@@ -111,10 +117,6 @@ use jarvis_protocol::parse_command::ParsedCommand;
 use jarvis_protocol::request_user_input::RequestUserInputEvent;
 use jarvis_protocol::user_input::TextElement;
 use jarvis_protocol::user_input::UserInput;
-use crossterm::event::KeyCode;
-use crossterm::event::KeyEvent;
-use crossterm::event::KeyEventKind;
-use crossterm::event::KeyModifiers;
 use rand::Rng;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
@@ -190,6 +192,7 @@ use crate::tui::FrameRequester;
 mod interrupts;
 use self::interrupts::InterruptManager;
 mod agent;
+pub(crate) mod agent_loop_runner;
 use self::agent::spawn_agent;
 use self::agent::spawn_agent_from_existing;
 pub(crate) use self::agent::spawn_op_forwarder;
@@ -585,6 +588,11 @@ pub(crate) struct ChatWidget {
     // Current session rollout path (if known)
     current_rollout_path: Option<PathBuf>,
     external_editor_state: ExternalEditorState,
+    /// Optional sender for the text-based agent loop runner.
+    /// When `Some`, user messages are routed through the AgentLoop instead of the Responses API.
+    agent_loop_tx: Option<tokio::sync::mpsc::UnboundedSender<agent_loop_runner::AgentLoopMessage>>,
+    /// Cancellation token for the agent loop.
+    agent_loop_cancel: Option<tokio_util::sync::CancellationToken>,
 }
 
 /// Snapshot of active-cell state that affects transcript overlay rendering.
@@ -744,6 +752,47 @@ fn remap_placeholders_for_message(message: UserMessage, next_label: &mut usize) 
 }
 
 impl ChatWidget {
+    /// Check the agent_loop config and, if the effective mode is `TextBased`,
+    /// spawn the agent loop runner and store its sender/cancel token.
+    fn maybe_init_agent_loop(&mut self) {
+        use jarvis_core::config::types::AgentLoopMode;
+
+        let model_name = self
+            .config
+            .model
+            .as_deref()
+            .unwrap_or("unknown");
+        let effective = self.config.agent_loop.effective_mode(model_name);
+
+        if effective == AgentLoopMode::TextBased {
+            let system_prompt = self
+                .config
+                .user_instructions
+                .clone()
+                .unwrap_or_else(|| "You are Jarvis, a helpful AI coding assistant.".to_string());
+
+            let (tx, cancel) = agent_loop_runner::spawn_agent_loop_runner(
+                self.config.agent_loop.clone(),
+                system_prompt,
+                self.app_event_tx.clone(),
+                self.config.cwd.clone(),
+            );
+            self.agent_loop_tx = Some(tx);
+            self.agent_loop_cancel = Some(cancel);
+
+            tracing::info!(
+                "Agent loop enabled for text-based model: {}",
+                model_name
+            );
+        }
+    }
+
+    /// Check if the agent loop is active (text-based mode).
+    #[allow(dead_code)]
+    fn is_agent_loop_active(&self) -> bool {
+        self.agent_loop_tx.is_some()
+    }
+
     /// Synchronize the bottom-pane "task running" indicator with the current lifecycles.
     ///
     /// The bottom pane only has one running flag, but this module treats it as a derived state of
@@ -2333,12 +2382,15 @@ impl ChatWidget {
                 // Initialize RAG injector synchronously (disabled by default)
                 Arc::new({
                     let embedding_gen = Arc::new(
-                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
-                            .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                "http://localhost:11434".to_string(),
-                                "nomic-embed-text".to_string(),
-                                768,
-                            ))
+                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config().unwrap_or_else(
+                            |_| {
+                                jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                    "http://localhost:11434".to_string(),
+                                    "nomic-embed-text".to_string(),
+                                    768,
+                                )
+                            },
+                        ),
                     );
                     let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
                     let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
@@ -2357,6 +2409,8 @@ impl ChatWidget {
             feedback_audience,
             current_rollout_path: None,
             external_editor_state: ExternalEditorState::Closed,
+            agent_loop_tx: None,
+            agent_loop_cancel: None,
         };
 
         widget.prefetch_rate_limits();
@@ -2380,6 +2434,8 @@ impl ChatWidget {
         widget
             .bottom_pane
             .set_connectors_enabled(widget.config.features.enabled(Feature::Apps));
+
+        widget.maybe_init_agent_loop();
 
         widget
     }
@@ -2502,12 +2558,15 @@ impl ChatWidget {
                 // Initialize RAG injector synchronously (disabled by default)
                 Arc::new({
                     let embedding_gen = Arc::new(
-                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
-                            .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                "http://localhost:11434".to_string(),
-                                "nomic-embed-text".to_string(),
-                                768,
-                            ))
+                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config().unwrap_or_else(
+                            |_| {
+                                jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                    "http://localhost:11434".to_string(),
+                                    "nomic-embed-text".to_string(),
+                                    768,
+                                )
+                            },
+                        ),
                     );
                     let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
                     let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
@@ -2526,6 +2585,8 @@ impl ChatWidget {
             feedback_audience,
             current_rollout_path: None,
             external_editor_state: ExternalEditorState::Closed,
+            agent_loop_tx: None,
+            agent_loop_cancel: None,
         };
 
         widget.prefetch_rate_limits();
@@ -2536,6 +2597,8 @@ impl ChatWidget {
             widget.config.features.enabled(Feature::CollaborationModes),
         );
         widget.sync_personality_command_enabled();
+
+        widget.maybe_init_agent_loop();
 
         widget
     }
@@ -2660,12 +2723,15 @@ impl ChatWidget {
                 // Initialize RAG injector synchronously (disabled by default)
                 Arc::new({
                     let embedding_gen = Arc::new(
-                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config()
-                            .unwrap_or_else(|_| jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                "http://localhost:11434".to_string(),
-                                "nomic-embed-text".to_string(),
-                                768,
-                            ))
+                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config().unwrap_or_else(
+                            |_| {
+                                jarvis_core::rag::OllamaEmbeddingGenerator::new(
+                                    "http://localhost:11434".to_string(),
+                                    "nomic-embed-text".to_string(),
+                                    768,
+                                )
+                            },
+                        ),
                     );
                     let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
                     let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
@@ -2684,6 +2750,8 @@ impl ChatWidget {
             feedback_audience,
             current_rollout_path: None,
             external_editor_state: ExternalEditorState::Closed,
+            agent_loop_tx: None,
+            agent_loop_cancel: None,
         };
 
         widget.prefetch_rate_limits();
@@ -2703,6 +2771,8 @@ impl ChatWidget {
                 ),
         );
         widget.update_collaboration_mode_indicator();
+
+        widget.maybe_init_agent_loop();
 
         widget
     }
@@ -3136,6 +3206,12 @@ impl ChatWidget {
                     }),
                 }));
             }
+            SlashCommand::ApproveAll => {
+                self.activate_approve_all_mode();
+            }
+            SlashCommand::ApproveDefault => {
+                self.restore_default_approval_mode();
+            }
         }
     }
 
@@ -3369,24 +3445,32 @@ impl ChatWidget {
 
         if !text.is_empty() {
             // Inject RAG context before sending to LLM
-            let enhanced_text = {
+            let enhanced_text = if self.rag_injector.is_enabled() {
                 let rag_injector = Arc::clone(&self.rag_injector);
                 let text_for_rag = text.clone();
 
                 tokio::runtime::Handle::try_current()
                     .ok()
                     .and_then(|handle| {
-                        handle.block_on(async move {
-                            let config = RagContextConfig::default();
-                            inject_rag_context(&text_for_rag, &rag_injector, &config)
-                                .await
-                                .ok()
+                        // Use block_in_place to avoid "Cannot start a runtime from
+                        // within a runtime" panic when called from an async context.
+                        tokio::task::block_in_place(|| {
+                            handle.block_on(async move {
+                                let config = RagContextConfig::default();
+                                inject_rag_context(&text_for_rag, &rag_injector, &config)
+                                    .await
+                                    .ok()
+                            })
                         })
                     })
                     .unwrap_or_else(|| {
-                        tracing::debug!("RAG context injection skipped (no async runtime or failed)");
+                        tracing::debug!(
+                            "RAG context injection skipped (no async runtime or failed)"
+                        );
                         text.clone()
                     })
+            } else {
+                text.clone()
             };
 
             items.push(UserInput::Text {
@@ -3436,22 +3520,33 @@ impl ChatWidget {
             .personality
             .filter(|_| self.config.features.enabled(Feature::Personality))
             .filter(|_| self.current_model_supports_personality());
-        let op = Op::UserTurn {
-            items,
-            cwd: self.config.cwd.clone(),
-            approval_policy: self.config.approval_policy.value(),
-            sandbox_policy: self.config.sandbox_policy.get().clone(),
-            model: effective_mode.model().to_string(),
-            effort: effective_mode.reasoning_effort(),
-            summary: self.config.model_reasoning_summary,
-            final_output_json_schema: None,
-            collaboration_mode,
-            personality,
-        };
+        // Route through the agent loop if text-based mode is active.
+        if let Some(ref agent_loop_tx) = self.agent_loop_tx {
+            let msg = agent_loop_runner::AgentLoopMessage {
+                text: text.clone(),
+                cwd: self.config.cwd.clone(),
+            };
+            agent_loop_tx.send(msg).unwrap_or_else(|e| {
+                tracing::error!("failed to send to agent loop: {e}");
+            });
+        } else {
+            let op = Op::UserTurn {
+                items,
+                cwd: self.config.cwd.clone(),
+                approval_policy: self.config.approval_policy.value(),
+                sandbox_policy: self.config.sandbox_policy.get().clone(),
+                model: effective_mode.model().to_string(),
+                effort: effective_mode.reasoning_effort(),
+                summary: self.config.model_reasoning_summary,
+                final_output_json_schema: None,
+                collaboration_mode,
+                personality,
+            };
 
-        self.jarvis_op_tx.send(op).unwrap_or_else(|e| {
-            tracing::error!("failed to send message: {e}");
-        });
+            self.jarvis_op_tx.send(op).unwrap_or_else(|e| {
+                tracing::error!("failed to send message: {e}");
+            });
+        }
 
         // Persist the text to cross-session message history.
         if !text.is_empty() {
@@ -4589,6 +4684,61 @@ impl ChatWidget {
     pub(crate) fn open_permissions_popup(&mut self) {
         let include_read_only = cfg!(target_os = "windows");
         self.open_approval_mode_popup(include_read_only);
+    }
+
+    /// Instantly switch to "Full Access" mode (approve-all / yolo mode).
+    /// No popup — takes effect immediately for the current session.
+    fn activate_approve_all_mode(&mut self) {
+        let approval = AskForApproval::Never;
+        let sandbox = SandboxPolicy::DangerFullAccess;
+        self.app_event_tx
+            .send(AppEvent::CodexOp(Op::OverrideTurnContext {
+                cwd: None,
+                approval_policy: Some(approval),
+                sandbox_policy: Some(sandbox.clone()),
+                windows_sandbox_level: None,
+                model: None,
+                effort: None,
+                summary: None,
+                collaboration_mode: None,
+                personality: None,
+            }));
+        self.app_event_tx
+            .send(AppEvent::UpdateAskForApprovalPolicy(approval));
+        self.app_event_tx
+            .send(AppEvent::UpdateSandboxPolicy(sandbox));
+        self.add_info_message(
+            "Yolo mode activated! Jarvis will auto-approve all actions for this session."
+                .to_string(),
+            None,
+        );
+    }
+
+    /// Restore the default approval mode (workspace write + ask on request).
+    fn restore_default_approval_mode(&mut self) {
+        let approval = AskForApproval::OnRequest;
+        let sandbox = SandboxPolicy::new_workspace_write_policy();
+        self.app_event_tx
+            .send(AppEvent::CodexOp(Op::OverrideTurnContext {
+                cwd: None,
+                approval_policy: Some(approval),
+                sandbox_policy: Some(sandbox.clone()),
+                windows_sandbox_level: None,
+                model: None,
+                effort: None,
+                summary: None,
+                collaboration_mode: None,
+                personality: None,
+            }));
+        self.app_event_tx
+            .send(AppEvent::UpdateAskForApprovalPolicy(approval));
+        self.app_event_tx
+            .send(AppEvent::UpdateSandboxPolicy(sandbox));
+        self.add_info_message(
+            "Default approval mode restored. Jarvis will ask for approval on sensitive actions."
+                .to_string(),
+            None,
+        );
     }
 
     fn open_approval_mode_popup(&mut self, include_read_only: bool) {

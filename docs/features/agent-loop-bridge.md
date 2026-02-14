@@ -1,12 +1,17 @@
 # AgentLoop Bridge — Text-Based Tool Calling Integration
 
 **Data**: 2026-02-13
-**Status**: Implementado
-**Modulo**: `jarvis-rs/core/src/agent_loop/bridge.rs`
+**Status**: Implementado (Bridge + TUI Integration)
+**Modulos**:
+- `jarvis-rs/core/src/agent_loop/bridge.rs`
+- `jarvis-rs/core/src/config/types.rs` (AgentLoopSettings)
+- `jarvis-rs/tui/src/chatwidget/agent_loop_runner.rs`
 
 ## Overview
 
 Bridge que conecta o `AgentLoop` (Think-Execute-Observe cycle) ao sistema de tools existente, habilitando modelos sem suporte nativo a function calling (como Mistral-Nemo, Phi-3, TinyLlama, etc.) a utilizar tools via text-based tool calling.
+
+O TUI detecta automaticamente o modo baseado no modelo ativo e roteia mensagens atraves do AgentLoop quando necessario.
 
 ## Arquitetura
 
@@ -27,7 +32,57 @@ Bridge que conecta o `AgentLoop` (Think-Execute-Observe cycle) ao sistema de too
    │  OpenAI-compat API  │ │ Local tool dispatch │
    │  + text tool inject │ │ (shell, read, etc.) │
    └─────────────────────┘ └────────────────────┘
+
+   ┌──────────────────────────────────────────┐
+   │  TUI ChatWidget                          │
+   │  ┌─────────────────────────────────────┐ │
+   │  │ submit_user_message()               │ │
+   │  │  ├─ agent_loop_tx (TextBased mode)  │ │
+   │  │  └─ jarvis_op_tx  (Native mode)     │ │
+   │  └─────────────────────────────────────┘ │
+   │  ┌─────────────────────────────────────┐ │
+   │  │ agent_loop_runner                   │ │
+   │  │  AgentEvent -> EventMsg translation │ │
+   │  └─────────────────────────────────────┘ │
+   └──────────────────────────────────────────┘
 ```
+
+## Configuracao
+
+### config.toml
+
+```toml
+[agent_loop]
+# "auto" (default), "text_based", "native", or "disabled"
+mode = "auto"
+
+# OpenAI-compatible API URL (default: Ollama local)
+base_url = "http://localhost:11434/v1"
+
+# API key (empty for local models)
+api_key = ""
+
+# Model override for text-based mode
+model = "mistral"
+
+# LLM parameters
+temperature = 0.7
+max_tokens = 4096
+
+# Loop safety limits
+max_iterations = 25
+timeout_sec = 300
+max_context_tokens = 32000
+```
+
+### Modos
+
+| Modo | Comportamento |
+|------|---------------|
+| `auto` (default) | Detecta automaticamente baseado no modelo. Modelos conhecidos sem function calling usam text-based; outros usam native. |
+| `text_based` | Sempre usa o AgentLoop com text-based tool calling. Util para modelos locais via Ollama. |
+| `native` | Sempre usa o fluxo padrão Responses API. |
+| `disabled` | Desabilita tool calling completamente. |
 
 ## Componentes
 
@@ -46,35 +101,23 @@ Bridge que conecta o `AgentLoop` (Think-Execute-Observe cycle) ao sistema de too
   - `grep_search` — busca via ripgrep
   - `write_new_file` — criacao de arquivos
 
-### BridgeLlmConfig
-```rust
-BridgeLlmConfig {
-    base_url: "http://localhost:11434/v1",  // Ollama default
-    api_key: "",                             // Vazio para modelos locais
-    model: "mistral",
-    temperature: 0.7,
-    max_tokens: 4096,
-    timeout_sec: 120,
-}
-```
+### AgentLoopRunner (TUI)
+- Recebe mensagens do chatwidget via channel
+- Cria BridgeLlmClient + BridgeToolExecutor por turno
+- Traduz AgentEvent -> EventMsg para o TUI renderizar
+- Mapeamento de eventos:
+  - `Thinking` -> `TurnStarted` + `BackgroundEvent`
+  - `ExecutingTool` -> `ExecCommandBegin`
+  - `ToolResult` -> `ExecCommandEnd`
+  - `FinalResponse` -> `AgentMessage` + `TurnComplete`
+  - `Error` -> `Error`
+  - `MaxIterationsReached` / `Timeout` -> `Warning`
 
-### BridgeToolConfig
-```rust
-BridgeToolConfig {
-    working_dir: PathBuf::from("."),
-    shell_timeout: Duration::from_secs(30),
-    require_approval: false,
-}
-```
-
-## Fluxo de Execucao
-
-1. **System Prompt Enrichment**: O `BridgeLlmClient` injeta descricoes de tools no final do system prompt
-2. **Think**: Envia mensagens para o LLM via API OpenAI-compatible
-3. **Parse**: Extrai tool calls do texto de resposta (fenced ou inline)
-4. **Execute**: `BridgeToolExecutor` despacha para o tool handler apropriado
-5. **Observe**: Resultado formatado como `[Tool Result: ...]` e adicionado ao contexto
-6. **Repeat**: Loop continua ate resposta final ou limite de iteracoes
+### ChatWidget Integration
+- `maybe_init_agent_loop()` — chamado em todos os construtores
+- Detecta o modo efetivo baseado no modelo ativo
+- Armazena `agent_loop_tx` e `agent_loop_cancel`
+- `submit_user_message()` roteia mensagens para o canal correto
 
 ## Modelos Detectados como Text-Based
 
@@ -88,7 +131,17 @@ O modulo `text_tool_calling.rs` detecta automaticamente modelos sem function cal
 
 ## Testes
 
-### Unitarios (bridge.rs)
+### Config (types.rs)
+- `agent_loop_mode_default_is_auto` — Default e Auto
+- `agent_loop_mode_deserialize` — Desserializacao de todos os modos
+- `agent_loop_config_toml_defaults` — Valores padrao da config TOML
+- `agent_loop_config_toml_custom_values` — Valores customizados
+- `effective_mode_auto_detects_native` — Auto detecta Native para GPT-4
+- `effective_mode_auto_detects_text_based` — Auto detecta TextBased para Mistral-Nemo
+- `effective_mode_explicit_override` — Override explicito funciona
+- `agent_loop_settings_default` — Comparacao completa de defaults
+
+### Bridge (bridge.rs)
 - `bridge_llm_config_defaults` — Valores padrao da configuracao LLM
 - `bridge_llm_config_deserialize` — Desserializacao JSON da config
 - `bridge_tool_config_defaults` — Valores padrao da config de tools
@@ -102,26 +155,22 @@ O modulo `text_tool_calling.rs` detecta automaticamente modelos sem function cal
 - `full_agent_loop_with_bridge` — Loop completo sem tools (mock LLM)
 - `full_agent_loop_with_tool_call` — Loop completo com tool call (mock LLM + real executor)
 
-### Unitarios (text_tool_calling.rs — pre-existentes)
-- `detect_native_for_gpt4` — Deteccao de modo nativo
-- `detect_text_based_for_mistral_nemo` — Deteccao de modo text-based
-- `parse_fenced_tool_call` — Parse de tool call em fence
-- `parse_multiple_fenced_tool_calls` — Parse de multiplos tool calls
-- `parse_inline_json_tool_call` — Parse de tool call inline
-- `prompt_injection_generates_valid_text` — Geracao de prompt injection
-- `format_tool_result` — Formatacao de resultado de tool
+### TUI Runner (agent_loop_runner.rs)
+- `agent_loop_message_construction` — Construcao de mensagem
+- `settings_defaults_are_sane` — Defaults sao validos
+- `effective_mode_auto_detects_text_based` — Auto-deteccao no TUI
+- `effective_mode_explicit_override` — Override no TUI
+- `emit_agent_event_does_not_panic` — Todos os eventos sao tratados
 
 ## Arquivos
 
+### Core
 - `core/src/agent_loop/mod.rs` — Registro do modulo `bridge`
-- `core/src/agent_loop/bridge.rs` — Implementacao do BridgeLlmClient e BridgeToolExecutor
+- `core/src/agent_loop/bridge.rs` — BridgeLlmClient, BridgeToolExecutor, re-exports
+- `core/src/config/types.rs` — AgentLoopMode, AgentLoopConfigToml, AgentLoopSettings
+- `core/src/config/mod.rs` — Campo `agent_loop` em Config e ConfigToml
 - `core/src/tools/text_tool_calling.rs` — Text parsing e mode detection (pre-existente)
 
-## Uso Futuro no TUI
-
-O TUI pode utilizar o bridge de duas formas:
-
-1. **Automatico**: Detectar o modelo e, se `ToolCallingMode::TextBased`, usar `AgentLoop` com o bridge em vez do protocolo Responses API
-2. **Configuravel**: Permitir ao usuario selecionar o modo via config (`tool_calling_mode: "text_based"`)
-
-A integracao no chatwidget requer routing do `AgentEvent` para `AppEvent`, que pode ser feito via um adaptador simples.
+### TUI
+- `tui/src/chatwidget/agent_loop_runner.rs` — Runner que traduz AgentEvent -> EventMsg
+- `tui/src/chatwidget.rs` — Integracao: maybe_init_agent_loop(), routing em submit_user_message()

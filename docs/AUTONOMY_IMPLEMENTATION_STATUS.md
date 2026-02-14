@@ -81,9 +81,18 @@ grep_search, write_new_file). Documentacao: `docs/features/agent-loop-bridge.md`
 | 5.4 | Jetpack Stats (alternativa WP Statistics) | **COMPLETO** |
 | 5.5 | Dashboard CLI (visualizacao rica de metricas) | **COMPLETO** |
 
+## Fase 6: TUI Integration (AgentLoop + Toggle)
+
+| Step | Entrega | Status |
+|------|---------|--------|
+| 6.1 | Config: AgentLoopMode, AgentLoopConfigToml, AgentLoopSettings | **COMPLETO** |
+| 6.2 | TUI: agent_loop_runner (AgentEvent -> EventMsg translation) | **COMPLETO** |
+| 6.3 | TUI: ChatWidget integration (auto-detect + routing) | **COMPLETO** |
+| 6.4 | Re-exports no bridge para consumidores externos | **COMPLETO** |
+
 ## Proximos Passos (Prioridade)
 
-1. **Habilitar toggle no TUI/CLI** — Permitir usuario selecionar modo text-based via config, ativando AgentLoop+Bridge automaticamente
+Todos os itens do roadmap de autonomia estao **COMPLETOS**.
 
 ## Arquivos Criados/Modificados
 
@@ -144,3 +153,12 @@ grep_search, write_new_file). Documentacao: `docs/features/agent-loop-bridge.md`
 - `core/src/agent_loop/bridge.rs` — BridgeLlmClient (OpenAI-compat + text injection) + BridgeToolExecutor (shell, read_file, list_directory, grep_search, write_new_file)
 - `core/src/agent_loop/mod.rs` — Registro do modulo bridge
 - `docs/features/agent-loop-bridge.md` — Documentacao completa do bridge
+
+### Sessao 9 (TUI Integration — AgentLoop Toggle)
+- `core/src/config/types.rs` — AgentLoopMode, AgentLoopConfigToml, AgentLoopSettings + testes
+- `core/src/config/mod.rs` — Campo `agent_loop` em Config e ConfigToml
+- `core/src/agent_loop/bridge.rs` — Re-exports (ToolCallingMode, default_tool_specs, ToolSpec)
+- `tui/src/chatwidget/agent_loop_runner.rs` — Runner: AgentEvent -> EventMsg, spawn_agent_loop_runner()
+- `tui/src/chatwidget.rs` — maybe_init_agent_loop(), is_agent_loop_active(), routing em submit_user_message()
+- `tui/src/chatwidget/tests.rs` — Campos agent_loop_tx/agent_loop_cancel adicionados
+- `docs/features/agent-loop-bridge.md` — Documentacao atualizada com config + TUI integration
