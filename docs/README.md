@@ -9,14 +9,14 @@
 ### Executar Agora (Build + Run)
 ```bash
 cd /e/projects/ia/jarvis_cli
-chmod +x BUILD_AND_RUN_COMPLETE.sh
-./BUILD_AND_RUN_COMPLETE.sh
+chmod +x scripts/BUILD_AND_RUN_COMPLETE.sh
+./scripts/BUILD_AND_RUN_COMPLETE.sh
 ```
 
 ### Apenas Run (Build já feito)
 ```bash
 cd /e/projects/ia/jarvis_cli
-./RUN_JARVIS.sh
+./scripts/RUN_JARVIS.sh
 ```
 
 ---
@@ -48,11 +48,37 @@ Guia de configuração do projeto:
 ### 3. Features
 **Diretório**: [`features/`](./features/)
 
-Documentação de funcionalidades implementadas:
+Documentação de funcionalidades implementadas e planejadas:
+- Autonomia & Agente Inteligente (Gaps G1–G6)
 - RAG Context Management
 - Autonomous Architecture (Phase 1, 2, 3)
 - Integrações (Qdrant, Redis, SQL Server)
 - Persistence Layer
+
+### 4. Agents — Sistema de Agentes Inteligentes
+**Diretório**: [`agents/`](./agents/)
+
+Documentação central do sistema de agentes:
+- **Agent Roles**: Planner, Developer, Reviewer, Explorer, Worker, Orchestrator
+- **Seleção de Modelos**: Cada role usa o modelo LLM ideal para sua função
+- **Agent Registry**: Matching automático de agents por contexto (planejado)
+- **Agent Analytics**: Métricas de uso, taxas de sucesso, padrões
+
+Documentação relacionada:
+- [Arquitetura de Seleção de Modelos](./AGENT_MODEL_SELECTION_ARCHITECTURE.md)
+- [Roles disponíveis](../jarvis-rs/docs/features/jarvis-agents.md)
+
+### 5. Autonomia — Roadmap para Agente Autônomo
+**Diretório**: [`architecture/`](./architecture/)
+
+Roadmap e especificações para transformar o Jarvis em agente autônomo:
+- [Autonomy Roadmap](./architecture/autonomy-roadmap.md) — Visão estratégica, gap analysis, 3 fases
+- [Proposal Executor](./features/proposal-executor.md) — G1: Execução automática de propostas
+- [Goal System](./features/goal-system.md) — G2: Metas mensuráveis
+- [Real Data Integration](./features/real-data-integration.md) — G3: Dados reais de analytics
+- [Tool Calling Nativo](./features/tool-calling-native.md) — G4: Client-side tool dispatch
+- [Agentic Loop](./features/agentic-loop.md) — G5: Think→Execute→Observe→Repeat
+- [Sandbox Execution](./features/sandbox-execution.md) — G6: Execução segura com rollback
 
 ---
 
@@ -114,8 +140,8 @@ Análise técnica do problema:
 
 | Script | Descrição | Uso |
 |--------|-----------|-----|
-| `BUILD_AND_RUN_COMPLETE.sh` | Build + Config + Run | `./BUILD_AND_RUN_COMPLETE.sh` |
-| `RUN_JARVIS.sh` | Apenas execução | `./RUN_JARVIS.sh` |
+| `scripts/BUILD_AND_RUN_COMPLETE.sh` | Build + Config + Run | `./scripts/BUILD_AND_RUN_COMPLETE.sh` |
+| `scripts/RUN_JARVIS.sh` | Apenas execução | `./scripts/RUN_JARVIS.sh` |
 | `TEST_NOW.sh` | Teste rápido (release) | `./TEST_NOW.sh` |
 | `TEST_DATABRICKS_COMPLETE.sh` | Teste com provider + modelo | `./TEST_DATABRICKS_COMPLETE.sh` |
 
@@ -176,8 +202,9 @@ E:/projects/ia/jarvis_cli/
 │       └── release/jarvis.exe      # Build release
 ├── .env                            # Variáveis de ambiente (raiz)
 ├── config.toml                     # Configuração local (opcional)
-├── BUILD_AND_RUN_COMPLETE.sh      # Script principal
-├── RUN_JARVIS.sh                  # Script de execução
+├── scripts/
+│   ├── BUILD_AND_RUN_COMPLETE.sh  # Script principal
+│   ├── RUN_JARVIS.sh              # Script de execução
 ├── configure-credentials.sh        # Config credenciais (Bash)
 ├── configure-credentials.ps1       # Config credenciais (PowerShell)
 ├── TROUBLESHOOTING.md             # Troubleshooting
@@ -200,8 +227,8 @@ E:/projects/ia/jarvis_cli/
    ```
 3. **Build + Run**:
    ```bash
-   chmod +x BUILD_AND_RUN_COMPLETE.sh
-   ./BUILD_AND_RUN_COMPLETE.sh
+   chmod +x scripts/BUILD_AND_RUN_COMPLETE.sh
+   ./scripts/BUILD_AND_RUN_COMPLETE.sh
    ```
 4. **Aguardar compilação** (~10-15 min primeira vez)
 5. **Usar Jarvis**!
@@ -210,7 +237,7 @@ E:/projects/ia/jarvis_cli/
 
 ```bash
 cd /e/projects/ia/jarvis_cli
-./RUN_JARVIS.sh
+./scripts/RUN_JARVIS.sh
 ```
 
 ### Desenvolvimento
@@ -223,7 +250,7 @@ cargo build --package jarvis-cli
 
 # 3. Testar
 cd ..
-./RUN_JARVIS.sh
+./scripts/RUN_JARVIS.sh
 
 # 4. Se funcionar, build release
 cd jarvis-rs
@@ -251,7 +278,7 @@ Adicione `-m <modelo>` ao comando:
 ### Erro 401 ainda aparece?
 1. Verifique credenciais: `echo $DATABRICKS_API_KEY`
 2. Recompile: `cargo build --package jarvis-cli --release`
-3. Use script completo: `./BUILD_AND_RUN_COMPLETE.sh`
+3. Use script completo: `./scripts/BUILD_AND_RUN_COMPLETE.sh`
 
 ### Como limpar cache de compilação?
 ```bash

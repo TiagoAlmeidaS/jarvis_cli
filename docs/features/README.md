@@ -13,6 +13,28 @@ Este diretório contém documentação técnica detalhada para funcionalidades r
 | [Integração Redis](./redis-integration.md) | 📝 Planejado | 🔴 Alta | [redis-integration.md](./redis-integration.md) |
 | [Integração SQL Server](./sqlserver-integration.md) | 📝 Planejado | 🔴 Alta | [sqlserver-integration.md](./sqlserver-integration.md) |
 
+### Autonomia & Agente Inteligente
+
+> Roadmap completo: [docs/architecture/autonomy-roadmap.md](../architecture/autonomy-roadmap.md)  
+> Pagina central de Agents: [docs/agents/README.md](../agents/README.md)
+
+| Feature | Status | Prioridade | Gap | Documentação |
+|---------|--------|------------|-----|--------------|
+| [Proposal Executor](./proposal-executor.md) | ✅ Implementado | 🔴 CRITICA | G1 | [proposal-executor.md](./proposal-executor.md) |
+| [Goal System](./goal-system.md) | ✅ Implementado | 🔴 CRITICA | G2 | [goal-system.md](./goal-system.md) |
+| [Real Data Integration](./real-data-integration.md) | ✅ Implementado (CLI manual) | 🔴 CRITICA | G3 | [real-data-integration.md](./real-data-integration.md) |
+| [Tool Calling Nativo](./tool-calling-native.md) | ✅ Implementado | 🔴 Alta | G4 | [tool-calling-native.md](./tool-calling-native.md) |
+| [Agentic Loop](./agentic-loop.md) | ✅ Implementado (core) | 🔴 Alta | G5 | [agentic-loop.md](./agentic-loop.md) |
+| [Sandbox Execution](./sandbox-execution.md) | ✅ Implementado (parcial) | 🔴 Alta | G6 | [sandbox-execution.md](./sandbox-execution.md) |
+
+### Automação & Monetização
+
+| Feature | Status | Prioridade | Documentação |
+|---------|--------|------------|--------------|
+| [Daemon Automation](./daemon-automation.md) | 🚧 Em Progresso | 🔴 Alta | [daemon-automation.md](./daemon-automation.md) |
+| [Daemon Feedback Loop](./daemon-feedback-loop.md) | ✅ Implementado | 🔴 Alta | [daemon-feedback-loop.md](./daemon-feedback-loop.md) |
+| [Yolo Mode](./yolo-mode.md) | ✅ Implementado | 🟡 Média | [yolo-mode.md](./yolo-mode.md) |
+
 ### Features Principais
 
 | Feature | Status | Prioridade | Documentação |
@@ -43,17 +65,31 @@ Estes documentos descrevem funcionalidades que existem no projeto Jarvis.CLI (.N
 
 ## 📊 Status das Features
 
-### 🔴 Alta Prioridade
+### 🔴 CRITICA — Fechar o Loop Autonomo
 
-Funcionalidades fundamentais que devem ser implementadas primeiro:
+Gaps que impedem o Jarvis de funcionar como agente autonomo:
 
-1. **Integrações com Serviços Externos** - Qdrant, Redis e SQL Server para produção
+1. **[Proposal Executor](./proposal-executor.md)** (G1) — ✅ Executa propostas aprovadas automaticamente
+2. **[Goal System](./goal-system.md)** (G2) — ✅ Metas mensuraveis com CLI completo
+3. **[Real Data Integration](./real-data-integration.md)** (G3) — 🟡 Input manual via CLI implementado, APIs externas pendentes
+
+### 🔴 Alta Prioridade — Empoderar o TUI
+
+Capacidades que tornam o TUI tao capaz quanto Claude Code / Cursor:
+
+4. **[Tool Calling Nativo](./tool-calling-native.md)** (G4) — Tools executadas client-side, independente do modelo
+5. **[Agentic Loop](./agentic-loop.md)** (G5) — Loop think-execute-observe-repeat completo
+6. **[Sandbox Execution](./sandbox-execution.md)** (G6) — Execucao segura com classificacao de risco e rollback
+
+### 🔴 Alta Prioridade — Infraestrutura
+
+7. **Integrações com Serviços Externos** - Qdrant, Redis e SQL Server para produção
    - [Visão Geral das Integrações](./integrations-overview.md)
    - [Integração Qdrant](./qdrant-integration.md) - Vector database para RAG
    - [Integração Redis](./redis-integration.md) - Cache distribuído
    - [Integração SQL Server](./sqlserver-integration.md) - Persistência de dados
-2. **Sistema de Skills** - Base para extensibilidade e reutilização de funcionalidades
-3. **RAG e Context Management** - Melhora significativamente a qualidade das respostas do LLM
+8. **Sistema de Skills** - Base para extensibilidade e reutilização de funcionalidades
+9. **RAG e Context Management** - Melhora significativamente a qualidade das respostas do LLM
 
 ### 🟡 Média Prioridade
 
@@ -94,5 +130,5 @@ Funcionalidades avançadas que podem ser implementadas posteriormente:
 
 ---
 
-**Última atualização**: 2026-01-20  
-**Versão**: 1.0.0
+**Última atualização**: 2026-02-13
+**Versão**: 2.1.0

@@ -402,6 +402,14 @@ Agent Metrics:
 - `jarvis-rs/core/templates/agents/developer.md` - Template do Developer
 - `jarvis-rs/core/templates/agents/reviewer.md` - Template do Reviewer
 
+### Documentação Relacionada
+
+- [Agents — Página Central](../agents/README.md) - Visão unificada do sistema de agents
+- [Seleção de Modelos por Role](../AGENT_MODEL_SELECTION_ARCHITECTURE.md) - Cada role usa modelo LLM diferente
+- [Agent Analytics](./agent-analytics.md) - Métricas de uso e performance de agents
+- [Agentic Loop](./agentic-loop.md) - Loop Think→Execute→Observe que integra com agents
+- [Autonomy Roadmap](../architecture/autonomy-roadmap.md) - Roadmap completo de autonomia
+
 ### Documentação Externa
 
 - [Agent Patterns](https://www.patterns.dev/posts/agent-patterns/)
@@ -412,4 +420,4 @@ Agent Metrics:
 
 **Status**: 📝 Planejado  
 **Prioridade**: 🟡 Média  
-**Última atualização**: 2026-01-20
+**Última atualização**: 2026-02-13
