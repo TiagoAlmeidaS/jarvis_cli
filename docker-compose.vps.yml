@@ -81,6 +81,25 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: postgres
 
+  # Jarvis Daemon - automação autônoma (SEO, métricas, propostas)
+  jarvis-daemon:
+    build:
+      context: ./jarvis-rs
+      dockerfile: daemon/Dockerfile
+    image: jarvis-daemon:latest
+    container_name: jarvis-daemon
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - JARVIS_DAEMON_DB=/home/jarvis/.jarvis/daemon.db
+      - RUST_LOG=${RUST_LOG:-jarvis_daemon=info}
+    volumes:
+      - jarvis_daemon_data:/home/jarvis/.jarvis
+    # Monte credentials/ se tiver google.json (OAuth)
+    # volumes:
+    #   - ./credentials:/home/jarvis/.jarvis/credentials:ro
+
 volumes:
   qdrant_storage:
     driver: local
@@ -89,6 +108,8 @@ volumes:
   redis_data:
     driver: local
   postgres_data:
+    driver: local
+  jarvis_daemon_data:
     driver: local
 
 networks:

@@ -1,0 +1,35 @@
+# =============================================================================
+# Jarvis Daemon - Docker Compose
+# =============================================================================
+# Standalone:  docker compose -f docker-compose.daemon.yml up -d
+# Com VPS:     docker compose -f docker-compose.vps.yml -f docker-compose.daemon.yml up -d
+#
+# Crie .env na raiz com: OPENROUTER_API_KEY, WORDPRESS_APP_PASSWORD, etc.
+# =============================================================================
+
+services:
+  jarvis-daemon:
+    build:
+      context: ./jarvis-rs
+      dockerfile: daemon/Dockerfile
+    image: jarvis-daemon:latest
+    container_name: jarvis-daemon
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      - JARVIS_DAEMON_DB=/home/jarvis/.jarvis/daemon.db
+      - RUST_LOG=${RUST_LOG:-jarvis_daemon=info}
+
+    volumes:
+      - jarvis_daemon_data:/home/jarvis/.jarvis
+
+    # Credenciais Google (copie google.json para ./credentials/ antes de subir)
+    # volumes:
+    #   - ./credentials:/home/jarvis/.jarvis/credentials:ro
+
+volumes:
+  jarvis_daemon_data:
+    driver: local

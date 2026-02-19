@@ -1,0 +1,29 @@
+# Build artifacts
+target/
+
+# Version control
+.git/
+.gitignore
+
+# IDE and editor
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Test and debug
+*.log
+*.tmp
+.DS_Store
+
+# Documentation (not needed for build)
+docs/
+*.md
+!daemon/examples/*.md
+
+# Dev containers and CI
+.devcontainer/
+.github/
+
+# Exclude other binaries we don't need for daemon build
+# (reduces context size; cargo only builds jarvis-daemon)

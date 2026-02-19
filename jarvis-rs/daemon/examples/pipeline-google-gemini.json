@@ -1,0 +1,25 @@
+{
+  "_comment": "Exemplo de pipeline config usando Google Gemini (free tier). Crie o pipeline com: jarvis daemon pipeline create --config pipeline-google-gemini.json",
+
+  "llm": {
+    "provider": "google",
+    "model": "gemini-2.0-flash",
+    "max_tokens": 4096,
+    "temperature": 0.7
+  },
+
+  "seo": {
+    "niche": "Concursos Públicos de TI",
+    "target_audience": "Candidatos a concursos na área de Tecnologia da Informação",
+    "language": "pt-BR",
+    "tone": "informativo, profissional, acessível",
+    "min_word_count": 800,
+    "max_word_count": 2000
+  },
+
+  "publisher": {
+    "platform": "wordpress",
+    "base_url": "https://seu-blog.com",
+    "auth_token_env": "WORDPRESS_AUTH_TOKEN"
+  }
+}
