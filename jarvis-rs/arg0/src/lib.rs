@@ -1,4 +1,4 @@
-﻿use std::fs::File;
+use std::fs::File;
 use std::future::Future;
 use std::path::Path;
 use std::path::PathBuf;
@@ -131,9 +131,11 @@ const ILLEGAL_ENV_VAR_PREFIX: &str = "jarvis_";
 /// Security: Do not allow `.env` files to create or modify any variables
 /// with names starting with `jarvis_`.
 fn load_dotenv() {
-    if let Ok(jarvis_home) = jarvis_core::config::find_jarvis_home()
-        && let Ok(iter) = dotenvy::from_path_iter(jarvis_home.join(".env"))
-    {
+    let jarvis_home = match jarvis_core::config::find_jarvis_home() {
+        Ok(h) => h,
+        Err(_) => return,
+    };
+    if let Ok(iter) = dotenvy::from_path_iter(jarvis_home.join(".env")) {
         set_filtered(iter);
     }
 }

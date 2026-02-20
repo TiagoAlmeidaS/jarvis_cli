@@ -96,6 +96,14 @@ enum AuthProvider {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Load .env file (if present) before anything else reads env vars.
+    // Tries jarvis-rs/.env first (workspace root), then the repo root .env.
+    match dotenvy::dotenv() {
+        Ok(path) => eprintln!("[env] Loaded {}", path.display()),
+        Err(dotenvy::Error::Io(_)) => {} // no .env file — that's fine
+        Err(e) => eprintln!("[env] Warning: failed to load .env: {e}"),
+    }
+
     // Initialize logging.
     tracing_subscriber::fmt()
         .with_writer(std::io::stderr)

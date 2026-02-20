@@ -137,6 +137,9 @@ O Jarvis CLI Rust usa variáveis de ambiente para armazenar chaves de API por se
 # OpenRouter
 [System.Environment]::SetEnvironmentVariable("OPENROUTER_API_KEY", "sua-chave-aqui", "User")
 
+# Google AI Studio (Gemini) — free tier disponível em https://aistudio.google.com/apikey
+[System.Environment]::SetEnvironmentVariable("GOOGLE_API_KEY", "sua-chave-aqui", "User")
+
 # Azure OpenAI
 [System.Environment]::SetEnvironmentVariable("AZURE_OPENAI_API_KEY", "sua-chave-aqui", "User")
 
@@ -169,6 +172,50 @@ O Jarvis CLI Rust usa variáveis de ambiente para armazenar chaves de API por se
    ```bash
    jarvis chat --verbose
    ```
+
+## Daemon — Configuração de Pipeline com Google Gemini
+
+O daemon suporta múltiplos provedores LLM para geração de conteúdo. Para usar o Google Gemini (free tier):
+
+### 1. Obtenha a API Key
+
+Acesse [Google AI Studio](https://aistudio.google.com/apikey) e crie uma chave gratuita.
+
+### 2. Configure a variável de ambiente
+
+Adicione ao arquivo `jarvis-rs/.env`:
+```env
+GOOGLE_API_KEY=AIzaSy...sua-chave-aqui
+```
+
+Ou defina como variável de ambiente (ver seção acima).
+
+### 3. Use no pipeline config
+
+```json
+{
+  "llm": {
+    "provider": "google",
+    "model": "gemini-2.0-flash"
+  },
+  "seo": {
+    "niche": "Seu Nicho",
+    "language": "pt-BR"
+  }
+}
+```
+
+Veja o exemplo completo em `jarvis-rs/daemon/examples/pipeline-google-gemini.json`.
+
+### Provedores suportados pelo daemon
+
+| Provider | Env Var | Modelo padrão | Custo |
+|----------|---------|---------------|-------|
+| `google` | `GOOGLE_API_KEY` | `gemini-2.0-flash` | Free tier |
+| `openrouter` | `OPENROUTER_API_KEY` | `mistralai/mistral-nemo` | ~$0.03/M tokens |
+| `openai` | `OPENAI_API_KEY` | `gpt-4o-mini` | ~$2/M tokens |
+| `ollama` | — | `llama3.2` | Grátis (local) |
+| `databricks` | `DATABRICKS_API_KEY` | `databricks-claude-haiku-4-5` | Variável |
 
 ## Notas Importantes
 

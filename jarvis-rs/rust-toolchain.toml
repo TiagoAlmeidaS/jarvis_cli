@@ -1,3 +1,5 @@
 [toolchain]
-channel = "1.93.0"
+# Pin to 1.92.0 to avoid ICE "path with Res::Err but no error emitted" when
+# compiling tonic 0.14.3 on Rust 1.93.0 (see rust-lang/rust#149233).
+channel = "1.92.0"
 components = ["clippy", "rustfmt", "rust-src"]

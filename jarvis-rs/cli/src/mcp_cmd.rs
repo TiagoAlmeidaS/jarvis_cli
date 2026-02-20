@@ -1,4 +1,7 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
+use std::collections::BTreeMap;
+use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::Context;
 use anyhow::Result;
@@ -13,6 +16,7 @@ use jarvis_core::config::find_jarvis_home;
 use jarvis_core::config::load_global_mcp_servers;
 use jarvis_core::config::types::McpServerConfig;
 use jarvis_core::config::types::McpServerTransportConfig;
+use jarvis_core::mcp::auth::McpAuthStatusEntry;
 use jarvis_core::mcp::auth::McpOAuthLoginSupport;
 use jarvis_core::mcp::auth::compute_auth_statuses;
 use jarvis_core::mcp::auth::oauth_login_support;
@@ -185,7 +189,7 @@ async fn run_add(config_overrides: &CliConfigOverrides, add_args: AddArgs) -> Re
     let overrides = config_overrides
         .parse_overrides()
         .map_err(anyhow::Error::msg)?;
-    let config = Config::load_with_cli_overrides(overrides)
+    let config: Config = Config::load_with_cli_overrides(overrides)
         .await
         .context("failed to load configuration")?;
 
@@ -197,7 +201,7 @@ async fn run_add(config_overrides: &CliConfigOverrides, add_args: AddArgs) -> Re
     validate_server_name(&name)?;
 
     let jarvis_home = find_jarvis_home().context("failed to resolve jarvis_home")?;
-    let mut servers = load_global_mcp_servers(&jarvis_home)
+    let mut servers: BTreeMap<String, McpServerConfig> = load_global_mcp_servers(&jarvis_home)
         .await
         .with_context(|| format!("failed to load MCP servers from {}", jarvis_home.display()))?;
 
@@ -295,7 +299,7 @@ async fn run_remove(config_overrides: &CliConfigOverrides, remove_args: RemoveAr
     validate_server_name(&name)?;
 
     let jarvis_home = find_jarvis_home().context("failed to resolve jarvis_home")?;
-    let mut servers = load_global_mcp_servers(&jarvis_home)
+    let mut servers: BTreeMap<String, McpServerConfig> = load_global_mcp_servers(&jarvis_home)
         .await
         .with_context(|| format!("failed to load MCP servers from {}", jarvis_home.display()))?;
 
@@ -322,7 +326,7 @@ async fn run_login(config_overrides: &CliConfigOverrides, login_args: LoginArgs)
     let overrides = config_overrides
         .parse_overrides()
         .map_err(anyhow::Error::msg)?;
-    let config = Config::load_with_cli_overrides(overrides)
+    let config: Config = Config::load_with_cli_overrides(overrides)
         .await
         .context("failed to load configuration")?;
 
@@ -365,7 +369,7 @@ async fn run_logout(config_overrides: &CliConfigOverrides, logout_args: LogoutAr
     let overrides = config_overrides
         .parse_overrides()
         .map_err(anyhow::Error::msg)?;
-    let config = Config::load_with_cli_overrides(overrides)
+    let config: Config = Config::load_with_cli_overrides(overrides)
         .await
         .context("failed to load configuration")?;
 
@@ -395,13 +399,13 @@ async fn run_list(config_overrides: &CliConfigOverrides, list_args: ListArgs) ->
     let overrides = config_overrides
         .parse_overrides()
         .map_err(anyhow::Error::msg)?;
-    let config = Config::load_with_cli_overrides(overrides)
+    let config: Config = Config::load_with_cli_overrides(overrides)
         .await
         .context("failed to load configuration")?;
 
-    let mut entries: Vec<_> = config.mcp_servers.iter().collect();
+    let mut entries: Vec<(&String, &McpServerConfig)> = config.mcp_servers.iter().collect();
     entries.sort_by(|(a, _), (b, _)| a.cmp(b));
-    let auth_statuses = compute_auth_statuses(
+    let auth_statuses: HashMap<String, McpAuthStatusEntry> = compute_auth_statuses(
         config.mcp_servers.iter(),
         config.mcp_oauth_credentials_store_mode,
     )
@@ -410,7 +414,7 @@ async fn run_list(config_overrides: &CliConfigOverrides, list_args: ListArgs) ->
     if list_args.json {
         let json_entries: Vec<_> = entries
             .into_iter()
-            .map(|(name, cfg)| {
+            .map(|(name, cfg): (&String, &McpServerConfig)| {
                 let auth_status = auth_statuses
                     .get(name.as_str())
                     .map(|entry| entry.auth_status)
@@ -453,10 +457,12 @@ async fn run_list(config_overrides: &CliConfigOverrides, list_args: ListArgs) ->
                     "transport": transport,
                     "startup_timeout_sec": cfg
                         .startup_timeout_sec
-                        .map(|timeout| timeout.as_secs_f64()),
+                        .as_ref()
+                        .map(Duration::as_secs_f64),
                     "tool_timeout_sec": cfg
                         .tool_timeout_sec
-                        .map(|timeout| timeout.as_secs_f64()),
+                        .as_ref()
+                        .map(Duration::as_secs_f64),
                     "auth_status": auth_status,
                 })
             })
@@ -491,8 +497,8 @@ async fn run_list(config_overrides: &CliConfigOverrides, list_args: ListArgs) ->
                 let env_display = format_env_display(env.as_ref(), env_vars);
                 let cwd_display = cwd
                     .as_ref()
-                    .map(|path| path.display().to_string())
-                    .filter(|value| !value.is_empty())
+                    .map(|path: &PathBuf| path.display().to_string())
+                    .filter(|value: &String| !value.is_empty())
                     .unwrap_or_else(|| "-".to_string());
                 let status = format_mcp_status(cfg);
                 let auth_status = auth_statuses
@@ -645,7 +651,7 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
     let overrides = config_overrides
         .parse_overrides()
         .map_err(anyhow::Error::msg)?;
-    let config = Config::load_with_cli_overrides(overrides)
+    let config: Config = Config::load_with_cli_overrides(overrides)
         .await
         .context("failed to load configuration")?;
 
@@ -691,10 +697,12 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
             "disabled_tools": server.disabled_tools.clone(),
             "startup_timeout_sec": server
                 .startup_timeout_sec
-                .map(|timeout| timeout.as_secs_f64()),
+                .as_ref()
+                .map(Duration::as_secs_f64),
             "tool_timeout_sec": server
                 .tool_timeout_sec
-                .map(|timeout| timeout.as_secs_f64()),
+                .as_ref()
+                .map(Duration::as_secs_f64),
         }))?;
         println!("{output}");
         return Ok(());
@@ -744,8 +752,8 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
             println!("  args: {args_display}");
             let cwd_display = cwd
                 .as_ref()
-                .map(|path| path.display().to_string())
-                .filter(|value| !value.is_empty())
+                .map(|path: &PathBuf| path.display().to_string())
+                .filter(|value: &String| !value.is_empty())
                 .unwrap_or_else(|| "-".to_string());
             println!("  cwd: {cwd_display}");
             let env_display = format_env_display(env.as_ref(), env_vars);
@@ -763,8 +771,8 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
             println!("  bearer_token_env_var: {bearer_token_display}");
             let headers_display = match http_headers {
                 Some(map) if !map.is_empty() => {
-                    let mut pairs: Vec<_> = map.iter().collect();
-                    pairs.sort_by(|(a, _), (b, _)| a.cmp(b));
+                    let mut pairs: Vec<(&String, &String)> = map.iter().collect();
+                    pairs.sort_by(|(a, _): &(&String, &String), (b, _): &(&String, &String)| a.cmp(b));
                     pairs
                         .into_iter()
                         .map(|(k, _)| format!("{k}=*****"))
@@ -776,8 +784,8 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
             println!("  http_headers: {headers_display}");
             let env_headers_display = match env_http_headers {
                 Some(map) if !map.is_empty() => {
-                    let mut pairs: Vec<_> = map.iter().collect();
-                    pairs.sort_by(|(a, _), (b, _)| a.cmp(b));
+                    let mut pairs: Vec<(&String, &String)> = map.iter().collect();
+                    pairs.sort_by(|(a, _): &(&String, &String), (b, _): &(&String, &String)| a.cmp(b));
                     pairs
                         .into_iter()
                         .map(|(k, var)| format!("{k}={var}"))
@@ -790,10 +798,10 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
         }
     }
     if let Some(timeout) = server.startup_timeout_sec {
-        println!("  startup_timeout_sec: {}", timeout.as_secs_f64());
+        println!("  startup_timeout_sec: {}", Duration::as_secs_f64(&timeout));
     }
     if let Some(timeout) = server.tool_timeout_sec {
-        println!("  tool_timeout_sec: {}", timeout.as_secs_f64());
+        println!("  tool_timeout_sec: {}", Duration::as_secs_f64(&timeout));
     }
     println!("  remove: Jarvis mcp remove {}", get_args.name);
 

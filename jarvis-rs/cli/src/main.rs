@@ -411,8 +411,8 @@ fn format_exit_messages(exit_info: AppExitInfo, color_enabled: bool) -> Vec<Stri
     if let Some(resume_cmd) =
         jarvis_core::util::resume_command(thread_name.as_deref(), conversation_id)
     {
-        let command = if color_enabled {
-            resume_cmd.cyan().to_string()
+        let command: String = if color_enabled {
+            resume_cmd.as_str().cyan().to_string()
         } else {
             resume_cmd
         };
@@ -968,7 +968,8 @@ async fn run_interactive_tui(
 ) -> std::io::Result<AppExitInfo> {
     if let Some(prompt) = interactive.prompt.take() {
         // Normalize CRLF/CR to LF so CLI-provided text can't leak `\r` into TUI state.
-        interactive.prompt = Some(prompt.replace("\r\n", "\n").replace('\r', "\n"));
+        let normalized: String = prompt.replace("\r\n", "\n").replace('\r', "\n");
+        interactive.prompt = Some(normalized);
     }
 
     let terminal_info = jarvis_core::terminal::terminal_info();
@@ -1092,7 +1093,8 @@ fn merge_interactive_cli_flags(interactive: &mut TuiCli, subcommand_cli: TuiCli)
     }
     if let Some(prompt) = subcommand_cli.prompt {
         // Normalize CRLF/CR to LF so CLI-provided text can't leak `\r` into TUI state.
-        interactive.prompt = Some(prompt.replace("\r\n", "\n").replace('\r', "\n"));
+        let normalized: String = prompt.replace("\r\n", "\n").replace('\r', "\n");
+        interactive.prompt = Some(normalized);
     }
 
     interactive

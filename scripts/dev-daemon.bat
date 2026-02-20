@@ -106,13 +106,22 @@ if defined CARGO_FLAGS (
 )
 echo.
 
-REM Check for API key
+REM Check for API keys
 if defined OPENROUTER_API_KEY (
     echo  OpenRouter API:  configurada
 ) else (
-    echo  [AVISO] OPENROUTER_API_KEY nao definida.
+    echo  OpenRouter API:  nao definida
+)
+if defined GOOGLE_API_KEY (
+    echo  Google API:      configurada (Gemini)
+) else (
+    echo  Google API:      nao definida
+)
+if not defined OPENROUTER_API_KEY if not defined GOOGLE_API_KEY if not defined OPENAI_API_KEY (
+    echo.
+    echo  [AVISO] Nenhuma API key detectada (OPENROUTER_API_KEY, GOOGLE_API_KEY, OPENAI_API_KEY).
     echo          O daemon usara a env var do provider configurado no pipeline.
-    echo          Defina em .env ou como variavel de ambiente.
+    echo          Defina em jarvis-rs/.env ou como variavel de ambiente.
 )
 echo.
 echo  Compilando e executando...
