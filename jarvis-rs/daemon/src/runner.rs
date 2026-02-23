@@ -15,7 +15,7 @@ use tokio_util::sync::CancellationToken;
 use tracing::{error, info, warn};
 
 use crate::pipeline::{PipelineContext, PipelineRegistry};
-use crate::processor::OpenAiCompatibleClient;
+use crate::processor::router::LlmRouter;
 
 /// Orchestrates pipeline job execution.
 pub struct PipelineRunner {
@@ -69,8 +69,8 @@ impl PipelineRunner {
         // Load sources.
         let sources = self.db.list_sources(&pipeline_id).await?;
 
-        // Build LLM client from pipeline config.
-        let llm_client = Arc::new(OpenAiCompatibleClient::from_pipeline_config(&pipeline)?);
+        // Build LLM client from pipeline config (with fallback support if strategy is configured).
+        let llm_client = LlmRouter::from_pipeline_config(&pipeline).await?;
 
         // Build context.
         let ctx = PipelineContext {

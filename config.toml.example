@@ -258,3 +258,38 @@ webhook_url = "https://your-domain.com/telegram/webhook"
 webhook_port = 8081
 # Token secreto para validação do webhook (opcional, ou use variável de ambiente TELEGRAM_WEBHOOK_SECRET)
 webhook_secret = "your_webhook_secret"
+
+# ============================================================================
+# ESTRATÉGIAS DE ROTEAMENTO LLM (LLM Routing Strategies)
+# ============================================================================
+# Configuração de estratégias de fallback automático para pipelines do daemon.
+# Quando um provedor primário falha (HTTP 429, 50x), o sistema automaticamente
+# tenta os provedores de fallback na ordem especificada.
+#
+# Formato: [llm.strategies.<nome_da_estratégia>]
+# Campos:
+#   - primary: Provedor/modelo primário (formato: "provider/model")
+#   - fallbacks: Lista de provedores/modelos de fallback (em ordem de preferência)
+
+# Estratégia para tarefas que exigem contexto longo (leitura de código, transcrição de vídeo)
+[llm.strategies.heavy_context]
+primary = "google/gemini-2.0-flash"
+fallbacks = [
+    "openrouter/google/gemini-2.0-flash:free",
+    "github/gpt-4o-mini"
+]
+
+# Estratégia para tarefas que exigem raciocínio lógico (code review, planejamento)
+[llm.strategies.reasoning]
+primary = "openrouter/deepseek/deepseek-r1:free"
+fallbacks = [
+    "groq/llama-3.3-70b-versatile",
+    "google/gemini-2.0-flash"
+]
+
+# Estratégia para decisões rápidas de roteamento (decidir qual agente chamar)
+[llm.strategies.fast_routing]
+primary = "groq/llama-3.3-70b-versatile"
+fallbacks = [
+    "github/gpt-4o-mini"
+]

@@ -14,6 +14,8 @@ use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use tracing::{debug, warn};
 
+pub mod router;
+
 /// Generic LLM client trait used by pipelines.
 #[async_trait]
 pub trait LlmClient: Send + Sync {

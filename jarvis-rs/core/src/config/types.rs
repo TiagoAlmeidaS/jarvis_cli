@@ -1810,3 +1810,34 @@ mod agent_loop_tests {
         std::env::remove_var("OPENROUTER_API_KEY");
     }
 }
+
+// ===== LLM Router Strategies Configuration =====
+
+/// LLM routing strategies configuration for daemon pipelines.
+/// 
+/// Defines fallback chains for different use cases:
+/// - heavy_context: For tasks requiring long context (code reading, video transcription)
+/// - reasoning: For tasks requiring logical reasoning (code review, planning)
+/// - fast_routing: For quick routing decisions
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct LlmConfigToml {
+    /// Map of strategy names to their configurations.
+    /// Format: [llm.strategies.<strategy_name>]
+    #[serde(default)]
+    pub strategies: HashMap<String, LlmStrategyConfigToml>,
+}
+
+/// Configuration for a single LLM routing strategy.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct LlmStrategyConfigToml {
+    /// Primary provider/model identifier (format: "provider/model").
+    /// Example: "google/gemini-2.0-flash"
+    pub primary: String,
+    
+    /// Fallback provider/model identifiers in order of preference.
+    /// Example: ["openrouter/google/gemini-2.0-flash:free", "github/gpt-4o-mini"]
+    #[serde(default)]
+    pub fallbacks: Vec<String>,
+}

@@ -1014,6 +1014,15 @@ pub struct ConfigToml {
     pub experimental_use_freeform_apply_patch: Option<bool>,
     /// Preferred OSS provider for local models, e.g. "lmstudio" or "ollama".
     pub oss_provider: Option<String>,
+
+    /// LLM routing strategies for daemon pipelines with automatic fallback.
+    /// Format: [llm.strategies.<strategy_name>]
+    /// Example:
+    /// [llm.strategies.heavy_context]
+    /// primary = "google/gemini-2.0-flash"
+    /// fallbacks = ["openrouter/google/gemini-2.0-flash:free", "github/gpt-4o-mini"]
+    #[serde(default)]
+    pub llm: Option<crate::config::types::LlmConfigToml>,
 }
 
 impl From<ConfigToml> for UserSavedConfig {
