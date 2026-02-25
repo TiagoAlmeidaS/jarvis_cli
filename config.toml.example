@@ -55,11 +55,14 @@ stream_max_retries = 10
 stream_idle_timeout_ms = 300000
 
 # Provedor OpenRouter
+# NOTA: Modelos free podem precisar de uses_chat_completions_api = true
+# Se receber erro 404, tente adicionar: uses_chat_completions_api = true
 [model_providers.openrouter]
 name = "OpenRouter"
 base_url = "https://openrouter.ai/api/v1"
 env_key = "OPENROUTER_API_KEY"
 wire_api = "responses"
+# uses_chat_completions_api = true  # Descomente se modelos free retornarem 404
 request_max_retries = 4
 stream_max_retries = 10
 stream_idle_timeout_ms = 300000

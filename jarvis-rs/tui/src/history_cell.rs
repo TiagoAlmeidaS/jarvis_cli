@@ -32,7 +32,7 @@ use crate::text_formatting::truncate_text;
 use crate::tooltips;
 use crate::ui_consts::LIVE_PREFIX_COLS;
 use crate::update_action::UpdateAction;
-use crate::version::jarvis_CLI_VERSION;
+use crate::version::JARVIS_CLI_VERSION;
 use crate::wrapping::RtOptions;
 use crate::wrapping::word_wrap_line;
 use crate::wrapping::word_wrap_lines;
@@ -435,7 +435,7 @@ impl HistoryCell for UpdateAvailableHistoryCell {
                 padded_emoji("✨").bold().cyan(),
                 "Update available!".bold().cyan(),
                 " ",
-                format!("{jarvis_CLI_VERSION} -> {}", self.latest_version).bold(),
+                format!("{JARVIS_CLI_VERSION} -> {}", self.latest_version).bold(),
             ],
             update_instruction,
             "",
@@ -956,7 +956,7 @@ pub(crate) fn new_session_info(
         model.clone(),
         reasoning_effort,
         config.cwd.clone(),
-        jarvis_CLI_VERSION,
+        JARVIS_CLI_VERSION,
     );
     let mut parts: Vec<Box<dyn HistoryCell>> = vec![Box::new(header)];
 

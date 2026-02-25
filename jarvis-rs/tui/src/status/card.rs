@@ -2,7 +2,7 @@ use crate::history_cell::CompositeHistoryCell;
 use crate::history_cell::HistoryCell;
 use crate::history_cell::PlainHistoryCell;
 use crate::history_cell::with_border_with_inner_width;
-use crate::version::jarvis_CLI_VERSION;
+use crate::version::JARVIS_CLI_VERSION;
 use chrono::DateTime;
 use chrono::Local;
 use jarvis_common::summarize_sandbox_policy;
@@ -360,7 +360,7 @@ impl HistoryCell for StatusHistoryCell {
             Span::from(format!("{}>_ ", FieldFormatter::INDENT)).dim(),
             Span::from(provider_display).bold(),
             Span::from(" ").dim(),
-            Span::from(format!("(v{jarvis_CLI_VERSION})")).dim(),
+            Span::from(format!("(v{JARVIS_CLI_VERSION})")).dim(),
         ]));
         lines.push(Line::from(Vec::<Span<'static>>::new()));
 

@@ -34,7 +34,7 @@ use jarvis_core::rag::{
     RagContextConfig, RagContextInjector, create_rag_injector, inject_rag_context,
 };
 
-use crate::version::jarvis_CLI_VERSION;
+use crate::version::JARVIS_CLI_VERSION;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
@@ -5798,7 +5798,7 @@ impl ChatWidget {
             placeholder_style,
             None,
             config.cwd.clone(),
-            jarvis_CLI_VERSION,
+            JARVIS_CLI_VERSION,
         ))
     }
 

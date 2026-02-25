@@ -74,7 +74,7 @@ fn pick_tooltip<R: Rng + ?Sized>(rng: &mut R) -> Option<&'static str> {
 
 pub(crate) mod announcement {
     use crate::tooltips::ANNOUNCEMENT_TIP_URL;
-    use crate::version::jarvis_CLI_VERSION;
+    use crate::version::JARVIS_CLI_VERSION;
     use chrono::NaiveDate;
     use chrono::Utc;
     use regex_lite::Regex;
@@ -155,7 +155,7 @@ pub(crate) mod announcement {
             let Some(tip) = AnnouncementTip::from_raw(raw) else {
                 continue;
             };
-            if tip.version_matches(jarvis_CLI_VERSION)
+            if tip.version_matches(JARVIS_CLI_VERSION)
                 && tip.date_matches(today)
                 && tip.target_app == "cli"
             {

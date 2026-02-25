@@ -8,11 +8,13 @@ REM
 REM Usage: dev-jarvis.bat [provider] [model]
 REM
 REM Providers:
-REM   openrouter - OpenRouter API (default, free DeepSeek R1)
+REM   free       - OpenRouter Free Strategy (default, best free reasoning model)
+REM   openrouter - OpenRouter API (same as free, explicit)
+REM   free_google - Google AI Studio Free (requires GOOGLE_API_KEY)
 REM   qwen       - OpenRouter + Qwen3 Coder 80B MoE (best cheap paid for TUI, ~$0.09/day)
 REM   nemo       - OpenRouter + Mistral Nemo 12B (daemon only, no tool calling)
 REM   agent      - AgentLoop + OpenRouter + Mistral Nemo (text-based tool calling)
-REM   gemini     - Google AI Studio (free tier)
+REM   gemini     - Google AI Studio (free tier, alias for free_google)
 REM   ollama     - Ollama local/VPS
 REM   azure      - Azure OpenAI
 REM
@@ -22,10 +24,14 @@ REM
 REM ---- OpenRouter Models Reference ----
 REM
 REM Free models (tested with system messages + streaming):
-REM   deepseek/deepseek-r1-0528:free        - Best reasoning (default)
+REM   deepseek/deepseek-r1:free             - Best reasoning (free strategy default)
+REM   Note: When using model_provider=openrouter, use format: deepseek/deepseek-r1:free
+REM   (without the -0528 suffix and without openrouter/ prefix)
 REM   nvidia/nemotron-nano-9b-v2:free       - Fast and light
 REM   stepfun/step-3.5-flash:free           - Fast, good general purpose
 REM   z-ai/glm-4.5-air:free                - Good general purpose
+REM   google/gemini-2.5-flash              - Google AI Studio free (requires GOOGLE_API_KEY)
+REM   google/gemini-2.5-flash-lite          - Google AI Studio free (faster)
 REM
 REM Cheap paid models (best cost-benefit for content):
 REM   mistralai/mistral-nemo                - 12B, multilingual, $0.02-0.04/M (nemo default)
@@ -38,17 +44,21 @@ REM IMPORTANT: google/gemma-* models do NOT support system messages
 REM            and will fail with Jarvis (which always sends system prompt).
 REM
 REM Examples:
-REM   dev-jarvis.bat                                       (OpenRouter + DeepSeek R1 free)
+REM   dev-jarvis.bat                                       (Free strategy - DeepSeek R1 free)
+REM   dev-jarvis.bat free                                  (Free strategy - explicit)
+REM   dev-jarvis.bat free stepfun/step-3.5-flash:free     (Free strategy - custom model)
+REM   dev-jarvis.bat free_google                           (Google AI Studio free)
+REM   dev-jarvis.bat free_google gemini-2.5-flash-lite      (Google AI Studio - faster model)
 REM   dev-jarvis.bat qwen                                  (OpenRouter + Qwen3 Coder, paid ~$0.09/day)
 REM   dev-jarvis.bat agent                                 (AgentLoop + OpenRouter + Mistral Nemo)
 REM   dev-jarvis.bat agent mistralai/codestral-mamba-latest (AgentLoop + custom model)
-REM   dev-jarvis.bat openrouter qwen/qwen3-coder-next     (same as above, explicit)
+REM   dev-jarvis.bat openrouter qwen/qwen3-coder-next     (OpenRouter explicit)
 REM   dev-jarvis.bat openrouter nvidia/nemotron-nano-9b-v2:free
 REM   dev-jarvis.bat openrouter stepfun/step-3.5-flash:free
-REM   dev-jarvis.bat gemini gemini-2.5-flash-lite
+REM   dev-jarvis.bat gemini gemini-2.5-flash-lite          (Google AI Studio - alias)
 REM   dev-jarvis.bat ollama llama3.2:3b
 REM   dev-jarvis.bat azure gpt-4o
-REM   dev-jarvis.bat --release qwen
+REM   dev-jarvis.bat --release free                        (Release build with free strategy)
 REM ============================================================================
 
 setlocal enabledelayedexpansion
@@ -56,10 +66,11 @@ setlocal enabledelayedexpansion
 REM Navigate to project root (parent of scripts/)
 cd /d "%~dp0.."
 
-REM Defaults
+REM Defaults - Free Strategy
 set "PROVIDER=openrouter"
-set "MODEL=deepseek/deepseek-r1-0528:free"
+set "MODEL=deepseek/deepseek-r1:free"
 set "CARGO_FLAGS="
+set "FREE_STRATEGY=1"
 
 REM Load .env file if it exists
 if exist ".env" (
@@ -79,9 +90,24 @@ if "%1"=="--release" (
     shift
     goto :parse_args
 )
+if "%1"=="free" (
+    set "PROVIDER=openrouter"
+    set "MODEL=deepseek/deepseek-r1:free"
+    set "FREE_STRATEGY=1"
+    shift
+    goto :parse_args
+)
+if "%1"=="free_google" (
+    set "PROVIDER=google"
+    set "MODEL=gemini-2.5-flash"
+    set "FREE_STRATEGY=1"
+    shift
+    goto :parse_args
+)
 if "%1"=="openrouter" (
     set "PROVIDER=openrouter"
-    set "MODEL=deepseek/deepseek-r1-0528:free"
+    set "MODEL=deepseek/deepseek-r1:free"
+    set "FREE_STRATEGY=1"
     shift
     goto :parse_args
 )
@@ -107,6 +133,7 @@ if "%1"=="qwen" (
 if "%1"=="gemini" (
     set "PROVIDER=google"
     set "MODEL=gemini-2.5-flash-lite"
+    set "FREE_STRATEGY=1"
     shift
     goto :parse_args
 )
@@ -135,6 +162,9 @@ echo ========================================
 echo.
 echo  Provider: %PROVIDER%
 echo  Modelo:   %MODEL%
+if defined FREE_STRATEGY (
+    echo  Strategy: Free [using free models]
+)
 if defined AGENT_LOOP (
     echo  Mode:     AgentLoop [text-based tool calling]
 )
@@ -144,6 +174,24 @@ if defined CARGO_FLAGS (
     echo  Build:    debug [incremental]
 )
 echo.
+if defined FREE_STRATEGY (
+    if "%PROVIDER%"=="openrouter" (
+        if not defined OPENROUTER_API_KEY (
+            echo  AVISO: OPENROUTER_API_KEY nao configurada!
+            echo  Configure com: set OPENROUTER_API_KEY=sk-or-v1-...
+            echo  Obtenha em: https://openrouter.ai/keys
+            echo.
+        )
+    )
+    if "%PROVIDER%"=="google" (
+        if not defined GOOGLE_API_KEY (
+            echo  AVISO: GOOGLE_API_KEY nao configurada!
+            echo  Configure com: set GOOGLE_API_KEY=...
+            echo  Obtenha em: https://ai.google.dev
+            echo.
+        )
+    )
+)
 echo  Compilando e executando...
 echo ========================================
 echo.
