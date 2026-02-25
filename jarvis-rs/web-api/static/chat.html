@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis API - Chat Interface</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <h1 class="text-3xl font-bold mb-8">Jarvis Chat</h1>
+        
+        <div id="chat-container" class="bg-gray-800 rounded-lg p-6">
+            <div id="messages" class="space-y-4 mb-6 min-h-[400px] max-h-[600px] overflow-y-auto">
+                <!-- Messages will be inserted here -->
+            </div>
+
+            <form 
+                hx-post="/api/chat" 
+                hx-target="#messages" 
+                hx-swap="beforeend"
+                class="flex gap-2"
+            >
+                <input 
+                    type="text" 
+                    name="prompt" 
+                    placeholder="Digite sua mensagem..."
+                    class="flex-1 bg-gray-700 text-gray-100 px-4 py-2 rounded-lg"
+                    required
+                />
+                <button 
+                    type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
+                >
+                    Enviar
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis API - Chat</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        .message {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <header class="mb-8">
+            <h1 class="text-3xl font-bold mb-2">Jarvis API</h1>
+            <p class="text-gray-400">Interface web para interagir com o Jarvis</p>
+        </header>
+
+        <div class="bg-gray-800 rounded-lg shadow-lg p-6">
+            <!-- Chat Messages -->
+            <div id="messages" class="space-y-4 mb-6 min-h-[400px] max-h-[600px] overflow-y-auto">
+                <div class="text-center text-gray-500 py-8">
+                    <p>Envie uma mensagem para começar a conversar com o Jarvis</p>
+                </div>
+            </div>
+
+            <!-- Input Form -->
+            <form 
+                hx-post="/api/chat" 
+                hx-target="#messages" 
+                hx-swap="beforeend"
+                hx-indicator="#loading"
+                hx-headers='{"Accept": "text/html"}'
+                class="flex gap-2"
+            >
+                <input 
+                    type="text" 
+                    name="prompt" 
+                    id="prompt-input"
+                    placeholder="Digite sua mensagem..."
+                    class="flex-1 bg-gray-700 text-gray-100 px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                />
+                <button 
+                    type="submit"
+                    class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                >
+                    Enviar
+                </button>
+            </form>
+
+            <!-- Loading Indicator -->
+            <div id="loading" class="htmx-indicator mt-4">
+                <div class="flex items-center gap-2 text-gray-400">
+                    <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                    <span>Jarvis está pensando...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Thread ID Display -->
+        <div id="thread-info" class="mt-4 text-sm text-gray-500"></div>
+    </div>
+
+    <script>
+        // Handle form submission
+        document.body.addEventListener('htmx:afterRequest', function(event) {
+            if (event.detail.pathInfo.requestPath === '/api/chat') {
+                const input = document.getElementById('prompt-input');
+                if (input) {
+                    input.value = '';
+                    input.focus();
+                }
+
+                // Scroll to bottom
+                const messages = document.getElementById('messages');
+                if (messages) {
+                    messages.scrollTop = messages.scrollHeight;
+                }
+            }
+        });
+
+        // Handle response
+        document.body.addEventListener('htmx:afterSwap', function(event) {
+            if (event.detail.target.id === 'messages') {
+                const response = event.detail.xhr.response;
+                try {
+                    const data = JSON.parse(response);
+                    if (data.thread_id) {
+                        document.getElementById('thread-info').textContent = 
+                            `Thread ID: ${data.thread_id}`;
+                    }
+                } catch (e) {
+                    // Not JSON, that's ok
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Render.com configuration for Jarvis Web API
+# Deploy gratuito disponível em: https://render.com
+
+services:
+  - type: web
+    name: jarvis-web-api
+    env: docker
+    dockerfilePath: ./jarvis-rs/web-api/Dockerfile
+    dockerContext: ./jarvis-rs
+    plan: free
+    region: oregon
+    envVars:
+      - key: RUST_LOG
+        value: info
+      - key: PORT
+        value: 3000
+      - key: JARVIS_HOME
+        value: /app/.jarvis
+      - key: JARVIS_API_KEY
+        sync: false  # Definir manualmente no dashboard
+    healthCheckPath: /api/health
+    autoDeploy: true

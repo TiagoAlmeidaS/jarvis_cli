@@ -1,0 +1,48 @@
+# =============================================================================
+# Jarvis Web API - Docker Compose
+# =============================================================================
+# Para subir: docker compose -f docker-compose.web-api.yml up -d
+# Para ver logs: docker compose -f docker-compose.web-api.yml logs -f
+# Para parar: docker compose -f docker-compose.web-api.yml down
+#
+# Variáveis de ambiente podem ser definidas em .env na raiz do projeto
+# =============================================================================
+
+services:
+  jarvis-web-api:
+    build:
+      context: .
+      dockerfile: jarvis-rs/web-api/Dockerfile
+    image: jarvis-web-api:latest
+    container_name: jarvis-web-api
+    restart: unless-stopped
+
+    ports:
+      - "${WEB_API_PORT:-3000}:3000"
+
+    environment:
+      - JARVIS_HOME=/app/.jarvis
+      - JARVIS_API_KEY=${JARVIS_API_KEY:-}
+      - RUST_LOG=${RUST_LOG:-info}
+      - PORT=3000
+
+    volumes:
+      # Persistir dados do Jarvis (config, threads, credenciais)
+      - jarvis_web_api_data:/app/.jarvis
+
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Labels para organização
+    labels:
+      - "com.jarvis.service=web-api"
+      - "com.jarvis.version=latest"
+
+volumes:
+  jarvis_web_api_data:
+    driver: local
+    name: jarvis_web_api_data

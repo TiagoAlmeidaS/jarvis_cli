@@ -1,0 +1,14 @@
+# Arquivos ignorados pelo Railway
+target/
+.git/
+.gitignore
+*.md
+!README.md
+tests/
+*.snap
+.vscode/
+.idea/
+*.log
+deploy-*.ps1
+deploy-*.sh
+DEPLOY_VPS.md
