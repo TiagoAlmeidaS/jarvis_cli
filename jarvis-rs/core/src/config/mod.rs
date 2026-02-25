@@ -372,6 +372,9 @@ pub struct Config {
     /// Messaging integrations configuration (WhatsApp, Telegram).
     pub messaging: crate::config::types::MessagingConfig,
 
+    /// API Web server configuration.
+    pub api: Option<crate::config::types::ApiConfig>,
+
     /// Agent loop configuration for text-based tool calling.
     pub agent_loop: crate::config::types::AgentLoopSettings,
 }
@@ -993,6 +996,10 @@ pub struct ConfigToml {
     /// Messaging integrations configuration (WhatsApp, Telegram).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub messaging: Option<crate::config::types::MessagingConfigToml>,
+
+    /// API Web server configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub api: Option<crate::config::types::ApiConfigToml>,
 
     /// Agent loop configuration for text-based tool calling with local/cheap models.
     #[serde(default)]
@@ -1741,6 +1748,7 @@ impl Config {
             },
             github: cfg.github.unwrap_or_default().into(),
             messaging: cfg.messaging.unwrap_or_default().into(),
+            api: cfg.api.map(Into::into),
             agent_loop: cfg.agent_loop.unwrap_or_default().into(),
         };
         Ok(config)
@@ -3915,6 +3923,7 @@ model_verbosity = "high"
                 otel: OtelConfig::default(),
                 github: Default::default(),
                 messaging: Default::default(),
+                api: None,
             },
             o3_profile_config
         );

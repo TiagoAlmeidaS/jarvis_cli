@@ -506,6 +506,48 @@ impl From<MessagingConfigToml> for MessagingConfig {
     }
 }
 
+// ===== API Web configuration =====
+
+/// API Web settings loaded from config.toml. Fields are optional so we can apply defaults.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct ApiConfigToml {
+    /// API key for authentication. Required for API access.
+    pub api_key: Option<String>,
+
+    /// Port for the API server. Defaults to 3000.
+    #[serde(default)]
+    pub port: Option<u16>,
+
+    /// Bind address for the API server. Defaults to "0.0.0.0".
+    #[serde(default)]
+    pub bind_address: Option<String>,
+
+    /// Enable CORS for cross-origin requests. Defaults to false.
+    #[serde(default)]
+    pub enable_cors: Option<bool>,
+}
+
+/// Effective API settings after defaults are applied.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ApiConfig {
+    pub api_key: String,
+    pub port: u16,
+    pub bind_address: String,
+    pub enable_cors: bool,
+}
+
+impl From<ApiConfigToml> for ApiConfig {
+    fn from(toml: ApiConfigToml) -> Self {
+        Self {
+            api_key: toml.api_key.unwrap_or_default(),
+            port: toml.port.unwrap_or(3000),
+            bind_address: toml.bind_address.unwrap_or_else(|| "0.0.0.0".to_string()),
+            enable_cors: toml.enable_cors.unwrap_or(false),
+        }
+    }
+}
+
 // ===== GitHub configuration =====
 
 /// GitHub settings loaded from config.toml. Fields are optional so we can apply defaults.

@@ -3,6 +3,7 @@ members = [
     "backend-client",
     "ansi-escape",
     "async-utils",
+    "web-api",
     "app-server",
     "app-server-protocol",
     "app-server-test-client",
