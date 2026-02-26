@@ -1,6 +1,7 @@
 //! Text chunking utilities for RAG system.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Represents a chunk of text with metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]

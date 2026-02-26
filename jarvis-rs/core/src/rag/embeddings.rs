@@ -6,7 +6,8 @@
 use anyhow::Result;
 use async_trait::async_trait;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::time::Duration;
 
 /// Trait for generating text embeddings.
@@ -62,15 +63,27 @@ impl OllamaEmbeddingGenerator {
         }
     }
 
-    /// Create from default configuration.
+    /// Create from a [`RagConfig`].
     ///
-    /// Uses hardcoded values for VPS Ollama instance:
-    /// - URL: http://100.98.213.86:11434
+    /// Reads the Ollama URL, model name, and embedding dimension from the
+    /// supplied configuration instead of using hardcoded values.
+    pub fn from_rag_config(cfg: &crate::config::types::RagConfig) -> Self {
+        Self::new(
+            cfg.ollama_url.clone(),
+            cfg.ollama_model.clone(),
+            cfg.embedding_dimension,
+        )
+    }
+
+    /// Create from default configuration (legacy).
+    ///
+    /// Uses localhost defaults:
+    /// - URL: http://localhost:11434
     /// - Model: nomic-embed-text
     /// - Dimension: 768
     pub fn from_config() -> Result<Self> {
         Ok(Self::new(
-            "http://100.98.213.86:11434".to_string(),
+            "http://localhost:11434".to_string(),
             "nomic-embed-text".to_string(),
             768, // nomic-embed-text dimension
         ))
@@ -166,6 +179,6 @@ mod tests {
     fn test_from_config() {
         let generator = OllamaEmbeddingGenerator::from_config().unwrap();
         assert_eq!(generator.embedding_dimension(), 768);
-        assert_eq!(generator.base_url, "http://100.98.213.86:11434");
+        assert_eq!(generator.base_url, "http://localhost:11434");
     }
 }

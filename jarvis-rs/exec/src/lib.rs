@@ -62,7 +62,10 @@ use tracing_subscriber::prelude::*;
 use uuid::Uuid;
 
 // RAG integration imports
-use jarvis_core::rag::{RagContextConfig, create_rag_injector, inject_rag_context, is_rag_ready};
+use jarvis_core::rag::RagContextConfig;
+use jarvis_core::rag::create_rag_injector_from_config;
+use jarvis_core::rag::inject_rag_context;
+use jarvis_core::rag::is_rag_ready;
 
 use crate::cli::Command as ExecCommand;
 use crate::event_processor::CodexStatus;
@@ -378,7 +381,7 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
     };
 
     // Initialize RAG context injector
-    let rag_injector = create_rag_injector().await;
+    let rag_injector = create_rag_injector_from_config(&config.rag).await;
 
     // Show RAG status to user (only in non-JSON mode)
     if !json_mode && is_rag_ready(&rag_injector).await {

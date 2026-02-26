@@ -1,16 +1,8 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use anyhow::Context;
 use anyhow::Result;
-use jarvis_core::config::types::McpServerConfig;
-use jarvis_core::config::types::McpServerTransportConfig;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::assert_regex_match;
 use core_test_support::responses;
 use core_test_support::responses::ev_assistant_message;
@@ -25,6 +17,14 @@ use core_test_support::skip_if_no_network;
 use core_test_support::stdio_server_bin;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::config::types::McpServerConfig;
+use jarvis_core::config::types::McpServerTransportConfig;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::user_input::UserInput;
 use serde_json::Value;
 use serde_json::json;
 use std::collections::HashMap;
@@ -536,7 +536,7 @@ async fn mcp_image_output_preserves_image_and_no_text_summary() -> Result<()> {
     let session_model = fixture.session_configured.model.clone();
 
     fixture
-        .jarvis
+        .Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "call the rmcp image tool".into(),
@@ -555,7 +555,10 @@ async fn mcp_image_output_preserves_image_and_no_text_summary() -> Result<()> {
         .await?;
 
     // Wait for completion to ensure the outbound request is captured.
-    wait_for_event(&fixture.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&fixture.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
     let output_item = final_mock.single_request().function_call_output(call_id);
     // Expect exactly one array element: the image item; and no trailing summary text.
     let output = output_item.get("output").expect("output");

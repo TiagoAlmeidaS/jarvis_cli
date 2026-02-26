@@ -9,14 +9,21 @@ use anyhow::Result;
 use async_trait::async_trait;
 use jarvis_daemon_common::DaemonPipeline;
 use reqwest::StatusCode;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 use tokio::sync::RwLock;
-use tracing::{error, warn};
+use tracing::error;
+use tracing::warn;
 
-use super::{LlmClient, LlmConfig, LlmProvider, LlmResponse, OpenAiCompatibleClient};
+use super::LlmClient;
+use super::LlmConfig;
+use super::LlmProvider;
+use super::LlmResponse;
+use super::OpenAiCompatibleClient;
 
 /// Classification of LLM errors to determine if fallback should be attempted.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -29,8 +36,13 @@ pub enum LlmError {
     ContextTooLarge,
     /// HTTP 401/403 - Authentication failed (not recoverable)
     AuthFailed,
+    /// HTTP 403 - Quota/limit exceeded (recoverable, should trigger fallback to other providers)
+    QuotaExceeded,
     /// Network errors, timeouts, connection issues (recoverable)
     NetworkError,
+    /// Endpoint not supported (e.g., 404 for /responses when model only supports /chat/completions)
+    /// This is recoverable and should trigger fallback or retry with different endpoint
+    EndpointNotSupported,
     /// Other errors that may or may not be recoverable
     Other(String),
 }
@@ -40,7 +52,11 @@ impl LlmError {
     pub fn is_recoverable(&self) -> bool {
         matches!(
             self,
-            Self::RateLimitExceeded | Self::ServerError | Self::NetworkError
+            Self::RateLimitExceeded
+                | Self::ServerError
+                | Self::NetworkError
+                | Self::EndpointNotSupported
+                | Self::QuotaExceeded
         )
     }
 
@@ -62,12 +78,24 @@ impl LlmError {
             Self::NetworkError
         } else if err_str.contains("429") {
             Self::RateLimitExceeded
+        } else if err_str.contains("403")
+            && (err_str.contains("limit exceeded")
+                || err_str.contains("quota")
+                || err_str.contains("key limit"))
+        {
+            // 403 with quota/limit exceeded is recoverable (should fallback to other providers)
+            Self::QuotaExceeded
         } else if err_str.contains("401") || err_str.contains("403") {
             Self::AuthFailed
         } else if err_str.contains("400") || err_str.contains("413") {
             Self::ContextTooLarge
         } else if err_str.contains("50") {
             Self::ServerError
+        } else if err_str.contains("404")
+            && (err_str.contains("no endpoints found") || err_str.contains("endpoints found"))
+        {
+            // OpenRouter returns 404 with "No endpoints found" when model doesn't support /responses
+            Self::EndpointNotSupported
         } else {
             Self::Other(err.to_string())
         }
@@ -180,16 +208,16 @@ impl ProviderMetrics {
     fn record_success(&mut self, latency_ms: f64, cost_usd: Option<f64>) {
         let now = chrono::Utc::now();
         let timestamp = now.timestamp();
-        
+
         self.total_requests += 1;
         self.successful_requests += 1;
         self.last_success_at = Some(timestamp);
-        
+
         // Update average latency
         self.latency_sum_ms += latency_ms;
         self.latency_samples += 1;
         self.avg_latency_ms = self.latency_sum_ms / self.latency_samples as f64;
-        
+
         let cost = cost_usd.unwrap_or(0.0);
         if cost > 0.0 {
             self.total_cost_usd += cost;
@@ -203,11 +231,11 @@ impl ProviderMetrics {
     fn record_failure(&mut self, latency_ms: f64) {
         let now = chrono::Utc::now();
         let timestamp = now.timestamp();
-        
+
         self.total_requests += 1;
         self.failed_requests += 1;
         self.last_failure_at = Some(timestamp);
-        
+
         // Update average latency (even failures have latency)
         self.latency_sum_ms += latency_ms;
         self.latency_samples += 1;
@@ -227,16 +255,17 @@ impl ProviderMetrics {
     ) {
         // Hourly metrics
         let hour_key = timestamp.format("%Y-%m-%d-%H").to_string();
-        let hourly = self.hourly_metrics.entry(hour_key.clone()).or_insert_with(|| {
-            HourlyMetrics {
+        let hourly = self
+            .hourly_metrics
+            .entry(hour_key.clone())
+            .or_insert_with(|| HourlyMetrics {
                 hour: hour_key,
                 requests: 0,
                 successful: 0,
                 failed: 0,
                 avg_latency_ms: 0.0,
                 cost_usd: 0.0,
-            }
-        });
+            });
         hourly.requests += 1;
         if success {
             hourly.successful += 1;
@@ -244,21 +273,23 @@ impl ProviderMetrics {
             hourly.failed += 1;
         }
         // Update average latency (simple moving average)
-        hourly.avg_latency_ms = (hourly.avg_latency_ms * (hourly.requests - 1) as f64 + latency_ms) / hourly.requests as f64;
+        hourly.avg_latency_ms = (hourly.avg_latency_ms * (hourly.requests - 1) as f64 + latency_ms)
+            / hourly.requests as f64;
         hourly.cost_usd += cost_usd;
 
         // Daily metrics
         let day_key = timestamp.format("%Y-%m-%d").to_string();
-        let daily = self.daily_metrics.entry(day_key.clone()).or_insert_with(|| {
-            DailyMetrics {
+        let daily = self
+            .daily_metrics
+            .entry(day_key.clone())
+            .or_insert_with(|| DailyMetrics {
                 day: day_key,
                 requests: 0,
                 successful: 0,
                 failed: 0,
                 avg_latency_ms: 0.0,
                 cost_usd: 0.0,
-            }
-        });
+            });
         daily.requests += 1;
         if success {
             daily.successful += 1;
@@ -266,7 +297,8 @@ impl ProviderMetrics {
             daily.failed += 1;
         }
         // Update average latency
-        daily.avg_latency_ms = (daily.avg_latency_ms * (daily.requests - 1) as f64 + latency_ms) / daily.requests as f64;
+        daily.avg_latency_ms = (daily.avg_latency_ms * (daily.requests - 1) as f64 + latency_ms)
+            / daily.requests as f64;
         daily.cost_usd += cost_usd;
     }
 
@@ -383,7 +415,7 @@ pub struct AlertThresholds {
 impl Default for AlertThresholds {
     fn default() -> Self {
         Self {
-            min_success_rate: 80.0, // Alert if success rate drops below 80%
+            min_success_rate: 80.0,     // Alert if success rate drops below 80%
             max_avg_latency_ms: 5000.0, // Alert if avg latency exceeds 5 seconds
         }
     }
@@ -443,9 +475,9 @@ impl LlmRouter {
 
         // Extract llm.strategies section
         let llm_config = config.get("llm")?.get("strategies")?;
-        
+
         let mut strategies = HashMap::new();
-        
+
         if let Some(strategies_table) = llm_config.as_table() {
             for (name, strategy_value) in strategies_table {
                 if let Some(strategy_table) = strategy_value.as_table() {
@@ -460,10 +492,7 @@ impl LlmRouter {
                         })
                         .unwrap_or_default();
 
-                    strategies.insert(
-                        name.clone(),
-                        StrategyConfig { primary, fallbacks },
-                    );
+                    strategies.insert(name.clone(), StrategyConfig { primary, fallbacks });
                 }
             }
         }
@@ -495,7 +524,7 @@ impl LlmRouter {
         strategies.insert(
             "reasoning".to_string(),
             StrategyConfig {
-                primary: "openrouter/deepseek/deepseek-r1:free".to_string(),
+                primary: "openrouter/free".to_string(),
                 fallbacks: vec![
                     "groq/llama-3.3-70b-versatile".to_string(),
                     "google/gemini-2.0-flash".to_string(),
@@ -541,8 +570,10 @@ impl LlmRouter {
                 .and_then(|v| v.get("auto_tune"))
                 .and_then(|v| v.as_bool())
                 .unwrap_or(false);
-            
-            let client = router.create_strategy_client(strategy_name, &llm_config, use_auto_tune).await?;
+
+            let client = router
+                .create_strategy_client(strategy_name, &llm_config, use_auto_tune)
+                .await?;
             Ok(Arc::new(client))
         }
         // Check if auto_strategy is enabled
@@ -573,8 +604,10 @@ impl LlmRouter {
                     .and_then(|v| v.get("auto_tune"))
                     .and_then(|v| v.as_bool())
                     .unwrap_or(true); // Default to true for auto_strategy mode
-                
-                let client = router.create_strategy_client(&strategy_name, &llm_config, use_auto_tune).await?;
+
+                let client = router
+                    .create_strategy_client(&strategy_name, &llm_config, use_auto_tune)
+                    .await?;
                 Ok(Arc::new(client))
             } else {
                 // Fallback to single provider if no strategy matches
@@ -769,8 +802,7 @@ impl LlmRouter {
         if metrics.avg_latency_ms > self.alert_thresholds.max_avg_latency_ms {
             alerts.push(format!(
                 "High latency: {:.2}ms (threshold: {:.2}ms)",
-                metrics.avg_latency_ms,
-                self.alert_thresholds.max_avg_latency_ms
+                metrics.avg_latency_ms, self.alert_thresholds.max_avg_latency_ms
             ));
         }
 
@@ -873,7 +905,10 @@ impl LlmRouter {
     /// Auto-tune strategy based on performance metrics.
     /// Returns a reordered strategy with best performers first.
     /// This doesn't modify the original strategy, but returns an optimized version.
-    pub async fn get_auto_tuned_strategy(&self, strategy_name: &str) -> Result<Option<StrategyConfig>> {
+    pub async fn get_auto_tuned_strategy(
+        &self,
+        strategy_name: &str,
+    ) -> Result<Option<StrategyConfig>> {
         let strategy = self
             .strategies
             .get(strategy_name)
@@ -987,7 +1022,10 @@ impl LlmRouter {
             );
 
             // Also log to file
-            if let Err(e) = self.write_fallback_log(strategy, failed, using, error).await {
+            if let Err(e) = self
+                .write_fallback_log(strategy, failed, using, error)
+                .await
+            {
                 warn!("Failed to write fallback log: {}", e);
             }
         }
@@ -1124,39 +1162,66 @@ impl LlmClient for StrategyClient {
                             let latency_ms = elapsed.as_secs_f64() * 1000.0;
 
                             // Record metrics for failure
-                            self.router.record_metrics_failure(provider_id, latency_ms).await;
-                            
+                            self.router
+                                .record_metrics_failure(provider_id, latency_ms)
+                                .await;
+
                             // Extract HTTP status from error message
                             // Format: "LLM API error {status} ({provider}, {model}):\n{text}"
                             let error_msg = e.to_string();
+                            let error_msg_lower = error_msg.to_lowercase();
                             let llm_error = if error_msg.contains("429") {
                                 LlmError::RateLimitExceeded
+                            } else if error_msg.contains("403")
+                                && (error_msg_lower.contains("limit exceeded")
+                                    || error_msg_lower.contains("quota")
+                                    || error_msg_lower.contains("key limit"))
+                            {
+                                // 403 with quota/limit exceeded is recoverable (should fallback to other providers)
+                                LlmError::QuotaExceeded
                             } else if error_msg.contains("401") || error_msg.contains("403") {
                                 LlmError::AuthFailed
                             } else if error_msg.contains("400") || error_msg.contains("413") {
                                 LlmError::ContextTooLarge
-                            } else if error_msg.contains("500") || error_msg.contains("502") 
-                                || error_msg.contains("503") || error_msg.contains("504") {
+                            } else if error_msg.contains("500")
+                                || error_msg.contains("502")
+                                || error_msg.contains("503")
+                                || error_msg.contains("504")
+                            {
                                 LlmError::ServerError
-                            } else if error_msg.contains("timeout") || error_msg.contains("connection") 
-                                || error_msg.contains("network") {
+                            } else if error_msg.contains("timeout")
+                                || error_msg.contains("connection")
+                                || error_msg.contains("network")
+                            {
                                 LlmError::NetworkError
+                            } else if error_msg.contains("404")
+                                && (error_msg_lower.contains("no endpoints found")
+                                    || error_msg_lower.contains("endpoints found"))
+                            {
+                                // OpenRouter returns 404 with "No endpoints found" when model doesn't support /responses
+                                LlmError::EndpointNotSupported
                             } else {
                                 // Try to parse status code from message
-                                let status_code = error_msg
-                                    .split_whitespace()
-                                    .find_map(|s| {
-                                        // Look for patterns like "HTTP 429" or just "429"
-                                        if s.starts_with("HTTP") {
-                                            s.split_whitespace().nth(1)?.parse::<u16>().ok()
-                                        } else {
-                                            s.parse::<u16>().ok()
-                                        }
-                                    });
-                                
+                                let status_code = error_msg.split_whitespace().find_map(|s| {
+                                    // Look for patterns like "HTTP 429" or just "429"
+                                    if s.starts_with("HTTP") {
+                                        s.split_whitespace().nth(1)?.parse::<u16>().ok()
+                                    } else {
+                                        s.parse::<u16>().ok()
+                                    }
+                                });
+
                                 if let Some(code) = status_code {
                                     if let Ok(status) = StatusCode::from_u16(code) {
-                                        LlmError::from_status(status)
+                                        // For 404, check if it's an endpoint not supported error
+                                        if code == 404
+                                            && (error_msg_lower.contains("no endpoints found")
+                                                || error_msg_lower.contains("endpoints found"))
+                                        {
+                                            LlmError::EndpointNotSupported
+                                        } else {
+                                            LlmError::from_status(status)
+                                        }
                                     } else {
                                         LlmError::from_anyhow(&e)
                                     }
@@ -1231,6 +1296,8 @@ mod tests {
         assert!(LlmError::RateLimitExceeded.is_recoverable());
         assert!(LlmError::ServerError.is_recoverable());
         assert!(LlmError::NetworkError.is_recoverable());
+        assert!(LlmError::QuotaExceeded.is_recoverable());
+        assert!(LlmError::EndpointNotSupported.is_recoverable());
         assert!(!LlmError::ContextTooLarge.is_recoverable());
         assert!(!LlmError::AuthFailed.is_recoverable());
         assert!(!LlmError::Other("test".to_string()).is_recoverable());
@@ -1268,20 +1335,15 @@ mod tests {
     fn test_llm_error_from_anyhow() {
         // Test timeout error
         let timeout_err = anyhow!("request timeout after 30s");
-        assert_eq!(
-            LlmError::from_anyhow(&timeout_err),
-            LlmError::NetworkError
-        );
+        assert_eq!(LlmError::from_anyhow(&timeout_err), LlmError::NetworkError);
 
         // Test connection error
         let conn_err = anyhow!("connection refused");
-        assert_eq!(
-            LlmError::from_anyhow(&conn_err),
-            LlmError::NetworkError
-        );
+        assert_eq!(LlmError::from_anyhow(&conn_err), LlmError::NetworkError);
 
         // Test HTTP 429 error
-        let rate_limit_err = anyhow!("LLM API error 429 (google, gemini-2.0-flash):\nRate limit exceeded");
+        let rate_limit_err =
+            anyhow!("LLM API error 429 (google, gemini-2.0-flash):\nRate limit exceeded");
         assert_eq!(
             LlmError::from_anyhow(&rate_limit_err),
             LlmError::RateLimitExceeded
@@ -1289,17 +1351,22 @@ mod tests {
 
         // Test HTTP 401 error
         let auth_err = anyhow!("LLM API error 401 (openai, gpt-4o-mini):\nUnauthorized");
-        assert_eq!(
-            LlmError::from_anyhow(&auth_err),
-            LlmError::AuthFailed
-        );
+        assert_eq!(LlmError::from_anyhow(&auth_err), LlmError::AuthFailed);
 
         // Test HTTP 500 error
-        let server_err = anyhow!("LLM API error 500 (openrouter, mistral-nemo):\nInternal server error");
-        assert_eq!(
-            LlmError::from_anyhow(&server_err),
-            LlmError::ServerError
+        let server_err =
+            anyhow!("LLM API error 500 (openrouter, mistral-nemo):\nInternal server error");
+        assert_eq!(LlmError::from_anyhow(&server_err), LlmError::ServerError);
+
+        // Test HTTP 403 with quota/limit exceeded (should be QuotaExceeded, recoverable)
+        let quota_err = anyhow!(
+            "LLM API error 403 (openrouter, openrouter/free):\nKey limit exceeded (monthly limit)"
         );
+        assert_eq!(LlmError::from_anyhow(&quota_err), LlmError::QuotaExceeded);
+
+        // Test HTTP 403 without quota/limit message (should be AuthFailed, not recoverable)
+        let auth_403_err = anyhow!("LLM API error 403 (openrouter, openrouter/free):\nForbidden");
+        assert_eq!(LlmError::from_anyhow(&auth_403_err), LlmError::AuthFailed);
     }
 
     #[test]
@@ -1330,7 +1397,7 @@ mod tests {
     #[test]
     fn test_circuit_breaker_cooldown() {
         let mut state = CircuitBreakerState::new();
-        
+
         // Open circuit
         state.record_failure();
         state.record_failure();
@@ -1356,7 +1423,7 @@ mod tests {
         assert!(heavy_context.fallbacks.len() >= 1);
 
         let reasoning = router.strategies.get("reasoning").unwrap();
-        assert_eq!(reasoning.primary, "openrouter/deepseek/deepseek-r1:free");
+        assert_eq!(reasoning.primary, "openrouter/free");
         assert!(!reasoning.fallbacks.is_empty());
 
         let fast_routing = router.strategies.get("fast_routing").unwrap();
@@ -1369,30 +1436,46 @@ mod tests {
         let router = LlmRouter::new();
 
         // Test Google provider
-        let config = router.parse_provider_model("google/gemini-2.0-flash").unwrap();
+        let config = router
+            .parse_provider_model("google/gemini-2.0-flash")
+            .unwrap();
         assert_eq!(config.provider, LlmProvider::Google);
         assert_eq!(config.model, Some("gemini-2.0-flash".to_string()));
 
         // Test OpenRouter provider
-        let config = router.parse_provider_model("openrouter/mistralai/mistral-nemo").unwrap();
+        let config = router
+            .parse_provider_model("openrouter/mistralai/mistral-nemo")
+            .unwrap();
         assert_eq!(config.provider, LlmProvider::Openrouter);
         assert_eq!(config.model, Some("mistralai/mistral-nemo".to_string()));
 
         // Test Groq provider (custom)
-        let config = router.parse_provider_model("groq/llama-3.3-70b-versatile").unwrap();
+        let config = router
+            .parse_provider_model("groq/llama-3.3-70b-versatile")
+            .unwrap();
         assert_eq!(config.provider, LlmProvider::Custom);
-        assert_eq!(config.base_url, Some("https://api.groq.com/openai/v1".to_string()));
+        assert_eq!(
+            config.base_url,
+            Some("https://api.groq.com/openai/v1".to_string())
+        );
         assert_eq!(config.model, Some("llama-3.3-70b-versatile".to_string()));
 
         // Test GitHub provider
         let config = router.parse_provider_model("github/gpt-4o-mini").unwrap();
         assert_eq!(config.provider, LlmProvider::Openai);
-        assert_eq!(config.base_url, Some("https://models.inference.ai/v1".to_string()));
+        assert_eq!(
+            config.base_url,
+            Some("https://models.inference.ai/v1".to_string())
+        );
         assert_eq!(config.model, Some("gpt-4o-mini".to_string()));
 
         // Test invalid format
         assert!(router.parse_provider_model("invalid").is_err());
-        assert!(router.parse_provider_model("unknown/provider/model").is_err());
+        assert!(
+            router
+                .parse_provider_model("unknown/provider/model")
+                .is_err()
+        );
     }
 
     #[test]
@@ -1482,8 +1565,11 @@ mod tests {
         // We're just testing that it doesn't panic and recognizes the strategy
         if let Err(e) = &result {
             let err_msg = e.to_string();
-            assert!(err_msg.contains("API key") || err_msg.contains("No API key") 
-                || err_msg.contains("Unknown strategy"));
+            assert!(
+                err_msg.contains("API key")
+                    || err_msg.contains("No API key")
+                    || err_msg.contains("Unknown strategy")
+            );
         }
         // If it succeeds, that's also fine (means API keys are set)
     }
@@ -1491,22 +1577,22 @@ mod tests {
     #[tokio::test]
     async fn test_circuit_breaker_integration() {
         let router = LlmRouter::new();
-        
+
         // Test that circuit breaker state is shared across router instances
         let identifier = "test-provider/model";
-        
+
         // Initially should allow
         assert!(router.can_attempt_provider(identifier).await);
-        
+
         // Record failures
         router.record_provider_failure(identifier).await;
         router.record_provider_failure(identifier).await;
         assert!(router.can_attempt_provider(identifier).await);
-        
+
         // Third failure should open circuit
         router.record_provider_failure(identifier).await;
         assert!(!router.can_attempt_provider(identifier).await);
-        
+
         // Record success should close circuit
         router.record_provider_success(identifier).await;
         assert!(router.can_attempt_provider(identifier).await);
@@ -1517,8 +1603,11 @@ mod tests {
         // Test that router can be cloned (needed for StrategyClient)
         let router1 = LlmRouter::new();
         let router2 = router1.clone();
-        
+
         assert_eq!(router1.strategies.len(), router2.strategies.len());
-        assert_eq!(router1.strategies.keys().count(), router2.strategies.keys().count());
+        assert_eq!(
+            router1.strategies.keys().count(),
+            router2.strategies.keys().count()
+        );
     }
 }

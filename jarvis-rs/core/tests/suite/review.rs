@@ -1,5 +1,11 @@
-﻿use jarvis_core::JarvisThread;
+use core_test_support::load_sse_fixture_with_id_from_str;
+use core_test_support::responses::ResponseMock;
+use core_test_support::responses::mount_sse_sequence;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
 use jarvis_core::ContentItem;
+use jarvis_core::JarvisThread;
 use jarvis_core::REVIEW_PROMPT;
 use jarvis_core::ResponseItem;
 use jarvis_core::config::Config;
@@ -17,12 +23,6 @@ use jarvis_core::protocol::RolloutItem;
 use jarvis_core::protocol::RolloutLine;
 use jarvis_core::review_format::render_review_output_text;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::load_sse_fixture_with_id_from_str;
-use core_test_support::responses::ResponseMock;
-use core_test_support::responses::mount_sse_sequence;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use pretty_assertions::assert_eq;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -900,7 +900,7 @@ where
         .build(server)
         .await
         .expect("create conversation")
-        .jarvis
+        .Jarvis
 }
 
 /// Create a conversation resuming from a rollout file, configured to talk to the provided mock server.
@@ -925,5 +925,5 @@ where
         .resume(server, jarvis_home, resume_path)
         .await
         .expect("resume conversation")
-        .jarvis
+        .Jarvis
 }

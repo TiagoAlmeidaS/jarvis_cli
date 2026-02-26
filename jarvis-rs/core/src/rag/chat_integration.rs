@@ -2,10 +2,12 @@
 //!
 //! This module provides functionality to inject RAG context into chat conversations.
 
-use crate::rag::{
-    DocumentStore, EmbeddingGenerator, IndexedDocument, OllamaEmbeddingGenerator, SearchResult,
-    VectorStore,
-};
+use crate::rag::DocumentStore;
+use crate::rag::EmbeddingGenerator;
+use crate::rag::IndexedDocument;
+use crate::rag::OllamaEmbeddingGenerator;
+use crate::rag::SearchResult;
+use crate::rag::VectorStore;
 use anyhow::Result;
 use std::sync::Arc;
 
@@ -15,7 +17,9 @@ use crate::rag::QdrantVectorStore;
 #[cfg(feature = "postgres")]
 use crate::rag::document_store::postgres::PostgresDocumentStore;
 
-use crate::rag::{InMemoryDocumentStore, InMemoryVectorStore, JsonFileDocumentStore};
+use crate::rag::InMemoryDocumentStore;
+use crate::rag::InMemoryVectorStore;
+use crate::rag::JsonFileDocumentStore;
 
 /// Context injector for RAG-enhanced chat.
 pub struct RagContextInjector {
@@ -61,12 +65,68 @@ impl RagContextInjector {
         }
     }
 
-    /// Create from default configuration.
+    /// Create from a [`RagConfig`].
     ///
     /// Attempts to use:
-    /// 1. Ollama for embeddings (VPS: 100.98.213.86:11434)
-    /// 2. Qdrant for vector storage (VPS: 100.98.213.86:6333)
-    /// 3. PostgreSQL for document storage (VPS: 100.98.213.86:5432)
+    /// 1. Ollama for embeddings (configured URL)
+    /// 2. Qdrant for vector storage (configured URL)
+    /// 3. PostgreSQL for document storage (configured URL, if set)
+    ///
+    /// Falls back to in-memory/JSON file storage if connections fail.
+    pub async fn from_rag_config(cfg: &crate::config::types::RagConfig) -> Result<Self> {
+        if !cfg.enabled {
+            // Return a disabled injector using in-memory stores
+            let embedding_gen = Arc::new(OllamaEmbeddingGenerator::from_rag_config(cfg));
+            let vector_store: Arc<dyn VectorStore> = Arc::new(InMemoryVectorStore::new());
+            let doc_store: Arc<dyn DocumentStore> = Arc::new(InMemoryDocumentStore::new());
+            return Ok(Self {
+                embedding_gen,
+                vector_store,
+                doc_store,
+                enabled: false,
+            });
+        }
+
+        let embedding_gen = Arc::new(OllamaEmbeddingGenerator::from_rag_config(cfg));
+
+        // Try Qdrant, fallback to in-memory
+        #[cfg(feature = "qdrant")]
+        let vector_store: Arc<dyn VectorStore> = QdrantVectorStore::from_rag_config(cfg)
+            .await
+            .map(|s| Arc::new(s) as Arc<dyn VectorStore>)
+            .unwrap_or_else(|_| Arc::new(InMemoryVectorStore::new()));
+
+        #[cfg(not(feature = "qdrant"))]
+        let vector_store: Arc<dyn VectorStore> = Arc::new(InMemoryVectorStore::new());
+
+        // Try PostgreSQL (if configured), fallback to JSON file
+        #[cfg(feature = "postgres")]
+        let doc_store: Arc<dyn DocumentStore> = if cfg.postgres_url.is_some() {
+            match PostgresDocumentStore::from_rag_config(cfg).await {
+                Ok(s) => Arc::new(s),
+                Err(_) => Self::fallback_doc_store().await,
+            }
+        } else {
+            Self::fallback_doc_store().await
+        };
+
+        #[cfg(not(feature = "postgres"))]
+        let doc_store: Arc<dyn DocumentStore> = Self::fallback_doc_store().await;
+
+        Ok(Self {
+            embedding_gen,
+            vector_store,
+            doc_store,
+            enabled: true,
+        })
+    }
+
+    /// Create from default configuration (legacy).
+    ///
+    /// Attempts to use:
+    /// 1. Ollama for embeddings (localhost:11434)
+    /// 2. Qdrant for vector storage (localhost:6333)
+    /// 3. PostgreSQL for document storage (localhost:5432)
     ///
     /// Falls back to in-memory/JSON file storage if connections fail.
     pub async fn from_config() -> Result<Self> {
@@ -82,36 +142,15 @@ impl RagContextInjector {
         #[cfg(not(feature = "qdrant"))]
         let vector_store: Arc<dyn VectorStore> = Arc::new(InMemoryVectorStore::new());
 
-        // Try PostgreSQL, fallback to JSON file
+        // Try PostgreSQL, fallback to JSON file / in-memory
         #[cfg(feature = "postgres")]
         let doc_store: Arc<dyn DocumentStore> = match PostgresDocumentStore::from_config().await {
             Ok(s) => Arc::new(s),
-            Err(_) => {
-                // Fallback to JSON file store
-                let json_path = jarvis_utils_home_dir::find_jarvis_home()
-                    .ok()
-                    .map(|h| h.join("documents.json"))
-                    .unwrap_or_else(|| std::path::PathBuf::from(".jarvis/documents.json"));
-
-                match JsonFileDocumentStore::new(&json_path).await {
-                    Ok(s) => Arc::new(s),
-                    Err(_) => Arc::new(InMemoryDocumentStore::new()),
-                }
-            }
+            Err(_) => Self::fallback_doc_store().await,
         };
 
         #[cfg(not(feature = "postgres"))]
-        let doc_store: Arc<dyn DocumentStore> = {
-            let json_path = jarvis_utils_home_dir::find_jarvis_home()
-                .ok()
-                .map(|h| h.join("documents.json"))
-                .unwrap_or_else(|| std::path::PathBuf::from(".jarvis/documents.json"));
-
-            match JsonFileDocumentStore::new(&json_path).await {
-                Ok(s) => Arc::new(s),
-                Err(_) => Arc::new(InMemoryDocumentStore::new()),
-            }
-        };
+        let doc_store: Arc<dyn DocumentStore> = Self::fallback_doc_store().await;
 
         Ok(Self {
             embedding_gen,
@@ -119,6 +158,19 @@ impl RagContextInjector {
             doc_store,
             enabled: true,
         })
+    }
+
+    /// Fallback document store: JSON file in jarvis_home, or in-memory.
+    async fn fallback_doc_store() -> Arc<dyn DocumentStore> {
+        let json_path = jarvis_utils_home_dir::find_jarvis_home()
+            .ok()
+            .map(|h| h.join("documents.json"))
+            .unwrap_or_else(|| std::path::PathBuf::from(".jarvis/documents.json"));
+
+        match JsonFileDocumentStore::new(&json_path).await {
+            Ok(s) => Arc::new(s),
+            Err(_) => Arc::new(InMemoryDocumentStore::new()),
+        }
     }
 
     /// Check if RAG is enabled.
@@ -226,9 +278,11 @@ pub struct ContextStats {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rag::{
-        ChunkMetadata, ChunkingConfig, DocumentMetadata, InMemoryDocumentIndexer, TextChunk,
-    };
+    use crate::rag::ChunkMetadata;
+    use crate::rag::ChunkingConfig;
+    use crate::rag::DocumentMetadata;
+    use crate::rag::InMemoryDocumentIndexer;
+    use crate::rag::TextChunk;
     use std::path::PathBuf;
 
     #[tokio::test]

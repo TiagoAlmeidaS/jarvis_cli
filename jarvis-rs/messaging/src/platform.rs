@@ -1,5 +1,7 @@
 use crate::handler::MessageHandler;
-use crate::message::{IncomingMessage, MessageId, OutgoingMessage};
+use crate::message::IncomingMessage;
+use crate::message::MessageId;
+use crate::message::OutgoingMessage;
 
 /// Trait para plataformas de mensageria
 #[async_trait::async_trait]

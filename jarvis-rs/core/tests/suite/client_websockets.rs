@@ -1,7 +1,16 @@
-﻿#![allow(clippy::expect_used, clippy::unwrap_used)]
+#![allow(clippy::expect_used, clippy::unwrap_used)]
+use core_test_support::load_default_config_for_test;
+use core_test_support::responses::WebSocketConnectionConfig;
+use core_test_support::responses::WebSocketTestServer;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::start_websocket_server;
+use core_test_support::responses::start_websocket_server_with_headers;
+use core_test_support::skip_if_no_network;
+use futures::StreamExt;
 use jarvis_core::AuthManager;
-use jarvis_core::JarvisAuth;
 use jarvis_core::ContentItem;
+use jarvis_core::JarvisAuth;
 use jarvis_core::ModelClient;
 use jarvis_core::ModelClientSession;
 use jarvis_core::ModelProviderInfo;
@@ -20,15 +29,6 @@ use jarvis_otel::metrics::MetricsConfig;
 use jarvis_protocol::ThreadId;
 use jarvis_protocol::account::PlanType;
 use jarvis_protocol::config_types::ReasoningSummary;
-use core_test_support::load_default_config_for_test;
-use core_test_support::responses::WebSocketConnectionConfig;
-use core_test_support::responses::WebSocketTestServer;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::start_websocket_server;
-use core_test_support::responses::start_websocket_server_with_headers;
-use core_test_support::skip_if_no_network;
-use futures::StreamExt;
 use opentelemetry_sdk::metrics::InMemoryMetricExporter;
 use pretty_assertions::assert_eq;
 use serde_json::json;
@@ -390,6 +390,7 @@ fn websocket_provider(server: &WebSocketTestServer) -> ModelProviderInfo {
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
         supports_websockets: true,
+        uses_chat_completions_api: false,
     }
 }
 

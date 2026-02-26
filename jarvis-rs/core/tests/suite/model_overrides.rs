@@ -1,9 +1,9 @@
-﻿use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_protocol::openai_models::ReasoningEffort;
 use core_test_support::responses::start_mock_server;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_protocol::openai_models::ReasoningEffort;
 use pretty_assertions::assert_eq;
 
 const CONFIG_TOML: &str = "config.toml";
@@ -21,7 +21,7 @@ async fn override_turn_context_does_not_persist_when_config_exists() {
             config.model = Some("gpt-4o".to_string());
         });
     let test = builder.build(&server).await.expect("create conversation");
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let config_path = test.home.path().join(CONFIG_TOML);
 
     Jarvis
@@ -53,7 +53,7 @@ async fn override_turn_context_does_not_create_config_file() {
     let server = start_mock_server().await;
     let mut builder = test_codex();
     let test = builder.build(&server).await.expect("create conversation");
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let config_path = test.home.path().join(CONFIG_TOML);
     assert!(
         !config_path.exists(),

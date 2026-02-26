@@ -1,9 +1,11 @@
 //! CLI commands for intent detection system.
 
 use anyhow::Result;
-use clap::{Args, Subcommand};
+use clap::Args;
+use clap::Subcommand;
 use jarvis_common::CliConfigOverrides;
-use jarvis_core::intent::{IntentDetector, RuleBasedIntentDetector};
+use jarvis_core::intent::IntentDetector;
+use jarvis_core::intent::RuleBasedIntentDetector;
 use owo_colors::OwoColorize;
 
 /// Intent detection commands

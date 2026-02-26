@@ -2,7 +2,9 @@
 
 use crate::client::GitHubClient;
 use crate::errors::GitHubError;
-use crate::models::{PRComment, PRCommentCreate, PullRequest};
+use crate::models::PRComment;
+use crate::models::PRCommentCreate;
+use crate::models::PullRequest;
 
 /// Get a pull request by number.
 pub async fn get_pr(

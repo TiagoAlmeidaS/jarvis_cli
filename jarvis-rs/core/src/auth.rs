@@ -1441,6 +1441,10 @@ mod tests {
                 tokens: Some(TokenData {
                     id_token: IdTokenInfo {
                         email: Some("user@example.com".to_string()),
+                        email_verified: Some(true),
+                        sub: None,
+                        name: None,
+                        picture: None,
                         chatgpt_plan_type: Some(InternalPlanType::Known(InternalKnownPlan::Pro)),
                         chatgpt_user_id: Some("user-12345".to_string()),
                         chatgpt_account_id: None,

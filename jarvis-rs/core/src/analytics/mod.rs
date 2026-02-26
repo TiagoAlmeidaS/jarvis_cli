@@ -8,7 +8,14 @@ mod queries;
 mod self_improvement;
 mod suggestions;
 
-pub use metrics::{CacheMetrics, CommandMetrics, PerformanceMetrics, SkillMetrics, SystemMetrics};
+pub use metrics::CacheMetrics;
+pub use metrics::CommandMetrics;
+pub use metrics::PerformanceMetrics;
+pub use metrics::SkillMetrics;
+pub use metrics::SystemMetrics;
 pub use queries::AnalyticsQueries;
 pub use self_improvement::SelfImprovement;
-pub use suggestions::{Improvement, ImprovementCategory, ImprovementPriority, group_by_priority};
+pub use suggestions::Improvement;
+pub use suggestions::ImprovementCategory;
+pub use suggestions::ImprovementPriority;
+pub use suggestions::group_by_priority;

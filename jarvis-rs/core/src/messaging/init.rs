@@ -10,7 +10,9 @@ use crate::config::Config;
 use crate::messaging::handler::MessageToJarvisHandler;
 use crate::tools::router::ToolRouter;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 /// Inicializa os servidores de mensageria baseado na configuração usando um JarvisThread.
 /// Esta é a versão recomendada que cria os componentes necessários a partir do thread.

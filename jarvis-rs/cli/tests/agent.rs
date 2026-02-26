@@ -1,4 +1,4 @@
-﻿//! Smoke tests for agent commands.
+//! Smoke tests for agent commands.
 
 use anyhow::Result;
 use predicates::str::contains;
@@ -21,7 +21,9 @@ async fn agent_explore_explores_codebase() -> Result<()> {
         ".",
         "--thoroughness=fast",
         "--output=json",
-    ]).assert().success();
+    ])
+    .assert()
+    .success();
 
     Ok(())
 }
@@ -31,12 +33,9 @@ async fn agent_plan_creates_plan() -> Result<()> {
     let jarvis_home = TempDir::new()?;
 
     let mut cmd = jarvis_command(jarvis_home.path())?;
-    cmd.args([
-        "agent",
-        "plan",
-        "criar função de soma",
-        "--output=json",
-    ]).assert().success();
+    cmd.args(["agent", "plan", "criar função de soma", "--output=json"])
+        .assert()
+        .success();
 
     Ok(())
 }

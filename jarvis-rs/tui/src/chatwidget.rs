@@ -30,9 +30,9 @@ use std::time::Duration;
 use std::time::Instant;
 
 // RAG integration imports
-use jarvis_core::rag::{
-    RagContextConfig, RagContextInjector, create_rag_injector, inject_rag_context,
-};
+use jarvis_core::rag::RagContextConfig;
+use jarvis_core::rag::RagContextInjector;
+use jarvis_core::rag::inject_rag_context;
 
 use crate::version::JARVIS_CLI_VERSION;
 use crossterm::event::KeyCode;
@@ -772,6 +772,7 @@ impl ChatWidget {
                 self.app_event_tx.clone(),
                 self.config.cwd.clone(),
                 self.config.jarvis_home.clone(),
+                self.config.knowledge.clone(),
             );
             self.agent_loop_tx = Some(tx);
             self.agent_loop_cancel = Some(cancel);
@@ -2304,6 +2305,10 @@ impl ChatWidget {
 
         let active_cell = Some(Self::placeholder_session_header_cell(&config));
 
+        let rag_injector = Arc::new(jarvis_core::rag::create_disabled_injector_with_config(
+            Some(&config.rag),
+        ));
+
         let mut widget = Self {
             app_event_tx: app_event_tx.clone(),
             frame_requester: frame_requester.clone(),
@@ -2371,32 +2376,7 @@ impl ChatWidget {
             plan_delta_buffer: String::new(),
             plan_item_active: false,
             last_separator_elapsed_secs: None,
-            rag_injector: {
-                // Initialize RAG injector synchronously (disabled by default)
-                Arc::new({
-                    let embedding_gen = Arc::new(
-                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config().unwrap_or_else(
-                            |_| {
-                                jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                    "http://localhost:11434".to_string(),
-                                    "nomic-embed-text".to_string(),
-                                    768,
-                                )
-                            },
-                        ),
-                    );
-                    let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
-                    let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
-                    let mut injector = RagContextInjector::new(
-                        embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
-                        vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
-                        doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
-                        false,
-                    );
-                    injector.set_enabled(false);
-                    injector
-                })
-            },
+            rag_injector: rag_injector.clone(),
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
             feedback_audience,
@@ -2424,15 +2404,12 @@ impl ChatWidget {
         );
         widget.update_collaboration_mode_indicator();
 
-        widget
-            .bottom_pane
-            .set_connectors_enabled(widget.config.features.enabled(Feature::Apps));
-
         widget.maybe_init_agent_loop();
 
         widget
     }
 
+    /// Create a ChatWidget with a pre-built op sender (e.g., for thread switching).
     pub(crate) fn new_with_op_sender(
         common: ChatWidgetInit,
         jarvis_op_tx: UnboundedSender<Op>,
@@ -2472,13 +2449,16 @@ impl ChatWidget {
             reasoning_effort: None,
             developer_instructions: None,
         };
-        // Collaboration modes start in Default mode.
         let current_collaboration_mode = CollaborationMode {
             mode: ModeKind::Default,
             settings: fallback_default,
         };
 
         let active_cell = Some(Self::placeholder_session_header_cell(&config));
+
+        let rag_injector = Arc::new(jarvis_core::rag::create_disabled_injector_with_config(
+            Some(&config.rag),
+        ));
 
         let mut widget = Self {
             app_event_tx: app_event_tx.clone(),
@@ -2532,10 +2512,6 @@ impl ChatWidget {
             thread_id: None,
             thread_name: None,
             forked_from: None,
-            saw_plan_update_this_turn: false,
-            saw_plan_item_this_turn: false,
-            plan_delta_buffer: String::new(),
-            plan_item_active: false,
             queued_user_messages: VecDeque::new(),
             show_welcome_banner: is_first_run,
             suppress_session_configured_redraw: false,
@@ -2546,33 +2522,12 @@ impl ChatWidget {
             pre_review_token_info: None,
             needs_final_message_separator: false,
             had_work_activity: false,
+            saw_plan_update_this_turn: false,
+            saw_plan_item_this_turn: false,
+            plan_delta_buffer: String::new(),
+            plan_item_active: false,
             last_separator_elapsed_secs: None,
-            rag_injector: {
-                // Initialize RAG injector synchronously (disabled by default)
-                Arc::new({
-                    let embedding_gen = Arc::new(
-                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config().unwrap_or_else(
-                            |_| {
-                                jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                    "http://localhost:11434".to_string(),
-                                    "nomic-embed-text".to_string(),
-                                    768,
-                                )
-                            },
-                        ),
-                    );
-                    let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
-                    let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
-                    let mut injector = RagContextInjector::new(
-                        embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
-                        vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
-                        doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
-                        false,
-                    );
-                    injector.set_enabled(false);
-                    injector
-                })
-            },
+            rag_injector: rag_injector.clone(),
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
             feedback_audience,
@@ -2590,6 +2545,15 @@ impl ChatWidget {
             widget.config.features.enabled(Feature::CollaborationModes),
         );
         widget.sync_personality_command_enabled();
+        #[cfg(target_os = "windows")]
+        widget.bottom_pane.set_windows_degraded_sandbox_active(
+            jarvis_core::windows_sandbox::ELEVATED_SANDBOX_NUX_ENABLED
+                && matches!(
+                    WindowsSandboxLevel::from_config(&widget.config),
+                    WindowsSandboxLevel::RestrictedToken
+                ),
+        );
+        widget.update_collaboration_mode_indicator();
 
         widget.maybe_init_agent_loop();
 
@@ -2644,6 +2608,10 @@ impl ChatWidget {
             mode: ModeKind::Default,
             settings: fallback_default,
         };
+
+        let rag_injector = Arc::new(jarvis_core::rag::create_disabled_injector_with_config(
+            Some(&config.rag),
+        ));
 
         let mut widget = Self {
             app_event_tx: app_event_tx.clone(),
@@ -2712,32 +2680,7 @@ impl ChatWidget {
             plan_delta_buffer: String::new(),
             plan_item_active: false,
             last_separator_elapsed_secs: None,
-            rag_injector: {
-                // Initialize RAG injector synchronously (disabled by default)
-                Arc::new({
-                    let embedding_gen = Arc::new(
-                        jarvis_core::rag::OllamaEmbeddingGenerator::from_config().unwrap_or_else(
-                            |_| {
-                                jarvis_core::rag::OllamaEmbeddingGenerator::new(
-                                    "http://localhost:11434".to_string(),
-                                    "nomic-embed-text".to_string(),
-                                    768,
-                                )
-                            },
-                        ),
-                    );
-                    let vector_store = Arc::new(jarvis_core::rag::InMemoryVectorStore::new());
-                    let doc_store = Arc::new(jarvis_core::rag::InMemoryDocumentStore::new());
-                    let mut injector = RagContextInjector::new(
-                        embedding_gen as Arc<dyn jarvis_core::rag::EmbeddingGenerator>,
-                        vector_store as Arc<dyn jarvis_core::rag::VectorStore>,
-                        doc_store as Arc<dyn jarvis_core::rag::DocumentStore>,
-                        false,
-                    );
-                    injector.set_enabled(false);
-                    injector
-                })
-            },
+            rag_injector: rag_injector.clone(),
             last_rendered_width: std::cell::Cell::new(None),
             feedback,
             feedback_audience,

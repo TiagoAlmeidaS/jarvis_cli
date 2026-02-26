@@ -1,5 +1,6 @@
 use super::Database;
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 
 /// Database migration manager
 pub struct Migrator {

@@ -1,4 +1,4 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use std::fs;
@@ -7,10 +7,6 @@ use std::time::Instant;
 
 use anyhow::Context;
 use anyhow::Result;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_core::sandboxing::SandboxPermissions;
 use core_test_support::assert_regex_match;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
@@ -23,6 +19,10 @@ use core_test_support::responses::sse;
 use core_test_support::responses::start_mock_server;
 use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_core::sandboxing::SandboxPermissions;
 use regex_lite::Regex;
 use serde_json::Value;
 use serde_json::json;

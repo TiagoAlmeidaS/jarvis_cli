@@ -1,7 +1,6 @@
-﻿use std::time::Duration;
+use std::time::Duration;
 
 use anyhow::Result;
-use jarvis_core::features::Feature;
 use core_test_support::assert_regex_match;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
@@ -14,6 +13,7 @@ use core_test_support::skip_if_windows;
 use core_test_support::test_codex::TestCodexBuilder;
 use core_test_support::test_codex::TestCodexHarness;
 use core_test_support::test_codex::test_codex;
+use jarvis_core::features::Feature;
 use serde_json::json;
 use test_case::test_case;
 

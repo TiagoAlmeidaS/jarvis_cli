@@ -1,6 +1,7 @@
 //! Context analysis for autonomous decision-making.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Represents analyzed context for decision-making.

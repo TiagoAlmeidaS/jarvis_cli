@@ -1,6 +1,7 @@
 //! Data models for the daemon automation system.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------

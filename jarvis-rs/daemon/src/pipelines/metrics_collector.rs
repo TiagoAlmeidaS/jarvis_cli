@@ -10,17 +10,28 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{
-    ContentFilter, ContentOutput, ContentStatus, CreateRevenue, GoalFilter, GoalMetricType,
-    GoalStatus, LogLevel, MetricType, RevenueSource,
-};
+use jarvis_daemon_common::ContentFilter;
+use jarvis_daemon_common::ContentOutput;
+use jarvis_daemon_common::ContentStatus;
+use jarvis_daemon_common::CreateRevenue;
+use jarvis_daemon_common::GoalFilter;
+use jarvis_daemon_common::GoalMetricType;
+use jarvis_daemon_common::GoalStatus;
+use jarvis_daemon_common::LogLevel;
+use jarvis_daemon_common::MetricType;
+use jarvis_daemon_common::RevenueSource;
 use serde::Deserialize;
 
-use crate::data_sources::google_adsense::{AdSenseClient, AdSenseConfig};
-use crate::data_sources::google_analytics::{GoogleAnalyticsClient, GoogleAnalyticsConfig};
-use crate::data_sources::google_search_console::{SearchConsoleClient, SearchConsoleConfig};
-use crate::data_sources::wordpress_stats::{WordPressStatsClient, WordPressStatsConfig};
-use crate::pipeline::{Pipeline, PipelineContext};
+use crate::data_sources::google_adsense::AdSenseClient;
+use crate::data_sources::google_adsense::AdSenseConfig;
+use crate::data_sources::google_analytics::GoogleAnalyticsClient;
+use crate::data_sources::google_analytics::GoogleAnalyticsConfig;
+use crate::data_sources::google_search_console::SearchConsoleClient;
+use crate::data_sources::google_search_console::SearchConsoleConfig;
+use crate::data_sources::wordpress_stats::WordPressStatsClient;
+use crate::data_sources::wordpress_stats::WordPressStatsConfig;
+use crate::pipeline::Pipeline;
+use crate::pipeline::PipelineContext;
 
 /// Metrics Collector pipeline implementation.
 pub struct MetricsCollectorPipeline;

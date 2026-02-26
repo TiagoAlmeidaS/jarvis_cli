@@ -1,6 +1,7 @@
 //! Validação de segurança para webhooks
 
-use hmac::{Hmac, Mac};
+use hmac::Hmac;
+use hmac::Mac;
 use sha2::Sha256;
 
 type HmacSha256 = Hmac<Sha256>;

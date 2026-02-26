@@ -1,19 +1,7 @@
-﻿#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)]
 
 use std::collections::HashMap;
 
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::CollaborationMode;
-use jarvis_protocol::config_types::ModeKind;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::config_types::Settings;
-use jarvis_protocol::request_user_input::RequestUserInputAnswer;
-use jarvis_protocol::request_user_input::RequestUserInputResponse;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses;
 use core_test_support::responses::ResponsesRequest;
 use core_test_support::responses::ev_assistant_message;
@@ -27,6 +15,18 @@ use core_test_support::test_codex::TestCodex;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
 use core_test_support::wait_for_event_match;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::CollaborationMode;
+use jarvis_protocol::config_types::ModeKind;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::config_types::Settings;
+use jarvis_protocol::request_user_input::RequestUserInputAnswer;
+use jarvis_protocol::request_user_input::RequestUserInputResponse;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 use serde_json::json;

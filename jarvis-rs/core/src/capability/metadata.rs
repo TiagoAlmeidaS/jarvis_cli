@@ -1,6 +1,7 @@
 //! Capability metadata structures for the capability registry.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Represents metadata for a capability in the system.

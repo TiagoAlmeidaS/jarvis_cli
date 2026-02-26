@@ -1,20 +1,32 @@
 //! CLI commands for RAG context management.
 
 use anyhow::Result;
-use clap::{Args, Subcommand};
+use clap::Args;
+use clap::Subcommand;
 use jarvis_common::CliConfigOverrides;
 use jarvis_core::config::find_jarvis_home;
-use jarvis_core::rag::{
-    ChunkingConfig, DocumentIndexer, DocumentMetadata, DocumentStore, Embedding,
-    EmbeddingGenerator, EmbeddingMetadata, InMemoryDocumentIndexer, InMemoryVectorStore,
-    JsonFileDocumentStore, KnowledgeRetriever, OllamaEmbeddingGenerator, SimpleKnowledgeRetriever,
-    VectorStore,
-};
+use jarvis_core::config::types::RagConfig;
+use jarvis_core::config::types::RagConfigToml;
+use jarvis_core::rag::ChunkingConfig;
+use jarvis_core::rag::DocumentIndexer;
+use jarvis_core::rag::DocumentMetadata;
+use jarvis_core::rag::DocumentStore;
+use jarvis_core::rag::Embedding;
+use jarvis_core::rag::EmbeddingGenerator;
+use jarvis_core::rag::EmbeddingMetadata;
+use jarvis_core::rag::InMemoryDocumentIndexer;
+use jarvis_core::rag::InMemoryVectorStore;
+use jarvis_core::rag::JsonFileDocumentStore;
+use jarvis_core::rag::KnowledgeRetriever;
+use jarvis_core::rag::OllamaEmbeddingGenerator;
+use jarvis_core::rag::SimpleKnowledgeRetriever;
+use jarvis_core::rag::VectorStore;
 use owo_colors::OwoColorize;
 use serde_json;
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::SystemTime;
+use std::time::UNIX_EPOCH;
 
 #[cfg(feature = "qdrant")]
 use jarvis_core::rag::QdrantVectorStore;
@@ -184,10 +196,12 @@ impl ContextCli {
 
 /// Create a document store with fallback strategy.
 async fn create_document_store() -> Arc<dyn DocumentStore> {
+    let rag_config = RagConfig::from(RagConfigToml::default());
+
     // Try PostgreSQL first (if feature enabled)
     #[cfg(feature = "postgres")]
     {
-        if let Ok(store) = PostgresDocumentStore::from_config().await {
+        if let Ok(store) = PostgresDocumentStore::from_rag_config(&rag_config).await {
             return Arc::new(store);
         }
     }
@@ -248,11 +262,12 @@ async fn add_context(args: AddArgs) -> Result<()> {
         println!("{}", "🔮 Generating embeddings...".cyan());
     }
 
-    let embedding_gen = OllamaEmbeddingGenerator::from_config()?;
+    let rag_config = RagConfig::from(RagConfigToml::default());
+    let embedding_gen = OllamaEmbeddingGenerator::from_rag_config(&rag_config);
 
     #[cfg(feature = "qdrant")]
     let vector_store: Arc<dyn VectorStore> = Arc::new(
-        QdrantVectorStore::from_config()
+        QdrantVectorStore::from_rag_config(&rag_config)
             .await
             .map_err(|e| {
                 if args.output == OutputFormat::Human {
@@ -260,7 +275,7 @@ async fn add_context(args: AddArgs) -> Result<()> {
                         "{}",
                         "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow()
                     );
-                    eprintln!("   {}", format!("Error: {}", e).dimmed());
+                    eprintln!("   {}", format!("Error: {e}").dimmed());
                 }
                 e
             })
@@ -376,13 +391,14 @@ async fn search_context(args: SearchArgs) -> Result<()> {
         println!("{}", "🔮 Generating query embedding...".dimmed());
     }
 
-    let embedding_gen = OllamaEmbeddingGenerator::from_config()?;
+    let rag_config = RagConfig::from(RagConfigToml::default());
+    let embedding_gen = OllamaEmbeddingGenerator::from_rag_config(&rag_config);
     let query_embedding = embedding_gen.generate_embedding(&args.query).await?;
 
     // Create vector store
     #[cfg(feature = "qdrant")]
     let vector_store: Arc<dyn VectorStore> = Arc::new(
-        QdrantVectorStore::from_config()
+        QdrantVectorStore::from_rag_config(&rag_config)
             .await
             .map_err(|e| {
                 if args.output == OutputFormat::Human {
@@ -390,7 +406,7 @@ async fn search_context(args: SearchArgs) -> Result<()> {
                         "{}",
                         "⚠️  Failed to connect to Qdrant, using in-memory storage".yellow()
                     );
-                    eprintln!("   {}", format!("Error: {}", e).dimmed());
+                    eprintln!("   {}", format!("Error: {e}").dimmed());
                 }
                 e
             })
@@ -644,7 +660,8 @@ async fn remove_context(args: RemoveArgs) -> Result<()> {
         // Remove embeddings from vector store
         #[cfg(feature = "qdrant")]
         {
-            if let Ok(vector_store) = QdrantVectorStore::from_config().await {
+            let rag_config = RagConfig::from(RagConfigToml::default());
+            if let Ok(vector_store) = QdrantVectorStore::from_rag_config(&rag_config).await {
                 for chunk in &doc.chunks {
                     let _ = vector_store.remove_embedding(&chunk.id).await;
                 }

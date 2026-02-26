@@ -8,14 +8,18 @@
 //! The collected pageviews are matched against `daemon_content` by URL or slug
 //! and persisted as real metrics in the `daemon_metrics` table.
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{DaemonDb, MetricType};
+use jarvis_daemon_common::DaemonDb;
+use jarvis_daemon_common::MetricType;
 use reqwest::Client;
 use serde::Deserialize;
-use tracing::{debug, info};
+use tracing::debug;
+use tracing::info;
 
-use super::{DataSource, SyncResult};
+use super::DataSource;
+use super::SyncResult;
 
 // ---------------------------------------------------------------------------
 // Configuration

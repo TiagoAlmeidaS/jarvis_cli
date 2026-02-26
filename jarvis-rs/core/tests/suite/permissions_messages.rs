@@ -1,4 +1,12 @@
-﻿use anyhow::Result;
+use anyhow::Result;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::responses::sse;
+use core_test_support::responses::start_mock_server;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
 use jarvis_core::config::Constrained;
 use jarvis_core::protocol::AskForApproval;
 use jarvis_core::protocol::EventMsg;
@@ -8,14 +16,6 @@ use jarvis_execpolicy::Policy;
 use jarvis_protocol::models::DeveloperInstructions;
 use jarvis_protocol::user_input::UserInput;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::responses::sse;
-use core_test_support::responses::start_mock_server;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use pretty_assertions::assert_eq;
 use std::collections::HashSet;
 use tempfile::TempDir;
@@ -59,7 +59,7 @@ async fn permissions_message_sent_once_on_start() -> Result<()> {
     });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -68,7 +68,7 @@ async fn permissions_message_sent_once_on_start() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let request = req.single_request();
     let body = request.body_json();
@@ -100,7 +100,7 @@ async fn permissions_message_added_on_override_change() -> Result<()> {
     });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 1".into(),
@@ -109,9 +109,9 @@ async fn permissions_message_added_on_override_change() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: Some(AskForApproval::Never),
@@ -125,7 +125,7 @@ async fn permissions_message_added_on_override_change() -> Result<()> {
         })
         .await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 2".into(),
@@ -134,7 +134,7 @@ async fn permissions_message_added_on_override_change() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let body1 = req1.single_request().body_json();
     let body2 = req2.single_request().body_json();
@@ -172,7 +172,7 @@ async fn permissions_message_not_added_when_no_change() -> Result<()> {
     });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 1".into(),
@@ -181,9 +181,9 @@ async fn permissions_message_not_added_when_no_change() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 2".into(),
@@ -192,7 +192,7 @@ async fn permissions_message_not_added_when_no_change() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let body1 = req1.single_request().body_json();
     let body2 = req2.single_request().body_json();
@@ -241,7 +241,7 @@ async fn resume_replays_permissions_messages() -> Result<()> {
     let home = initial.home.clone();
 
     initial
-        .jarvis
+        .Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 1".into(),
@@ -250,10 +250,13 @@ async fn resume_replays_permissions_messages() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&initial.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&initial.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     initial
-        .jarvis
+        .Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: Some(AskForApproval::Never),
@@ -268,7 +271,7 @@ async fn resume_replays_permissions_messages() -> Result<()> {
         .await?;
 
     initial
-        .jarvis
+        .Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 2".into(),
@@ -277,11 +280,14 @@ async fn resume_replays_permissions_messages() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&initial.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&initial.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     let resumed = builder.resume(&server, home, rollout_path).await?;
     resumed
-        .jarvis
+        .Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "after resume".into(),
@@ -290,7 +296,10 @@ async fn resume_replays_permissions_messages() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&resumed.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&resumed.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     let body3 = req3.single_request().body_json();
     let input = body3["input"].as_array().expect("input array");
@@ -340,7 +349,7 @@ async fn resume_and_fork_append_permissions_messages() -> Result<()> {
     let home = initial.home.clone();
 
     initial
-        .jarvis
+        .Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 1".into(),
@@ -349,10 +358,13 @@ async fn resume_and_fork_append_permissions_messages() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&initial.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&initial.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     initial
-        .jarvis
+        .Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: Some(AskForApproval::Never),
@@ -367,7 +379,7 @@ async fn resume_and_fork_append_permissions_messages() -> Result<()> {
         .await?;
 
     initial
-        .jarvis
+        .Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello 2".into(),
@@ -376,7 +388,10 @@ async fn resume_and_fork_append_permissions_messages() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&initial.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&initial.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     let body2 = req2.single_request().body_json();
     let input2 = body2["input"].as_array().expect("input array");
@@ -388,7 +403,7 @@ async fn resume_and_fork_append_permissions_messages() -> Result<()> {
     });
     let resumed = builder.resume(&server, home, rollout_path.clone()).await?;
     resumed
-        .jarvis
+        .Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "after resume".into(),
@@ -397,7 +412,10 @@ async fn resume_and_fork_append_permissions_messages() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&resumed.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&resumed.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     let body3 = req3.single_request().body_json();
     let input3 = body3["input"].as_array().expect("input array");
@@ -469,7 +487,7 @@ async fn permissions_message_includes_writable_roots() -> Result<()> {
     });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -478,7 +496,7 @@ async fn permissions_message_includes_writable_roots() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let body = req.single_request().body_json();
     let input = body["input"].as_array().expect("input array");

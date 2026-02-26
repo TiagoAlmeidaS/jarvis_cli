@@ -8,9 +8,10 @@ REM
 REM Usage: dev-jarvis.bat [provider] [model]
 REM
 REM Providers:
-REM   free       - OpenRouter Free Strategy (default, best free reasoning model)
+REM   (default)  - Google Gemini (free with daily quotas, best for development)
+REM   free       - OpenRouter Free Strategy
 REM   openrouter - OpenRouter API (same as free, explicit)
-REM   free_google - Google AI Studio Free (requires GOOGLE_API_KEY)
+REM   free_google - Google AI Studio Free (same as default, explicit)
 REM   qwen       - OpenRouter + Qwen3 Coder 80B MoE (best cheap paid for TUI, ~$0.09/day)
 REM   nemo       - OpenRouter + Mistral Nemo 12B (daemon only, no tool calling)
 REM   agent      - AgentLoop + OpenRouter + Mistral Nemo (text-based tool calling)
@@ -24,8 +25,8 @@ REM
 REM ---- OpenRouter Models Reference ----
 REM
 REM Free models (tested with system messages + streaming):
-REM   deepseek/deepseek-r1:free             - Best reasoning (free strategy default)
-REM   Note: When using model_provider=openrouter, use format: deepseek/deepseek-r1:free
+REM   openrouter/free                       - Default free model (free strategy default)
+REM   Note: When using model_provider=openrouter, use format: openrouter/free
 REM   (without the -0528 suffix and without openrouter/ prefix)
 REM   nvidia/nemotron-nano-9b-v2:free       - Fast and light
 REM   stepfun/step-3.5-flash:free           - Fast, good general purpose
@@ -44,7 +45,7 @@ REM IMPORTANT: google/gemma-* models do NOT support system messages
 REM            and will fail with Jarvis (which always sends system prompt).
 REM
 REM Examples:
-REM   dev-jarvis.bat                                       (Free strategy - DeepSeek R1 free)
+REM   dev-jarvis.bat                                       (Default - Google Gemini free)
 REM   dev-jarvis.bat free                                  (Free strategy - explicit)
 REM   dev-jarvis.bat free stepfun/step-3.5-flash:free     (Free strategy - custom model)
 REM   dev-jarvis.bat free_google                           (Google AI Studio free)
@@ -66,9 +67,9 @@ setlocal enabledelayedexpansion
 REM Navigate to project root (parent of scripts/)
 cd /d "%~dp0.."
 
-REM Defaults - Free Strategy
-set "PROVIDER=openrouter"
-set "MODEL=deepseek/deepseek-r1:free"
+REM Defaults - Google Gemini (free with daily quotas)
+set "PROVIDER=google"
+set "MODEL=gemini-2.5-flash"
 set "CARGO_FLAGS="
 set "FREE_STRATEGY=1"
 
@@ -92,7 +93,7 @@ if "%1"=="--release" (
 )
 if "%1"=="free" (
     set "PROVIDER=openrouter"
-    set "MODEL=deepseek/deepseek-r1:free"
+    set "MODEL=openrouter/free"
     set "FREE_STRATEGY=1"
     shift
     goto :parse_args
@@ -106,7 +107,7 @@ if "%1"=="free_google" (
 )
 if "%1"=="openrouter" (
     set "PROVIDER=openrouter"
-    set "MODEL=deepseek/deepseek-r1:free"
+    set "MODEL=openrouter/free"
     set "FREE_STRATEGY=1"
     shift
     goto :parse_args

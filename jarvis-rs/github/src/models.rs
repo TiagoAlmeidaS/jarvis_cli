@@ -1,6 +1,7 @@
 //! Data models for GitHub API operations.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// A GitHub issue.
 #[derive(Debug, Clone, Serialize, Deserialize)]

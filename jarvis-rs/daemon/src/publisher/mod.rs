@@ -4,7 +4,9 @@ pub mod wordpress;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{ContentOutput, Platform, PublishResult};
+use jarvis_daemon_common::ContentOutput;
+use jarvis_daemon_common::Platform;
+use jarvis_daemon_common::PublishResult;
 
 /// Trait for publishing content to an external platform.
 #[async_trait]

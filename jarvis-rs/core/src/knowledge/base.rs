@@ -1,6 +1,7 @@
 //! Knowledge base for accumulating and managing contextual knowledge.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Represents a piece of knowledge in the knowledge base.

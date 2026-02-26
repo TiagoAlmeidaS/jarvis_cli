@@ -10,14 +10,20 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{
-    ActionType, ContentFilter, ContentOutput, CreatePromptScore, CreateProposal, LogLevel,
-    PromptOptimizationSuggestion, RiskLevel,
-};
+use jarvis_daemon_common::ActionType;
+use jarvis_daemon_common::ContentFilter;
+use jarvis_daemon_common::ContentOutput;
+use jarvis_daemon_common::CreatePromptScore;
+use jarvis_daemon_common::CreateProposal;
+use jarvis_daemon_common::LogLevel;
+use jarvis_daemon_common::PromptOptimizationSuggestion;
+use jarvis_daemon_common::RiskLevel;
 use serde::Deserialize;
-use sha2::{Digest, Sha256};
+use sha2::Digest;
+use sha2::Sha256;
 
-use crate::pipeline::{Pipeline, PipelineContext};
+use crate::pipeline::Pipeline;
+use crate::pipeline::PipelineContext;
 use crate::processor;
 
 /// Prompt Optimizer pipeline implementation.

@@ -11,14 +11,25 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{
-    ActionType, ContentFilter, ContentOutput, CreateProposal, GoalFilter, GoalStatus, LogLevel,
-    ProposalFilter, ProposalStatus, RiskLevel,
-};
-use serde::{Deserialize, Serialize};
+use jarvis_daemon_common::ActionType;
+use jarvis_daemon_common::ContentFilter;
+use jarvis_daemon_common::ContentOutput;
+use jarvis_daemon_common::CreateProposal;
+use jarvis_daemon_common::GoalFilter;
+use jarvis_daemon_common::GoalStatus;
+use jarvis_daemon_common::LogLevel;
+use jarvis_daemon_common::ProposalFilter;
+use jarvis_daemon_common::ProposalStatus;
+use jarvis_daemon_common::RiskLevel;
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::decision_engine::{DecisionEngine, DecisionEngineConfig, GoalSnapshot, SystemSnapshot};
-use crate::pipeline::{Pipeline, PipelineContext};
+use crate::decision_engine::DecisionEngine;
+use crate::decision_engine::DecisionEngineConfig;
+use crate::decision_engine::GoalSnapshot;
+use crate::decision_engine::SystemSnapshot;
+use crate::pipeline::Pipeline;
+use crate::pipeline::PipelineContext;
 use crate::processor;
 
 /// Strategy Analyzer pipeline implementation.

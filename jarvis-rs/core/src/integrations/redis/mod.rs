@@ -5,5 +5,6 @@
 mod cache;
 mod multi_level;
 
-pub use cache::{DistributedCache, RedisCache};
+pub use cache::DistributedCache;
+pub use cache::RedisCache;
 pub use multi_level::MultiLevelCache;

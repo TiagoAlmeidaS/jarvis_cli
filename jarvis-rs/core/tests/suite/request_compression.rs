@@ -1,10 +1,5 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 
-use jarvis_core::JarvisAuth;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_response_created;
 use core_test_support::responses::mount_sse_once;
@@ -13,6 +8,11 @@ use core_test_support::responses::start_mock_server;
 use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::JarvisAuth;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -33,7 +33,7 @@ async fn request_body_is_zstd_compressed_for_codex_backend_when_enabled() -> any
             config.features.enable(Feature::EnableRequestCompression);
             config.model_provider.base_url = Some(base_url);
         });
-    let Jarvis = builder.build(&server).await?.jarvis;
+    let Jarvis = builder.build(&server).await?.Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -77,7 +77,7 @@ async fn request_body_is_not_compressed_for_api_key_auth_even_when_enabled() -> 
         config.features.enable(Feature::EnableRequestCompression);
         config.model_provider.base_url = Some(base_url);
     });
-    let Jarvis = builder.build(&server).await?.jarvis;
+    let Jarvis = builder.build(&server).await?.Jarvis;
 
     Jarvis
         .submit(Op::UserInput {

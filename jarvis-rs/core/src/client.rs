@@ -144,6 +144,19 @@ impl ModelClient {
         }
     }
 
+    /// Check if the current provider is OpenRouter.
+    fn is_openrouter_provider(&self) -> bool {
+        let name_lower = self.state.provider.name.to_lowercase();
+        name_lower == "openrouter"
+            || self
+                .state
+                .provider
+                .base_url
+                .as_ref()
+                .map(|url| url.contains("openrouter.ai"))
+                .unwrap_or(false)
+    }
+
     pub fn new_session(&self, turn_metadata_header: Option<String>) -> ModelClientSession {
         ModelClientSession {
             state: Arc::clone(&self.state),
@@ -153,6 +166,21 @@ impl ModelClient {
             turn_metadata_header,
             turn_state: Arc::new(OnceLock::new()),
         }
+    }
+}
+
+impl ModelClientSession {
+    /// Check if the current provider is OpenRouter.
+    fn is_openrouter_provider(&self) -> bool {
+        let name_lower = self.state.provider.name.to_lowercase();
+        name_lower == "openrouter"
+            || self
+                .state
+                .provider
+                .base_url
+                .as_ref()
+                .map(|url| url.contains("openrouter.ai"))
+                .unwrap_or(false)
     }
 }
 
@@ -496,15 +524,22 @@ impl ModelClientSession {
         let mut auth_recovery = auth_manager
             .as_ref()
             .map(super::auth::AuthManager::unauthorized_recovery);
+        let mut tried_chat_completions = false;
         loop {
             let auth = match auth_manager.as_ref() {
                 Some(manager) => manager.auth().await,
                 None => None,
             };
-            let api_provider = self
+            let mut api_provider = self
                 .state
                 .provider
                 .to_api_provider(auth.as_ref().map(JarvisAuth::internal_auth_mode))?;
+
+            // If we're retrying after a 404, enable chat completions API
+            if tried_chat_completions {
+                api_provider.uses_chat_completions_api = true;
+            }
+
             let api_auth = auth_provider_from_auth(auth.clone(), &self.state.provider)?;
             let transport = ReqwestTransport::new(build_reqwest_client());
             let (request_telemetry, sse_telemetry) = self.build_streaming_telemetry();
@@ -528,6 +563,72 @@ impl ModelClientSession {
                 )) if status == StatusCode::UNAUTHORIZED => {
                     handle_unauthorized(unauthorized_transport, &mut auth_recovery).await?;
                     continue;
+                }
+                Err(ApiError::Transport(TransportError::Http { status, body, .. }))
+                    if status == StatusCode::NOT_FOUND && self.is_openrouter_provider() =>
+                {
+                    let body_text = body.unwrap_or_default();
+                    // Check if this is the specific OpenRouter error about endpoints not found
+                    if body_text.contains("No endpoints found")
+                        || body_text.contains("no endpoints found")
+                    {
+                        if !tried_chat_completions {
+                            // First attempt failed, retry with chat completions
+                            tracing::warn!(
+                                "OpenRouter returned 404 for /responses endpoint, retrying with /chat/completions"
+                            );
+                            tried_chat_completions = true;
+                            continue;
+                        } else {
+                            // Both endpoints failed - model is not available
+                            // Try to fetch free models from OpenRouter API to suggest alternatives
+                            let api_key = self.state.provider.api_key().ok().flatten();
+                            let free_models = crate::openrouter_models::get_free_models_for_error(
+                                api_key.as_deref(),
+                                5, // Limit to 5 models for error message
+                            )
+                            .await;
+
+                            let error_body = if let Some(models) = free_models {
+                                if !models.is_empty() {
+                                    let models_list = models
+                                        .iter()
+                                        .map(|m| format!("• {}", m))
+                                        .collect::<Vec<_>>()
+                                        .join("\n");
+                                    format!(
+                                        "Model '{}' is not available on OpenRouter. Both /responses and /chat/completions endpoints returned 404.\n\nFree models available on OpenRouter:\n{}\n\nTry using one of these models or check: https://openrouter.ai/models",
+                                        self.state.model_info.slug, models_list
+                                    )
+                                } else {
+                                    format!(
+                                        "Model '{}' is not available on OpenRouter. Both /responses and /chat/completions endpoints returned 404.\n\nNo free models found. Check available models at: https://openrouter.ai/models",
+                                        self.state.model_info.slug
+                                    )
+                                }
+                            } else {
+                                format!(
+                                    "Model '{}' is not available on OpenRouter. Both /responses and /chat/completions endpoints returned 404.\n\nCheck available models at: https://openrouter.ai/models",
+                                    self.state.model_info.slug
+                                )
+                            };
+
+                            return Err(map_api_error(ApiError::Transport(TransportError::Http {
+                                status,
+                                url: Some(
+                                    "https://openrouter.ai/api/v1/chat/completions".to_string(),
+                                ),
+                                headers: None,
+                                body: Some(error_body),
+                            })));
+                        }
+                    }
+                    return Err(map_api_error(ApiError::Transport(TransportError::Http {
+                        status,
+                        url: None,
+                        headers: None,
+                        body: Some(body_text),
+                    })));
                 }
                 Err(err) => return Err(map_api_error(err)),
             }

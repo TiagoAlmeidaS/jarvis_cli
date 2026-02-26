@@ -9,10 +9,15 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{ContentOutput, ContentType, LogLevel, Platform};
-use serde::{Deserialize, Serialize};
+use jarvis_daemon_common::ContentOutput;
+use jarvis_daemon_common::ContentType;
+use jarvis_daemon_common::LogLevel;
+use jarvis_daemon_common::Platform;
+use serde::Deserialize;
+use serde::Serialize;
 
-use crate::pipeline::{Pipeline, PipelineContext};
+use crate::pipeline::Pipeline;
+use crate::pipeline::PipelineContext;
 use crate::processor;
 use crate::publisher;
 use crate::scraper;

@@ -1,6 +1,7 @@
 //! Types for intent detection system.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Represents the type of intent detected from user input.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

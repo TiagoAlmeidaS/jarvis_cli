@@ -1,4 +1,7 @@
-use jarvis_messaging::message::{MessageId, MessageType, OutgoingMessage, Platform};
+use jarvis_messaging::message::MessageId;
+use jarvis_messaging::message::MessageType;
+use jarvis_messaging::message::OutgoingMessage;
+use jarvis_messaging::message::Platform;
 use reqwest::Client;
 
 use crate::config::WhatsAppConfig;

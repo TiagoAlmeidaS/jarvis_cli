@@ -5,8 +5,10 @@
 
 use crate::models::*;
 use anyhow::Result;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
-use sqlx::{Row, SqlitePool};
+use sqlx::Row;
+use sqlx::SqlitePool;
+use sqlx::sqlite::SqliteConnectOptions;
+use sqlx::sqlite::SqlitePoolOptions;
 use std::path::Path;
 use std::str::FromStr;
 use uuid::Uuid;
@@ -1478,7 +1480,8 @@ fn compute_composite_score(ctr: f64, clicks: i64, revenue: f64) -> f64 {
 // ---------------------------------------------------------------------------
 
 fn compute_content_hash(body: &str) -> String {
-    use sha2::{Digest, Sha256};
+    use sha2::Digest;
+    use sha2::Sha256;
     let mut hasher = Sha256::new();
     hasher.update(body.as_bytes());
     hex::encode(hasher.finalize())

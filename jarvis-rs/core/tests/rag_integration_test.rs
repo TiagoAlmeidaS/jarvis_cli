@@ -3,11 +3,20 @@
 //! These tests verify the complete RAG pipeline from document indexing
 //! to context injection in chat.
 
-use jarvis_core::rag::{
-    ChunkingConfig, DocumentIndexer, DocumentMetadata, EmbeddingGenerator, InMemoryDocumentIndexer,
-    InMemoryDocumentStore, InMemoryVectorStore, OllamaEmbeddingGenerator, RagContextConfig,
-    RagContextInjector, VectorStore, create_rag_injector, inject_rag_context,
-};
+use jarvis_core::rag::ChunkingConfig;
+use jarvis_core::rag::DocumentIndexer;
+use jarvis_core::rag::DocumentMetadata;
+use jarvis_core::rag::DocumentStore;
+use jarvis_core::rag::EmbeddingGenerator;
+use jarvis_core::rag::InMemoryDocumentIndexer;
+use jarvis_core::rag::InMemoryDocumentStore;
+use jarvis_core::rag::InMemoryVectorStore;
+use jarvis_core::rag::OllamaEmbeddingGenerator;
+use jarvis_core::rag::RagContextConfig;
+use jarvis_core::rag::RagContextInjector;
+use jarvis_core::rag::VectorStore;
+use jarvis_core::rag::create_rag_injector;
+use jarvis_core::rag::inject_rag_context;
 use std::sync::Arc;
 use tempfile::TempDir;
 use tokio;

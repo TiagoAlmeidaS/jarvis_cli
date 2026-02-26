@@ -1,11 +1,11 @@
-﻿#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)]
 
-use jarvis_core::features::Feature;
-use jarvis_protocol::config_types::WebSearchMode;
 use core_test_support::responses;
 use core_test_support::responses::start_mock_server;
 use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
+use jarvis_core::features::Feature;
+use jarvis_protocol::config_types::WebSearchMode;
 
 #[allow(clippy::expect_used)]
 fn tool_identifiers(body: &serde_json::Value) -> Vec<String> {

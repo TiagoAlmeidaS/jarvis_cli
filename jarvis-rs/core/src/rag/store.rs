@@ -2,7 +2,8 @@
 
 use crate::rag::chunk::TextChunk;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Represents a vector embedding.
@@ -163,9 +164,11 @@ impl VectorStore for InMemoryVectorStore {
 pub mod qdrant {
     use super::*;
     use qdrant_client::prelude::*;
-    use qdrant_client::qdrant::{
-        Distance, PointStruct, VectorParams, VectorsConfig, vectors_config::Config,
-    };
+    use qdrant_client::qdrant::Distance;
+    use qdrant_client::qdrant::PointStruct;
+    use qdrant_client::qdrant::VectorParams;
+    use qdrant_client::qdrant::VectorsConfig;
+    use qdrant_client::qdrant::vectors_config::Config;
 
     /// Qdrant-based vector store implementation.
     pub struct QdrantVectorStore {
@@ -174,19 +177,27 @@ pub mod qdrant {
     }
 
     impl QdrantVectorStore {
-        /// Creates a new Qdrant vector store from default configuration.
+        /// Creates a new Qdrant vector store from a [`RagConfig`].
         ///
-        /// Uses hardcoded values for VPS Qdrant instance:
-        /// - URL: http://100.98.213.86:6333
+        /// Reads the Qdrant URL, collection name, and embedding dimension
+        /// from the supplied configuration.
+        pub async fn from_rag_config(cfg: &crate::config::types::RagConfig) -> Result<Self> {
+            Self::new(
+                &cfg.qdrant_url,
+                cfg.qdrant_collection.clone(),
+                cfg.embedding_dimension as u64,
+            )
+            .await
+        }
+
+        /// Creates a new Qdrant vector store from default configuration (legacy).
+        ///
+        /// Uses localhost defaults:
+        /// - URL: http://localhost:6333
         /// - Collection: jarvis_knowledge
         /// - Dimension: 768 (nomic-embed-text)
         pub async fn from_config() -> Result<Self> {
-            Self::new(
-                "http://100.98.213.86:6333",
-                "jarvis_knowledge".to_string(),
-                768,
-            )
-            .await
+            Self::new("http://localhost:6333", "jarvis_knowledge".to_string(), 768).await
         }
 
         /// Creates a new Qdrant vector store.

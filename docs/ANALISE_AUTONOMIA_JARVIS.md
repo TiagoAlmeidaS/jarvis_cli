@@ -255,6 +255,8 @@ O resumo diário e alertas já existem. **Aprovação inline (botões) é priori
 | [AUTONOMOUS_ARCHITECTURE_COMPLETE.md](AUTONOMOUS_ARCHITECTURE_COMPLETE.md) | Arquitetura autônoma do core (fases 1–3) |
 | [PLANO_IMPLEMENTACAO.md](../PLANO_IMPLEMENTACAO.md) | Comandos CLI planejados |
 | [daemon-automation.md](features/daemon-automation.md) | Especificação do daemon |
+| [codebase-exploration-guide.md](reports/codebase-exploration-guide.md) | **NOVO**: Guia de exploração do codebase para análises |
+| [gap-analysis-response-vs-reality.md](reports/gap-analysis-response-vs-reality.md) | **NOVO**: Análise comparativa de resposta genérica vs realidade |
 
 ---
 

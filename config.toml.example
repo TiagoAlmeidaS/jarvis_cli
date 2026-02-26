@@ -216,6 +216,29 @@ model_provider = "databricks"
 # Perfil padrão
 profile = "default"
 
+# ============================================================================
+# API WEB SERVER (Web API Server)
+# ============================================================================
+# Configuração do servidor HTTP REST para acesso remoto via web interface
+# Necessário para usar o dashboard web do daemon e a API REST
+
+[api]
+# API key para autenticação (OBRIGATÓRIO)
+# Gere uma chave segura com: openssl rand -hex 32
+api_key = "sua-chave-secreta-aqui"
+
+# Porta do servidor (opcional, padrão: 3000)
+port = 3000
+
+# Endereço de bind (opcional, padrão: "0.0.0.0")
+# Use "127.0.0.1" para aceitar apenas conexões locais
+# Use "0.0.0.0" para aceitar conexões de qualquer interface
+bind_address = "0.0.0.0"
+
+# Habilitar CORS para requisições cross-origin (opcional, padrão: false)
+# Use true apenas se precisar acessar a API de outro domínio
+enable_cors = false
+
 # Configurações do GitHub (se necessário)
 [github]
 token = "your_github_pat_here"
@@ -284,7 +307,7 @@ fallbacks = [
 
 # Estratégia para tarefas que exigem raciocínio lógico (code review, planejamento)
 [llm.strategies.reasoning]
-primary = "openrouter/deepseek/deepseek-r1:free"
+primary = "openrouter/free"
 fallbacks = [
     "groq/llama-3.3-70b-versatile",
     "google/gemini-2.0-flash"

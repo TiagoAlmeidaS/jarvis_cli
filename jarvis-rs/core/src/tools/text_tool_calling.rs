@@ -14,7 +14,8 @@
 //! 3. **Mode detection**: Heuristically decides whether a model/provider
 //!    combination should use native or text-based calling.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use uuid::Uuid;
 
 // ---------------------------------------------------------------------------

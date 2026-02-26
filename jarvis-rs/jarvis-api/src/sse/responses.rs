@@ -323,6 +323,10 @@ pub async fn process_sse(
 ) {
     let mut stream = stream.eventsource();
     let mut response_error: Option<ApiError> = None;
+    let mut is_chat_completions_format = false;
+    let mut received_any_event = false;
+    let mut chat_completions_item_created = false;
+    let mut chat_completions_item: Option<ResponseItem> = None;
 
     loop {
         let start = Instant::now();
@@ -338,6 +342,30 @@ pub async fn process_sse(
                 return;
             }
             Ok(None) => {
+                // Stream closed - if we detected Chat Completions format and received events,
+                // generate a synthetic response.completed instead of error
+                if is_chat_completions_format && received_any_event && response_error.is_none() {
+                    debug!(
+                        "Stream closed normally for Chat Completions API, finalizing item and generating synthetic response.completed"
+                    );
+                    // Finalize the message item if we created one
+                    if let Some(item) = chat_completions_item {
+                        if tx_event
+                            .send(Ok(ResponseEvent::OutputItemDone(item)))
+                            .await
+                            .is_err()
+                        {
+                            return;
+                        }
+                    }
+                    let _ = tx_event
+                        .send(Ok(ResponseEvent::Completed {
+                            response_id: String::new(),
+                            token_usage: None,
+                        }))
+                        .await;
+                    return;
+                }
                 let error = response_error.unwrap_or(ApiError::Stream(
                     "stream closed before response.completed".into(),
                 ));
@@ -354,29 +382,106 @@ pub async fn process_sse(
 
         trace!("SSE event: {}", &sse.data);
 
-        let event: ResponsesStreamEvent = match serde_json::from_str(&sse.data) {
-            Ok(event) => event,
-            Err(e) => {
-                debug!("Failed to parse SSE event: {e}, data: {}", &sse.data);
+        // Try to parse as Responses API format first
+        match serde_json::from_str::<ResponsesStreamEvent>(&sse.data) {
+            Ok(event) => {
+                // Successfully parsed as Responses API format
+                match process_responses_event(event) {
+                    Ok(Some(event)) => {
+                        let is_completed = matches!(event, ResponseEvent::Completed { .. });
+                        if tx_event.send(Ok(event)).await.is_err() {
+                            return;
+                        }
+                        if is_completed {
+                            return;
+                        }
+                        continue;
+                    }
+                    Ok(None) => continue,
+                    Err(error) => {
+                        response_error = Some(error.into_api_error());
+                        continue;
+                    }
+                }
+            }
+            Err(_) => {
+                // Failed to parse as Responses API - might be Chat Completions format
+                // Check if it looks like Chat Completions format (has "choices" or "object": "chat.completion.chunk")
+                if let Ok(chat_data) = serde_json::from_str::<serde_json::Value>(&sse.data) {
+                    if chat_data.get("choices").is_some()
+                        || chat_data.get("object").and_then(|v| v.as_str())
+                            == Some("chat.completion.chunk")
+                        || chat_data.get("object").and_then(|v| v.as_str())
+                            == Some("chat.completion")
+                    {
+                        is_chat_completions_format = true;
+                        received_any_event = true;
+
+                        // Create the message item on first content delta
+                        if !chat_completions_item_created {
+                            use jarvis_protocol::models::ResponseItem;
+                            let message_item = ResponseItem::Message {
+                                id: None,
+                                role: "assistant".to_string(),
+                                content: vec![],
+                                end_turn: None,
+                                phase: None,
+                            };
+                            chat_completions_item = Some(message_item.clone());
+                            if tx_event
+                                .send(Ok(ResponseEvent::OutputItemAdded(message_item)))
+                                .await
+                                .is_err()
+                            {
+                                return;
+                            }
+                            chat_completions_item_created = true;
+                        }
+
+                        // For Chat Completions, we extract content from choices[0].delta.content
+                        if let Some(choices) = chat_data.get("choices").and_then(|c| c.as_array()) {
+                            if let Some(first_choice) = choices.first() {
+                                if let Some(delta) = first_choice.get("delta") {
+                                    if let Some(content) =
+                                        delta.get("content").and_then(|c| c.as_str())
+                                    {
+                                        if !content.is_empty() {
+                                            if tx_event
+                                                .send(Ok(ResponseEvent::OutputTextDelta(
+                                                    content.to_string(),
+                                                )))
+                                                .await
+                                                .is_err()
+                                            {
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Check if this is a completion event (choices[0].finish_reason is set)
+                        if let Some(choices) = chat_data.get("choices").and_then(|c| c.as_array()) {
+                            if let Some(first_choice) = choices.first() {
+                                if first_choice.get("finish_reason").is_some() {
+                                    // This is the final chunk - stream will close next
+                                    debug!(
+                                        "Received Chat Completions finish_reason, will complete on stream close"
+                                    );
+                                }
+                            }
+                        }
+                        continue;
+                    }
+                }
+                // Not Chat Completions format either - log and continue
+                debug!(
+                    "Failed to parse SSE event as Responses API or Chat Completions, data: {}",
+                    &sse.data
+                );
                 continue;
             }
-        };
-
-        match process_responses_event(event) {
-            Ok(Some(event)) => {
-                let is_completed = matches!(event, ResponseEvent::Completed { .. });
-                if tx_event.send(Ok(event)).await.is_err() {
-                    return;
-                }
-                if is_completed {
-                    return;
-                }
-            }
-            Ok(None) => {}
-            Err(error) => {
-                response_error = Some(error.into_api_error());
-            }
-        };
+        }
     }
 }
 

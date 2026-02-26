@@ -1,8 +1,10 @@
 //! Capability registry for managing and discovering system capabilities.
 
-use crate::capability::metadata::{CapabilityMetadata, CapabilityType};
+use crate::capability::metadata::CapabilityMetadata;
+use crate::capability::metadata::CapabilityType;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;

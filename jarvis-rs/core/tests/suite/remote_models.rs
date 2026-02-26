@@ -1,9 +1,25 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 #![allow(clippy::expect_used)]
 // unified exec is not supported on Windows OS
 use std::sync::Arc;
 
 use anyhow::Result;
+use core_test_support::load_default_config_for_test;
+use core_test_support::responses::ev_assistant_message;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_function_call;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::mount_models_once;
+use core_test_support::responses::mount_models_once_with_delay;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::responses::mount_sse_sequence;
+use core_test_support::responses::sse;
+use core_test_support::skip_if_no_network;
+use core_test_support::skip_if_sandbox;
+use core_test_support::test_codex::TestCodex;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
+use core_test_support::wait_for_event_match;
 use jarvis_core::JarvisAuth;
 use jarvis_core::ModelProviderInfo;
 use jarvis_core::built_in_model_providers;
@@ -27,22 +43,6 @@ use jarvis_protocol::openai_models::ReasoningEffortPreset;
 use jarvis_protocol::openai_models::TruncationPolicyConfig;
 use jarvis_protocol::openai_models::default_input_modalities;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::load_default_config_for_test;
-use core_test_support::responses::ev_assistant_message;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_function_call;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::mount_models_once;
-use core_test_support::responses::mount_models_once_with_delay;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::responses::mount_sse_sequence;
-use core_test_support::responses::sse;
-use core_test_support::skip_if_no_network;
-use core_test_support::skip_if_sandbox;
-use core_test_support::test_codex::TestCodex;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
-use core_test_support::wait_for_event_match;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 use tempfile::TempDir;

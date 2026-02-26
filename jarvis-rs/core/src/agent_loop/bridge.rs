@@ -12,20 +12,25 @@
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use serde::Deserialize;
 
-use super::{
-    AgentLlmClient, AgentMessage, AgentToolExecutor, ThinkResponse, ToolCallRequest, ToolCallResult,
-};
-use crate::tools::text_tool_calling::{
-    TextToolSpec, build_tool_prompt_injection, default_text_tool_specs, parse_tool_calls_from_text,
-};
+use super::AgentLlmClient;
+use super::AgentMessage;
+use super::AgentToolExecutor;
+use super::ThinkResponse;
+use super::ToolCallRequest;
+use super::ToolCallResult;
+use crate::tools::text_tool_calling::TextToolSpec;
+use crate::tools::text_tool_calling::build_tool_prompt_injection;
+use crate::tools::text_tool_calling::default_text_tool_specs;
+use crate::tools::text_tool_calling::parse_tool_calls_from_text;
 
 // Re-export for consumers outside the core crate.
-pub use crate::tools::text_tool_calling::{
-    TextToolSpec as ToolSpec, ToolCallingMode, default_text_tool_specs as default_tool_specs,
-};
+pub use crate::tools::text_tool_calling::TextToolSpec as ToolSpec;
+pub use crate::tools::text_tool_calling::ToolCallingMode;
+pub use crate::tools::text_tool_calling::default_text_tool_specs as default_tool_specs;
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -649,7 +654,9 @@ mod tests {
 
     #[tokio::test]
     async fn full_agent_loop_with_bridge() {
-        use super::super::{AgentLoop, AgentLoopConfig, StopReason};
+        use super::super::AgentLoop;
+        use super::super::AgentLoopConfig;
+        use super::super::StopReason;
         use std::sync::Mutex;
 
         // Mock LLM that returns a final text response (no tool calls).
@@ -699,7 +706,9 @@ mod tests {
 
     #[tokio::test]
     async fn full_agent_loop_with_tool_call() {
-        use super::super::{AgentLoop, AgentLoopConfig, StopReason};
+        use super::super::AgentLoop;
+        use super::super::AgentLoopConfig;
+        use super::super::StopReason;
 
         // Mock LLM: first call returns a tool call, second returns final answer.
         struct ToolCallingLlm {

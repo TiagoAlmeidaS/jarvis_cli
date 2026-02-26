@@ -1,16 +1,8 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 
 use std::fs;
 
 use assert_matches::assert_matches;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::plan_tool::StepStatus;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::assert_regex_match;
 use core_test_support::responses;
 use core_test_support::responses::ResponsesRequest;
@@ -26,6 +18,14 @@ use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::TestCodex;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::plan_tool::StepStatus;
+use jarvis_protocol::user_input::UserInput;
 use serde_json::Value;
 use serde_json::json;
 fn call_output(req: &ResponsesRequest, call_id: &str) -> (String, Option<bool>) {

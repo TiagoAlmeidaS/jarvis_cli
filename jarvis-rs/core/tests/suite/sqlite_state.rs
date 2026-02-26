@@ -1,4 +1,11 @@
-﻿use anyhow::Result;
+use anyhow::Result;
+use core_test_support::responses;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_function_call;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::mount_sse_sequence;
+use core_test_support::responses::start_mock_server;
+use core_test_support::test_codex::test_codex;
 use jarvis_core::features::Feature;
 use jarvis_protocol::ThreadId;
 use jarvis_protocol::dynamic_tools::DynamicToolSpec;
@@ -9,13 +16,6 @@ use jarvis_protocol::protocol::SessionMeta;
 use jarvis_protocol::protocol::SessionMetaLine;
 use jarvis_protocol::protocol::SessionSource;
 use jarvis_protocol::protocol::UserMessageEvent;
-use core_test_support::responses;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_function_call;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::mount_sse_sequence;
-use core_test_support::responses::start_mock_server;
-use core_test_support::test_codex::test_codex;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 use std::fs;
@@ -32,7 +32,7 @@ async fn new_thread_is_recorded_in_state_db() -> Result<()> {
     let test = builder.build(&server).await?;
 
     let thread_id = test.session_configured.session_id;
-    let rollout_path = test.jarvis.rollout_path().expect("rollout path");
+    let rollout_path = test.Jarvis.rollout_path().expect("rollout path");
     let db_path = jarvis_state::state_db_path(test.config.jarvis_home.as_path());
 
     for _ in 0..100 {
@@ -42,7 +42,7 @@ async fn new_thread_is_recorded_in_state_db() -> Result<()> {
         tokio::time::sleep(Duration::from_millis(25)).await;
     }
 
-    let db = test.jarvis.state_db().expect("state db enabled");
+    let db = test.Jarvis.state_db().expect("state db enabled");
 
     let mut metadata = None;
     for _ in 0..100 {
@@ -154,7 +154,7 @@ async fn backfill_scans_existing_rollouts() -> Result<()> {
         tokio::time::sleep(Duration::from_millis(25)).await;
     }
 
-    let db = test.jarvis.state_db().expect("state db enabled");
+    let db = test.Jarvis.state_db().expect("state db enabled");
 
     let mut metadata = None;
     for _ in 0..40 {
@@ -213,7 +213,7 @@ async fn user_messages_persist_in_state_db() -> Result<()> {
     test.submit_turn("hello from sqlite").await?;
     test.submit_turn("another message").await?;
 
-    let db = test.jarvis.state_db().expect("state db enabled");
+    let db = test.Jarvis.state_db().expect("state db enabled");
     let thread_id = test.session_configured.session_id;
 
     let mut metadata = None;
@@ -262,7 +262,7 @@ async fn tool_call_logs_include_thread_id() -> Result<()> {
         config.features.enable(Feature::Sqlite);
     });
     let test = builder.build(&server).await?;
-    let db = test.jarvis.state_db().expect("state db enabled");
+    let db = test.Jarvis.state_db().expect("state db enabled");
     let expected_thread_id = test.session_configured.session_id.to_string();
 
     let subscriber = tracing_subscriber::registry().with(jarvis_state::log_db::start(db.clone()));

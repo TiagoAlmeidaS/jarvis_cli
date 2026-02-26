@@ -8,16 +8,23 @@
 //! Revenue is matched against `daemon_content` by URL and persisted
 //! into `daemon_revenue` (source = `adsense`).
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{CreateRevenue, DaemonDb, RevenueSource};
+use jarvis_daemon_common::CreateRevenue;
+use jarvis_daemon_common::DaemonDb;
+use jarvis_daemon_common::RevenueSource;
 use reqwest::Client;
 use serde::Deserialize;
 use std::path::PathBuf;
-use tracing::{debug, info};
+use tracing::debug;
+use tracing::info;
 
-use super::google_auth::{self, GoogleOAuthConfig, GoogleTokens};
-use super::{DataSource, SyncResult};
+use super::DataSource;
+use super::SyncResult;
+use super::google_auth::GoogleOAuthConfig;
+use super::google_auth::GoogleTokens;
+use super::google_auth::{self};
 
 // ---------------------------------------------------------------------------
 // Configuration

@@ -1,12 +1,16 @@
 //! CLI commands for system analytics and self-improvement.
 
-use anyhow::{Context, Result};
-use clap::{Args, Subcommand};
+use anyhow::Context;
+use anyhow::Result;
+use clap::Args;
+use clap::Subcommand;
 use jarvis_common::CliConfigOverrides;
-use jarvis_core::analytics::{
-    Improvement, ImprovementPriority, SelfImprovement, group_by_priority,
-};
-use jarvis_core::integrations::redis::{MultiLevelCache, RedisCache};
+use jarvis_core::analytics::Improvement;
+use jarvis_core::analytics::ImprovementPriority;
+use jarvis_core::analytics::SelfImprovement;
+use jarvis_core::analytics::group_by_priority;
+use jarvis_core::integrations::redis::MultiLevelCache;
+use jarvis_core::integrations::redis::RedisCache;
 use jarvis_core::integrations::sqlserver::Database;
 use owo_colors::OwoColorize;
 use serde_json;

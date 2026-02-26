@@ -1,8 +1,11 @@
 //! Learning system for extracting knowledge from interactions.
 
-use crate::knowledge::base::{Knowledge, KnowledgeBase, KnowledgeType};
+use crate::knowledge::base::Knowledge;
+use crate::knowledge::base::KnowledgeBase;
+use crate::knowledge::base::KnowledgeType;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Represents a learning pattern extracted from interactions.
 #[derive(Debug, Clone, Serialize, Deserialize)]

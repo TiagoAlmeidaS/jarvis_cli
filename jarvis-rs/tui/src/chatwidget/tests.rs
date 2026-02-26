@@ -890,6 +890,7 @@ async fn make_chatwidget_manual(
         plan_delta_buffer: String::new(),
         plan_item_active: false,
         last_separator_elapsed_secs: None,
+        rag_injector: Arc::new(jarvis_core::rag::create_disabled_injector_with_config(None)),
         last_rendered_width: std::cell::Cell::new(None),
         feedback: jarvis_feedback::CodexFeedback::new(),
         feedback_audience: FeedbackAudience::External,

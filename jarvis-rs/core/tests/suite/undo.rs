@@ -1,4 +1,4 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 
 use std::fs;
 use std::path::Path;
@@ -8,11 +8,6 @@ use std::sync::Arc;
 use anyhow::Context;
 use anyhow::Result;
 use anyhow::bail;
-use jarvis_core::JarvisThread;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::UndoCompletedEvent;
 use core_test_support::responses::ev_apply_patch_function_call;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
@@ -23,6 +18,11 @@ use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::TestCodexHarness;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event_match;
+use jarvis_core::JarvisThread;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::UndoCompletedEvent;
 use pretty_assertions::assert_eq;
 
 #[allow(clippy::expect_used)]
@@ -156,7 +156,7 @@ async fn undo_removes_new_file_created_during_turn() -> Result<()> {
     let new_path = harness.path("new_file.txt");
     assert_eq!(fs::read_to_string(&new_path)?, "from turn\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     let completed = expect_successful_undo(&Jarvis).await?;
     assert!(completed.success, "undo failed: {:?}", completed.message);
 
@@ -193,7 +193,7 @@ async fn undo_restores_tracked_file_edit() -> Result<()> {
 
     assert_eq!(fs::read_to_string(&tracked)?, "after\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     let completed = expect_successful_undo(&Jarvis).await?;
     assert!(completed.success, "undo failed: {:?}", completed.message);
 
@@ -230,7 +230,7 @@ async fn undo_restores_untracked_file_edit() -> Result<()> {
 
     assert_eq!(fs::read_to_string(&notes)?, "modified\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     let completed = expect_successful_undo(&Jarvis).await?;
     assert!(completed.success, "undo failed: {:?}", completed.message);
 
@@ -257,7 +257,7 @@ async fn undo_reverts_only_latest_turn() -> Result<()> {
     run_apply_patch_turn(&harness, "revise story", call_id_two, update_patch, "done").await?;
     assert_eq!(fs::read_to_string(&story)?, "second version\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     let completed = expect_successful_undo(&Jarvis).await?;
     assert!(completed.success, "undo failed: {:?}", completed.message);
 
@@ -303,7 +303,7 @@ async fn undo_does_not_touch_unrelated_files() -> Result<()> {
     assert_eq!(fs::read_to_string(&target)?, "edited\n");
     assert_eq!(fs::read_to_string(&temp)?, "ephemeral\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     let completed = expect_successful_undo(&Jarvis).await?;
     assert!(completed.success, "undo failed: {:?}", completed.message);
 
@@ -361,7 +361,7 @@ async fn undo_sequential_turns_consumes_snapshots() -> Result<()> {
     .await?;
     assert_eq!(fs::read_to_string(&story)?, "turn three\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     expect_successful_undo(&Jarvis).await?;
     assert_eq!(fs::read_to_string(&story)?, "turn two\n");
 
@@ -381,7 +381,7 @@ async fn undo_without_snapshot_reports_failure() -> Result<()> {
     skip_if_no_network!(Ok(()));
 
     let harness = undo_harness().await?;
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
 
     expect_failed_undo(&Jarvis).await?;
 
@@ -407,7 +407,7 @@ async fn undo_restores_moves_and_renames() -> Result<()> {
     assert!(!source.exists());
     assert_eq!(fs::read_to_string(&destination)?, "renamed content\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     expect_successful_undo(&Jarvis).await?;
 
     assert_eq!(fs::read_to_string(&source)?, "original\n");
@@ -445,7 +445,7 @@ async fn undo_does_not_touch_ignored_directory_contents() -> Result<()> {
     let new_log = logs_dir.join("session.log");
     assert_eq!(fs::read_to_string(&new_log)?, "ephemeral log\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     expect_successful_undo(&Jarvis).await?;
 
     assert!(new_log.exists());
@@ -479,7 +479,7 @@ async fn undo_overwrites_manual_edits_after_turn() -> Result<()> {
     fs::write(&tracked, "manual edit\n")?;
     assert_eq!(fs::read_to_string(&tracked)?, "manual edit\n");
 
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     expect_successful_undo(&Jarvis).await?;
 
     assert_eq!(fs::read_to_string(&tracked)?, "baseline\n");
@@ -519,7 +519,7 @@ async fn undo_preserves_unrelated_staged_changes() -> Result<()> {
     assert!(status_before.contains("M  user_file.txt")); // M in index
 
     // UNDO
-    let Jarvis = Arc::clone(&harness.test().jarvis);
+    let Jarvis = Arc::clone(&harness.test().Jarvis);
     // checks that undo succeeded
     expect_successful_undo(&Jarvis).await?;
 

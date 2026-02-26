@@ -11,8 +11,11 @@
 //! Inspired by `core/src/autonomous/` but specialised for the daemon's domain.
 
 use anyhow::Result;
-use jarvis_daemon_common::{DaemonGoal, GoalMetricType, GoalStatus};
-use serde::{Deserialize, Serialize};
+use jarvis_daemon_common::DaemonGoal;
+use jarvis_daemon_common::GoalMetricType;
+use jarvis_daemon_common::GoalStatus;
+use serde::Deserialize;
+use serde::Serialize;
 
 // ---------------------------------------------------------------------------
 // Types

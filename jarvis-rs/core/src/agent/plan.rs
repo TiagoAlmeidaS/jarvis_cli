@@ -1,8 +1,10 @@
 //! Plan agent for creating detailed implementation plans.
 
-use crate::agent::session::{AgentSession, AgentSessionManager};
+use crate::agent::session::AgentSession;
+use crate::agent::session::AgentSessionManager;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::Arc;
 

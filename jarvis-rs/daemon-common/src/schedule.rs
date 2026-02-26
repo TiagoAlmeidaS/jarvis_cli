@@ -5,8 +5,11 @@
 //!
 //! Special values: `*` (any), specific numbers, and comma-separated lists.
 
-use anyhow::{Result, bail};
-use chrono::{Datelike, Timelike, Utc};
+use anyhow::Result;
+use anyhow::bail;
+use chrono::Datelike;
+use chrono::Timelike;
+use chrono::Utc;
 
 /// A parsed cron schedule.
 #[derive(Debug, Clone)]

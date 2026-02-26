@@ -1,6 +1,9 @@
 //! Persistent knowledge base using file-based storage.
 
-use crate::knowledge::base::{Knowledge, KnowledgeBase, KnowledgeError, KnowledgeType};
+use crate::knowledge::base::Knowledge;
+use crate::knowledge::base::KnowledgeBase;
+use crate::knowledge::base::KnowledgeError;
+use crate::knowledge::base::KnowledgeType;
 use std::path::PathBuf;
 use tokio::fs;
 

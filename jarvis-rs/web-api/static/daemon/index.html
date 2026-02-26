@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis Daemon Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <link rel="stylesheet" href="/daemon/assets/dashboard.css">
+</head>
+<body class="bg-gray-900 text-gray-100">
+    <div x-data="dashboard()" x-init="init()" class="min-h-screen">
+        <!-- Header -->
+        <header class="bg-gray-800 border-b border-gray-700 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <h1 class="text-2xl font-bold text-blue-400">Jarvis Daemon Dashboard</h1>
+                <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-2">
+                        <div :class="healthStatus === 'HEALTHY' ? 'bg-green-500' : healthStatus === 'AT_RISK' ? 'bg-yellow-500' : healthStatus === 'DEGRADED' ? 'bg-red-500' : 'bg-gray-500'" 
+                             class="w-3 h-3 rounded-full"></div>
+                        <span class="text-sm font-semibold" x-text="healthStatus"></span>
+                    </div>
+                    <button @click="refresh()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm">
+                        Atualizar
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="p-6">
+            <!-- Overview Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <div class="text-sm text-gray-400 mb-1">Pipelines</div>
+                    <div class="text-2xl font-bold" x-text="`${pipelinesEnabled}/${pipelinesTotal}`"></div>
+                    <div class="text-xs text-gray-500 mt-1">Ativos/Total</div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <div class="text-sm text-gray-400 mb-1">Jobs em Execução</div>
+                    <div class="text-2xl font-bold text-yellow-400" x-text="jobsRunning"></div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <div class="text-sm text-gray-400 mb-1">Revenue (30d)</div>
+                    <div class="text-2xl font-bold text-green-400" x-text="`$${revenue.toFixed(2)}`"></div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <div class="text-sm text-gray-400 mb-1">Goals em Risco</div>
+                    <div class="text-2xl font-bold text-red-400" x-text="goalsAtRisk"></div>
+                </div>
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <div class="text-sm text-gray-400 mb-1">Proposals Pendentes</div>
+                    <div class="text-2xl font-bold text-yellow-400" x-text="proposalsPending"></div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Revenue Chart -->
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h2 class="text-lg font-semibold mb-4">Revenue (30 dias)</h2>
+                    <canvas id="revenueChart"></canvas>
+                </div>
+                <!-- Jobs Status Chart -->
+                <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+                    <h2 class="text-lg font-semibold mb-4">Jobs por Status</h2>
+                    <canvas id="jobsChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="bg-gray-800 rounded-lg border border-gray-700">
+                <div class="border-b border-gray-700 flex">
+                    <button @click="activeTab = 'pipelines'" 
+                            :class="activeTab === 'pipelines' ? 'border-b-2 border-blue-500 text-blue-400' : 'text-gray-400'"
+                            class="px-6 py-3 font-semibold">Pipelines</button>
+                    <button @click="activeTab = 'jobs'" 
+                            :class="activeTab === 'jobs' ? 'border-b-2 border-blue-500 text-blue-400' : 'text-gray-400'"
+                            class="px-6 py-3 font-semibold">Jobs</button>
+                    <button @click="activeTab = 'goals'" 
+                            :class="activeTab === 'goals' ? 'border-b-2 border-blue-500 text-blue-400' : 'text-gray-400'"
+                            class="px-6 py-3 font-semibold">Goals</button>
+                    <button @click="activeTab = 'proposals'" 
+                            :class="activeTab === 'proposals' ? 'border-b-2 border-blue-500 text-blue-400' : 'text-gray-400'"
+                            class="px-6 py-3 font-semibold">Proposals</button>
+                    <button @click="activeTab = 'logs'" 
+                            :class="activeTab === 'logs' ? 'border-b-2 border-blue-500 text-blue-400' : 'text-gray-400'"
+                            class="px-6 py-3 font-semibold">Logs</button>
+                </div>
+
+                <!-- Pipelines Tab -->
+                <div x-show="activeTab === 'pipelines'" class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left py-2">ID</th>
+                                    <th class="text-left py-2">Nome</th>
+                                    <th class="text-left py-2">Estratégia</th>
+                                    <th class="text-left py-2">Status</th>
+                                    <th class="text-left py-2">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="pipeline in pipelines" :key="pipeline.id">
+                                    <tr class="border-b border-gray-700">
+                                        <td class="py-2 font-mono text-xs" x-text="pipeline.id"></td>
+                                        <td class="py-2" x-text="pipeline.name"></td>
+                                        <td class="py-2 text-gray-400" x-text="pipeline.strategy"></td>
+                                        <td class="py-2">
+                                            <span :class="pipeline.enabled ? 'text-green-400' : 'text-gray-500'" 
+                                                  x-text="pipeline.enabled ? 'Ativo' : 'Inativo'"></span>
+                                        </td>
+                                        <td class="py-2">
+                                            <button @click="togglePipeline(pipeline.id, !pipeline.enabled)" 
+                                                    :class="pipeline.enabled ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'"
+                                                    class="px-3 py-1 rounded text-xs">
+                                                <span x-text="pipeline.enabled ? 'Desativar' : 'Ativar'"></span>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Jobs Tab -->
+                <div x-show="activeTab === 'jobs'" class="p-6">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-gray-700">
+                                    <th class="text-left py-2">ID</th>
+                                    <th class="text-left py-2">Pipeline</th>
+                                    <th class="text-left py-2">Status</th>
+                                    <th class="text-left py-2">Duração</th>
+                                    <th class="text-left py-2">Criado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template x-for="job in jobs" :key="job.id">
+                                    <tr class="border-b border-gray-700">
+                                        <td class="py-2 font-mono text-xs" x-text="job.id.substring(0, 8)"></td>
+                                        <td class="py-2" x-text="job.pipeline_id"></td>
+                                        <td class="py-2">
+                                            <span :class="getStatusColor(job.status)" x-text="job.status"></span>
+                                        </td>
+                                        <td class="py-2 text-gray-400" x-text="job.duration_ms ? job.duration_ms + 'ms' : '-'"></td>
+                                        <td class="py-2 text-gray-400" x-text="formatDate(job.created_at)"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Goals Tab -->
+                <div x-show="activeTab === 'goals'" class="p-6">
+                    <div class="space-y-4">
+                        <template x-for="goal in goals" :key="goal.id">
+                            <div class="bg-gray-700 rounded p-4">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h3 class="font-semibold" x-text="goal.name"></h3>
+                                    <span :class="goal.progress_pct >= 100 ? 'text-green-400' : goal.progress_pct >= 60 ? 'text-blue-400' : 'text-yellow-400'"
+                                          x-text="goal.progress_pct.toFixed(1) + '%'"></span>
+                                </div>
+                                <div class="w-full bg-gray-600 rounded-full h-2 mb-2">
+                                    <div :style="`width: ${Math.min(goal.progress_pct, 100)}%`" 
+                                         :class="goal.progress_pct >= 100 ? 'bg-green-500' : goal.progress_pct >= 60 ? 'bg-blue-500' : 'bg-yellow-500'"
+                                         class="h-2 rounded-full"></div>
+                                </div>
+                                <div class="text-sm text-gray-400">
+                                    <span x-text="goal.current_value"></span> / 
+                                    <span x-text="goal.target_value"></span> 
+                                    <span x-text="goal.target_unit"></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Proposals Tab -->
+                <div x-show="activeTab === 'proposals'" class="p-6">
+                    <div class="space-y-4">
+                        <template x-for="proposal in proposals" :key="proposal.id">
+                            <div class="bg-gray-700 rounded p-4">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div>
+                                        <h3 class="font-semibold" x-text="proposal.title"></h3>
+                                        <p class="text-sm text-gray-400 mt-1" x-text="proposal.description"></p>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button @click="approveProposal(proposal.id)" 
+                                                class="px-3 py-1 bg-green-600 hover:bg-green-700 rounded text-xs">
+                                            Aprovar
+                                        </button>
+                                        <button @click="rejectProposal(proposal.id)" 
+                                                class="px-3 py-1 bg-red-600 hover:bg-red-700 rounded text-xs">
+                                            Rejeitar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="flex gap-4 text-xs text-gray-400">
+                                    <span>Risco: <span :class="getRiskColor(proposal.risk_level)" x-text="proposal.risk_level"></span></span>
+                                    <span>Confiança: <span x-text="(proposal.confidence * 100).toFixed(0) + '%'"></span></span>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Logs Tab -->
+                <div x-show="activeTab === 'logs'" class="p-6">
+                    <div class="bg-gray-900 rounded p-4 font-mono text-xs h-96 overflow-y-auto" id="logsContainer">
+                        <template x-for="log in logs" :key="log.id">
+                            <div :class="getLogLevelColor(log.level)" class="mb-1">
+                                <span class="text-gray-500" x-text="formatDate(log.created_at)"></span>
+                                <span class="mx-2" x-text="`[${log.level}]`"></span>
+                                <span x-text="log.message"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="/daemon/assets/dashboard.js"></script>
+</body>
+</html>

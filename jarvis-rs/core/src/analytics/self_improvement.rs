@@ -4,7 +4,8 @@ use anyhow::Result;
 
 use super::metrics::CacheMetrics;
 use super::queries::AnalyticsQueries;
-use super::suggestions::{Improvement, ImprovementCategory};
+use super::suggestions::Improvement;
+use super::suggestions::ImprovementCategory;
 
 /// Self-improvement system that analyzes Jarvis performance and suggests optimizations
 pub struct SelfImprovement {

@@ -10,11 +10,13 @@
 //! - `auth google`: perform Google OAuth2 authorisation flow.
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::Parser;
+use clap::Subcommand;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info};
+use tracing::error;
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 mod data_sources;
@@ -31,7 +33,10 @@ mod scraper;
 
 use jarvis_daemon_common::DaemonDb;
 use pipeline::PipelineRegistry;
-use processor::router::{DailyMetrics, HourlyMetrics, LlmRouter, ProviderMetrics};
+use processor::router::DailyMetrics;
+use processor::router::HourlyMetrics;
+use processor::router::LlmRouter;
+use processor::router::ProviderMetrics;
 use runner::PipelineRunner;
 use scheduler::Scheduler;
 
@@ -238,7 +243,7 @@ async fn handle_metrics(
     dashboard: bool,
 ) -> Result<()> {
     let router = LlmRouter::new();
-    
+
     // Load metrics from disk
     router.load_metrics().await?;
 
@@ -279,7 +284,7 @@ async fn handle_metrics(
     } else {
         // Show all metrics
         let all_metrics = router.get_all_metrics().await;
-        
+
         if all_metrics.is_empty() {
             println!("No metrics available yet. Run some pipelines to collect metrics.");
             return Ok(());
@@ -308,18 +313,26 @@ async fn handle_metrics(
 fn print_provider_metrics(provider_id: &str, metrics: &ProviderMetrics) {
     println!("Metrics for: {}\n", provider_id);
     println!("  Total Requests:      {}", metrics.total_requests);
-    println!("  Successful:          {} ({:.2}%)", metrics.successful_requests, metrics.success_rate());
-    println!("  Failed:              {} ({:.2}%)", metrics.failed_requests, metrics.failure_rate());
+    println!(
+        "  Successful:          {} ({:.2}%)",
+        metrics.successful_requests,
+        metrics.success_rate()
+    );
+    println!(
+        "  Failed:              {} ({:.2}%)",
+        metrics.failed_requests,
+        metrics.failure_rate()
+    );
     println!("  Avg Latency:         {:.2} ms", metrics.avg_latency_ms);
     println!("  Total Cost:          ${:.4}", metrics.total_cost_usd);
-    
+
     if let Some(last_success) = metrics.last_success_at {
         let dt = chrono::DateTime::from_timestamp(last_success, 0)
             .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
             .unwrap_or_else(|| "unknown".to_string());
         println!("  Last Success:        {}", dt);
     }
-    
+
     if let Some(last_failure) = metrics.last_failure_at {
         let dt = chrono::DateTime::from_timestamp(last_failure, 0)
             .map(|dt| dt.format("%Y-%m-%d %H:%M:%S").to_string())
@@ -335,12 +348,15 @@ fn print_all_metrics(metrics: &[(String, ProviderMetrics)]) {
     }
 
     println!("LLM Provider Metrics\n");
-    println!("{:<40} {:>10} {:>10} {:>10} {:>12} {:>10}", 
-        "Provider", "Requests", "Success %", "Failure %", "Avg Latency", "Cost");
+    println!(
+        "{:<40} {:>10} {:>10} {:>10} {:>12} {:>10}",
+        "Provider", "Requests", "Success %", "Failure %", "Avg Latency", "Cost"
+    );
     println!("{}", "-".repeat(100));
 
     for (provider_id, m) in metrics {
-        println!("{:<40} {:>10} {:>9.2}% {:>9.2}% {:>11.2} ms {:>9.4}$",
+        println!(
+            "{:<40} {:>10} {:>9.2}% {:>9.2}% {:>11.2} ms {:>9.4}$",
             provider_id,
             m.total_requests,
             m.success_rate(),
@@ -358,8 +374,10 @@ fn print_hourly_metrics(provider_id: &str, hourly: &[&HourlyMetrics]) {
     }
 
     println!("Hourly Metrics for: {}\n", provider_id);
-    println!("{:<20} {:>10} {:>10} {:>10} {:>12} {:>10}", 
-        "Hour", "Requests", "Success", "Failed", "Avg Latency", "Cost");
+    println!(
+        "{:<20} {:>10} {:>10} {:>10} {:>12} {:>10}",
+        "Hour", "Requests", "Success", "Failed", "Avg Latency", "Cost"
+    );
     println!("{}", "-".repeat(85));
 
     for h in hourly {
@@ -368,13 +386,9 @@ fn print_hourly_metrics(provider_id: &str, hourly: &[&HourlyMetrics]) {
         } else {
             0.0
         };
-        println!("{:<20} {:>10} {:>9.1}% {:>10} {:>11.2} ms {:>9.4}$",
-            h.hour,
-            h.requests,
-            success_rate,
-            h.failed,
-            h.avg_latency_ms,
-            h.cost_usd
+        println!(
+            "{:<20} {:>10} {:>9.1}% {:>10} {:>11.2} ms {:>9.4}$",
+            h.hour, h.requests, success_rate, h.failed, h.avg_latency_ms, h.cost_usd
         );
     }
 }
@@ -386,8 +400,10 @@ fn print_daily_metrics(provider_id: &str, daily: &[&DailyMetrics]) {
     }
 
     println!("Daily Metrics for: {}\n", provider_id);
-    println!("{:<15} {:>10} {:>10} {:>10} {:>12} {:>10}", 
-        "Day", "Requests", "Success", "Failed", "Avg Latency", "Cost");
+    println!(
+        "{:<15} {:>10} {:>10} {:>10} {:>12} {:>10}",
+        "Day", "Requests", "Success", "Failed", "Avg Latency", "Cost"
+    );
     println!("{}", "-".repeat(80));
 
     for d in daily {
@@ -396,13 +412,9 @@ fn print_daily_metrics(provider_id: &str, daily: &[&DailyMetrics]) {
         } else {
             0.0
         };
-        println!("{:<15} {:>10} {:>9.1}% {:>10} {:>11.2} ms {:>9.4}$",
-            d.day,
-            d.requests,
-            success_rate,
-            d.failed,
-            d.avg_latency_ms,
-            d.cost_usd
+        println!(
+            "{:<15} {:>10} {:>9.1}% {:>10} {:>11.2} ms {:>9.4}$",
+            d.day, d.requests, success_rate, d.failed, d.avg_latency_ms, d.cost_usd
         );
     }
 }
@@ -410,7 +422,7 @@ fn print_daily_metrics(provider_id: &str, daily: &[&DailyMetrics]) {
 /// Generate HTML dashboard for metrics visualization.
 async fn generate_dashboard(router: &LlmRouter) -> Result<()> {
     let all_metrics = router.get_all_metrics().await;
-    
+
     if all_metrics.is_empty() {
         println!("No metrics available yet. Run some pipelines to collect metrics.");
         return Ok(());
@@ -422,10 +434,11 @@ async fn generate_dashboard(router: &LlmRouter) -> Result<()> {
     tokio::fs::create_dir_all(&jarvis_home).await?;
 
     let dashboard_file = jarvis_home.join("llm_dashboard.html");
-    
-    let html = generate_dashboard_html(&all_metrics);
+
+    let metrics_vec: Vec<(String, ProviderMetrics)> = all_metrics.into_iter().collect();
+    let html = generate_dashboard_html(&metrics_vec);
     tokio::fs::write(&dashboard_file, html).await?;
-    
+
     println!("Dashboard generated: {}", dashboard_file.display());
     println!("Open it in your browser to view metrics.");
 
@@ -433,7 +446,8 @@ async fn generate_dashboard(router: &LlmRouter) -> Result<()> {
 }
 
 fn generate_dashboard_html(metrics: &[(String, ProviderMetrics)]) -> String {
-    let mut html = String::from(r#"<!DOCTYPE html>
+    let mut html = String::from(
+        r#"<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -525,7 +539,8 @@ fn generate_dashboard_html(metrics: &[(String, ProviderMetrics)]) -> String {
     <div class="container">
         <h1>🚀 Jarvis LLM Metrics Dashboard</h1>
         <div class="metrics-grid">
-"#);
+"#,
+    );
 
     for (provider_id, m) in metrics {
         let success_class = if m.success_rate() >= 95.0 {
@@ -536,7 +551,8 @@ fn generate_dashboard_html(metrics: &[(String, ProviderMetrics)]) -> String {
             "error"
         };
 
-        html.push_str(&format!(r#"
+        html.push_str(&format!(
+            r#"
             <div class="metric-card">
                 <h2>{}</h2>
                 <div class="metric-row">
@@ -560,18 +576,24 @@ fn generate_dashboard_html(metrics: &[(String, ProviderMetrics)]) -> String {
                     <span class="metric-value">${:.4}</span>
                 </div>
             </div>
-"#, 
+"#,
             provider_id,
             m.total_requests,
-            success_class, m.success_rate(),
-            if m.failure_rate() > 20.0 { "error" } else { "warning" },
+            success_class,
+            m.success_rate(),
+            if m.failure_rate() > 20.0 {
+                "error"
+            } else {
+                "warning"
+            },
             m.failure_rate(),
             m.avg_latency_ms,
             m.total_cost_usd
         ));
     }
 
-    html.push_str(r#"
+    html.push_str(
+        r#"
         </div>
         <div class="chart-container">
             <div class="chart-title">📊 Provider Comparison</div>
@@ -586,7 +608,8 @@ fn generate_dashboard_html(metrics: &[(String, ProviderMetrics)]) -> String {
                     </tr>
                 </thead>
                 <tbody>
-"#);
+"#,
+    );
 
     for (provider_id, m) in metrics {
         let badge_class = if m.success_rate() >= 95.0 {
@@ -597,7 +620,8 @@ fn generate_dashboard_html(metrics: &[(String, ProviderMetrics)]) -> String {
             "badge-error"
         };
 
-        html.push_str(&format!(r#"
+        html.push_str(&format!(
+            r#"
                     <tr>
                         <td>{}</td>
                         <td>{}</td>
@@ -615,18 +639,21 @@ fn generate_dashboard_html(metrics: &[(String, ProviderMetrics)]) -> String {
         ));
     }
 
-    html.push_str(r#"
+    let generated_at = chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC");
+    html.push_str(&format!(
+        r#"
                 </tbody>
             </table>
         </div>
         <div style="text-align: center; color: #8b949e; margin-top: 40px; padding: 20px;">
-            <p>Generated at: {}</p>
+            <p>Generated at: {generated_at}</p>
             <p>Refresh this page to see updated metrics</p>
         </div>
     </div>
 </body>
 </html>
-"#, chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"));
+"#
+    ));
 
     html
 }
@@ -717,7 +744,10 @@ async fn run_daemon(
 /// This runs once on daemon startup. If the user has already created goals
 /// (manually via CLI or from a previous run), this is a no-op.
 async fn bootstrap_default_goals(db: &DaemonDb) -> Result<()> {
-    use jarvis_daemon_common::{CreateGoal, GoalFilter, GoalMetricType, GoalPeriod};
+    use jarvis_daemon_common::CreateGoal;
+    use jarvis_daemon_common::GoalFilter;
+    use jarvis_daemon_common::GoalMetricType;
+    use jarvis_daemon_common::GoalPeriod;
 
     let existing = db.list_goals(&GoalFilter::default()).await?;
     if !existing.is_empty() {

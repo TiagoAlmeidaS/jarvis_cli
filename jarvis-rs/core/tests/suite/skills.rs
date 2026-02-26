@@ -1,11 +1,7 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use anyhow::Result;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_response_created;
@@ -14,6 +10,10 @@ use core_test_support::responses::sse;
 use core_test_support::responses::start_mock_server;
 use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::user_input::UserInput;
 use std::fs;
 use std::path::Path;
 
@@ -59,7 +59,7 @@ async fn user_turn_includes_skill_instructions() -> Result<()> {
     .await;
 
     let session_model = test.session_configured.model.clone();
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![
                 UserInput::Text {
@@ -83,7 +83,7 @@ async fn user_turn_includes_skill_instructions() -> Result<()> {
         })
         .await?;
 
-    core_test_support::wait_for_event(test.jarvis.as_ref(), |event| {
+    core_test_support::wait_for_event(test.Jarvis.as_ref(), |event| {
         matches!(event, jarvis_core::protocol::EventMsg::TurnComplete(_))
     })
     .await;
@@ -116,14 +116,14 @@ async fn skill_load_errors_surface_in_session_configured() -> Result<()> {
     });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::ListSkills {
             cwds: Vec::new(),
             force_reload: false,
         })
         .await?;
     let response =
-        core_test_support::wait_for_event_match(test.jarvis.as_ref(), |event| match event {
+        core_test_support::wait_for_event_match(test.Jarvis.as_ref(), |event| match event {
             jarvis_core::protocol::EventMsg::ListSkillsResponse(response) => Some(response.clone()),
             _ => None,
         })
@@ -184,14 +184,14 @@ async fn list_skills_includes_system_cache_entries() -> Result<()> {
         "expected embedded system skill file, got:\n{system_skill_contents}"
     );
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::ListSkills {
             cwds: Vec::new(),
             force_reload: true,
         })
         .await?;
     let response =
-        core_test_support::wait_for_event_match(test.jarvis.as_ref(), |event| match event {
+        core_test_support::wait_for_event_match(test.Jarvis.as_ref(), |event| match event {
             jarvis_core::protocol::EventMsg::ListSkillsResponse(response) => Some(response.clone()),
             _ => None,
         })

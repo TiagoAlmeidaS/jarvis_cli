@@ -1,4 +1,15 @@
-﻿use jarvis_core::config::types::Personality;
+use core_test_support::load_default_config_for_test;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::mount_models_once;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::responses::mount_sse_sequence;
+use core_test_support::responses::sse;
+use core_test_support::responses::start_mock_server;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
+use jarvis_core::config::types::Personality;
 use jarvis_core::features::Feature;
 use jarvis_core::models_manager::manager::ModelsManager;
 use jarvis_core::models_manager::manager::RefreshStrategy;
@@ -18,17 +29,6 @@ use jarvis_protocol::openai_models::ReasoningEffortPreset;
 use jarvis_protocol::openai_models::TruncationPolicyConfig;
 use jarvis_protocol::openai_models::default_input_modalities;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::load_default_config_for_test;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::mount_models_once;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::responses::mount_sse_sequence;
-use core_test_support::responses::sse;
-use core_test_support::responses::start_mock_server;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use pretty_assertions::assert_eq;
 use std::sync::Arc;
 use tempfile::TempDir;
@@ -91,7 +91,7 @@ async fn user_turn_personality_none_does_not_add_update_message() -> anyhow::Res
         });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -109,7 +109,7 @@ async fn user_turn_personality_none_does_not_add_update_message() -> anyhow::Res
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let request = resp_mock.single_request();
     let developer_texts = request.message_input_texts("developer");
@@ -142,7 +142,7 @@ async fn config_personality_some_sets_instructions_template() -> anyhow::Result<
         });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -160,7 +160,7 @@ async fn config_personality_some_sets_instructions_template() -> anyhow::Result<
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let request = resp_mock.single_request();
     let instructions_text = request.instructions_text();
@@ -202,7 +202,7 @@ async fn user_turn_personality_some_adds_update_message() -> anyhow::Result<()> 
         });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -220,9 +220,9 @@ async fn user_turn_personality_some_adds_update_message() -> anyhow::Result<()> 
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: None,
@@ -236,7 +236,7 @@ async fn user_turn_personality_some_adds_update_message() -> anyhow::Result<()> 
         })
         .await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -254,7 +254,7 @@ async fn user_turn_personality_some_adds_update_message() -> anyhow::Result<()> 
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let requests = resp_mock.requests();
     assert_eq!(requests.len(), 2, "expected two requests");
@@ -302,7 +302,7 @@ async fn user_turn_personality_same_value_does_not_add_update_message() -> anyho
         });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -320,9 +320,9 @@ async fn user_turn_personality_same_value_does_not_add_update_message() -> anyho
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: None,
@@ -336,7 +336,7 @@ async fn user_turn_personality_same_value_does_not_add_update_message() -> anyho
         })
         .await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -354,7 +354,7 @@ async fn user_turn_personality_same_value_does_not_add_update_message() -> anyho
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let requests = resp_mock.requests();
     assert_eq!(requests.len(), 2, "expected two requests");
@@ -411,7 +411,7 @@ async fn user_turn_personality_skips_if_feature_disabled() -> anyhow::Result<()>
         });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -429,9 +429,9 @@ async fn user_turn_personality_skips_if_feature_disabled() -> anyhow::Result<()>
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: None,
@@ -445,7 +445,7 @@ async fn user_turn_personality_skips_if_feature_disabled() -> anyhow::Result<()>
         })
         .await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -463,7 +463,7 @@ async fn user_turn_personality_skips_if_feature_disabled() -> anyhow::Result<()>
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let requests = resp_mock.requests();
     assert_eq!(requests.len(), 2, "expected two requests");
@@ -560,7 +560,7 @@ async fn ignores_remote_personality_if_remote_models_disabled() -> anyhow::Resul
     )
     .await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -578,7 +578,7 @@ async fn ignores_remote_personality_if_remote_models_disabled() -> anyhow::Resul
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let request = resp_mock.single_request();
     let instructions_text = request.instructions_text();
@@ -680,7 +680,7 @@ async fn remote_model_friendly_personality_instructions_with_feature() -> anyhow
     )
     .await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -698,7 +698,7 @@ async fn remote_model_friendly_personality_instructions_with_feature() -> anyhow
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let request = resp_mock.single_request();
     let instructions_text = request.instructions_text();
@@ -797,7 +797,7 @@ async fn user_turn_personality_remote_model_template_includes_update_message() -
     )
     .await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -815,9 +815,9 @@ async fn user_turn_personality_remote_model_template_includes_update_message() -
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: None,
@@ -831,7 +831,7 @@ async fn user_turn_personality_remote_model_template_includes_update_message() -
         })
         .await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "hello".into(),
@@ -849,7 +849,7 @@ async fn user_turn_personality_remote_model_template_includes_update_message() -
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let requests = resp_mock.requests();
     assert_eq!(requests.len(), 2, "expected two requests");

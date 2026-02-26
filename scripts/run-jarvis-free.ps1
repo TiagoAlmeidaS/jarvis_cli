@@ -2,7 +2,7 @@
 # Uso: .\scripts\run-jarvis-free.ps1
 
 param(
-    [string]$Model = "deepseek/deepseek-r1:free",
+    [string]$Model = "openrouter/free",
     [string]$Provider = "openrouter",
     [string]$Prompt = ""
 )

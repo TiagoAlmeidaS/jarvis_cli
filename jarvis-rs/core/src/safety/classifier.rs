@@ -1,9 +1,11 @@
 //! Safety classifier for assessing action safety.
 
-use crate::safety::assessment::{RiskLevel, SafetyAssessment};
+use crate::safety::assessment::RiskLevel;
+use crate::safety::assessment::SafetyAssessment;
 use crate::safety::rules::SafetyRules;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Represents a proposed action to be assessed.
 #[derive(Debug, Clone, Serialize, Deserialize)]

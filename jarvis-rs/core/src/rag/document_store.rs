@@ -6,7 +6,8 @@
 use crate::rag::indexer::IndexedDocument;
 use anyhow::Result;
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
@@ -167,8 +168,9 @@ impl DocumentStore for JsonFileDocumentStore {
 #[cfg(feature = "postgres")]
 pub mod postgres {
     use super::*;
+    use sqlx::PgPool;
+    use sqlx::Row;
     use sqlx::postgres::PgPoolOptions;
-    use sqlx::{PgPool, Row};
 
     /// PostgreSQL-based document store.
     pub struct PostgresDocumentStore {
@@ -216,13 +218,22 @@ pub mod postgres {
             Ok(Self { pool })
         }
 
-        /// Create from default configuration.
+        /// Create from a [`RagConfig`].
         ///
-        /// Uses hardcoded connection string for VPS PostgreSQL:
-        /// postgresql://jarvis:jarvis_secure_password_2026@100.98.213.86:5432/jarvis
+        /// Uses the `postgres_url` from the supplied configuration.
+        /// Returns an error if `postgres_url` is `None`.
+        pub async fn from_rag_config(cfg: &crate::config::types::RagConfig) -> Result<Self> {
+            let url = cfg.postgres_url.as_deref().ok_or_else(|| {
+                anyhow::anyhow!("postgres_url is required for PostgresDocumentStore")
+            })?;
+            Self::new(url).await
+        }
+
+        /// Create from default configuration (legacy).
+        ///
+        /// Falls back to localhost PostgreSQL with default credentials.
         pub async fn from_config() -> Result<Self> {
-            Self::new("postgresql://jarvis:jarvis_secure_password_2026@100.98.213.86:5432/jarvis")
-                .await
+            Self::new("postgresql://jarvis:jarvis@localhost:5432/jarvis").await
         }
     }
 
@@ -347,7 +358,8 @@ pub mod postgres {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::rag::chunk::{ChunkMetadata, TextChunk};
+    use crate::rag::chunk::ChunkMetadata;
+    use crate::rag::chunk::TextChunk;
     use crate::rag::indexer::DocumentMetadata;
     use std::path::PathBuf;
 

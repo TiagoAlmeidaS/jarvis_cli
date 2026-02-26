@@ -9,12 +9,18 @@
 //! 6. Retries on failure (up to `max_retries` with `retry_delay_sec` backoff)
 
 use anyhow::Result;
-use jarvis_daemon_common::{DaemonDb, DaemonJob, DaemonPipeline, LogLevel};
+use jarvis_daemon_common::DaemonDb;
+use jarvis_daemon_common::DaemonJob;
+use jarvis_daemon_common::DaemonPipeline;
+use jarvis_daemon_common::LogLevel;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
-use tracing::{error, info, warn};
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
-use crate::pipeline::{PipelineContext, PipelineRegistry};
+use crate::pipeline::PipelineContext;
+use crate::pipeline::PipelineRegistry;
 use crate::processor::router::LlmRouter;
 
 /// Orchestrates pipeline job execution.

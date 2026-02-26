@@ -1,18 +1,10 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::sync::OnceLock;
 
 use anyhow::Context;
 use anyhow::Result;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::ExecCommandSource;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::assert_regex_match;
 use core_test_support::process::wait_for_pid_file;
 use core_test_support::process::wait_for_process_exit;
@@ -32,6 +24,14 @@ use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
 use core_test_support::wait_for_event_match;
 use core_test_support::wait_for_event_with_timeout;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::ExecCommandSource;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 use regex_lite::Regex;
 use serde_json::Value;
@@ -192,7 +192,7 @@ async fn unified_exec_intercepts_apply_patch_exec_command() -> Result<()> {
     mount_sse_sequence(harness.server(), responses).await;
 
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd_path().to_path_buf();
     let session_model = test.session_configured.model.clone();
 

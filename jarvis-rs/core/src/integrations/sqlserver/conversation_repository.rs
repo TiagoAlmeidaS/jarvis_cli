@@ -1,6 +1,10 @@
+use super::Conversation;
+use super::Database;
+use super::Message;
+use super::Repository;
 use super::models::MessageRole;
-use super::{Conversation, Database, Message, Repository};
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
 use tiberius::Row;
 use time::OffsetDateTime;

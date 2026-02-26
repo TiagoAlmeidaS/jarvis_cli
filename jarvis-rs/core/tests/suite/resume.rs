@@ -1,9 +1,4 @@
-﻿use anyhow::Result;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_protocol::user_input::ByteRange;
-use jarvis_protocol::user_input::TextElement;
-use jarvis_protocol::user_input::UserInput;
+use anyhow::Result;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_reasoning_item;
@@ -14,6 +9,11 @@ use core_test_support::responses::start_mock_server;
 use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_protocol::user_input::ByteRange;
+use jarvis_protocol::user_input::TextElement;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 use std::sync::Arc;
 
@@ -24,7 +24,7 @@ async fn resume_includes_initial_messages_from_rollout_events() -> Result<()> {
     let server = start_mock_server().await;
     let mut builder = test_codex();
     let initial = builder.build(&server).await?;
-    let Jarvis = Arc::clone(&initial.jarvis);
+    let Jarvis = Arc::clone(&initial.Jarvis);
     let home = initial.home.clone();
     let rollout_path = initial
         .session_configured
@@ -87,7 +87,7 @@ async fn resume_includes_initial_messages_from_reasoning_events() -> Result<()> 
         config.show_raw_agent_reasoning = true;
     });
     let initial = builder.build(&server).await?;
-    let Jarvis = Arc::clone(&initial.jarvis);
+    let Jarvis = Arc::clone(&initial.Jarvis);
     let home = initial.home.clone();
     let rollout_path = initial
         .session_configured
@@ -149,7 +149,7 @@ async fn resume_switches_models_preserves_base_instructions() -> Result<()> {
         config.model = Some("gpt-5.2".to_string());
     });
     let initial = builder.build(&server).await?;
-    let Jarvis = Arc::clone(&initial.jarvis);
+    let Jarvis = Arc::clone(&initial.Jarvis);
     let home = initial.home.clone();
     let rollout_path = initial
         .session_configured
@@ -194,7 +194,7 @@ async fn resume_switches_models_preserves_base_instructions() -> Result<()> {
     });
     let resumed = resume_builder.resume(&server, home, rollout_path).await?;
     resumed
-        .jarvis
+        .Jarvis
         .submit(Op::UserInput {
             items: vec![UserInput::Text {
                 text: "Resume with different model".into(),
@@ -203,7 +203,7 @@ async fn resume_switches_models_preserves_base_instructions() -> Result<()> {
             final_output_json_schema: None,
         })
         .await?;
-    wait_for_event(&resumed.jarvis, |event| {
+    wait_for_event(&resumed.Jarvis, |event| {
         matches!(event, EventMsg::TurnComplete(_))
     })
     .await;

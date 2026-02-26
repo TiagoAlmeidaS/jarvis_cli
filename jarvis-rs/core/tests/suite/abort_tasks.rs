@@ -1,10 +1,7 @@
-﻿use assert_matches::assert_matches;
+use assert_matches::assert_matches;
 use std::sync::Arc;
 use std::time::Duration;
 
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_function_call;
 use core_test_support::responses::ev_response_created;
@@ -14,6 +11,9 @@ use core_test_support::responses::sse;
 use core_test_support::responses::start_mock_server;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_protocol::user_input::UserInput;
 use regex_lite::Regex;
 use serde_json::json;
 
@@ -41,7 +41,7 @@ async fn interrupt_long_running_tool_emits_turn_aborted() {
         .build(&server)
         .await
         .unwrap()
-        .jarvis;
+        .Jarvis;
 
     // Kick off a turn that triggers the function call.
     Jarvis
@@ -96,7 +96,7 @@ async fn interrupt_tool_records_history_entries() {
         .build(&server)
         .await
         .unwrap();
-    let Jarvis = Arc::clone(&fixture.jarvis);
+    let Jarvis = Arc::clone(&fixture.Jarvis);
 
     Jarvis
         .submit(Op::UserInput {
@@ -194,7 +194,7 @@ async fn interrupt_persists_turn_aborted_marker_in_next_request() {
         .build(&server)
         .await
         .unwrap();
-    let Jarvis = Arc::clone(&fixture.jarvis);
+    let Jarvis = Arc::clone(&fixture.Jarvis);
 
     Jarvis
         .submit(Op::UserInput {

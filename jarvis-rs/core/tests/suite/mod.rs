@@ -1,9 +1,9 @@
-﻿// Aggregates all former standalone integration tests as modules.
+// Aggregates all former standalone integration tests as modules.
 use std::ffi::OsString;
 
+use ctor::ctor;
 use jarvis_arg0::Arg0PathEntryGuard;
 use jarvis_arg0::arg0_dispatch;
-use ctor::ctor;
 use tempfile::TempDir;
 
 struct TestCodexAliasesGuard {
@@ -64,7 +64,6 @@ mod auth_refresh;
 mod cli_stream;
 mod client;
 mod client_websockets;
-mod jarvis_delegate;
 mod collaboration_instructions;
 mod compact;
 mod compact_remote;
@@ -77,6 +76,7 @@ mod grep_files;
 mod hierarchical_agents;
 mod image_rollout;
 mod items;
+mod jarvis_delegate;
 mod json_result;
 mod list_dir;
 mod list_models;

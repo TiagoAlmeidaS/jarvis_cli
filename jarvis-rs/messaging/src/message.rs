@@ -1,5 +1,7 @@
-use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use chrono::DateTime;
+use chrono::Utc;
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Plataforma de mensageria
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -72,6 +74,34 @@ pub struct OutgoingMessage {
     pub chat_id: String,
     pub message_type: MessageType,
     pub reply_to: Option<String>,
+    /// Parse mode for rich text (e.g. "Markdown", "MarkdownV2", "HTML").
+    pub parse_mode: Option<String>,
+    /// Disable link previews in the message (Telegram-specific).
+    pub disable_web_page_preview: bool,
+}
+
+impl OutgoingMessage {
+    /// Create a simple text message with Markdown parse mode and link previews disabled.
+    pub fn text(chat_id: impl Into<String>, text: impl Into<String>) -> Self {
+        Self {
+            chat_id: chat_id.into(),
+            message_type: MessageType::Text(text.into()),
+            reply_to: None,
+            parse_mode: Some("Markdown".to_string()),
+            disable_web_page_preview: true,
+        }
+    }
+
+    /// Create a plain text message with no parse mode.
+    pub fn plain_text(chat_id: impl Into<String>, text: impl Into<String>) -> Self {
+        Self {
+            chat_id: chat_id.into(),
+            message_type: MessageType::Text(text.into()),
+            reply_to: None,
+            parse_mode: None,
+            disable_web_page_preview: false,
+        }
+    }
 }
 
 /// ID de mensagem retornado após envio

@@ -1,4 +1,4 @@
-﻿//! Smoke tests for intent detection commands.
+//! Smoke tests for intent detection commands.
 
 use anyhow::Result;
 use predicates::str::contains;
@@ -21,7 +21,9 @@ async fn intent_detect_detects_intent() -> Result<()> {
         "criar uma skill para processar CSV",
         "--output",
         "json",
-    ]).assert().success();
+    ])
+    .assert()
+    .success();
 
     Ok(())
 }
@@ -31,7 +33,10 @@ async fn intent_list_shows_supported_intents() -> Result<()> {
     let jarvis_home = TempDir::new()?;
 
     let mut cmd = jarvis_command(jarvis_home.path())?;
-    cmd.args(["intent", "list"]).assert().success().stdout(contains("CreateSkill"));
+    cmd.args(["intent", "list"])
+        .assert()
+        .success()
+        .stdout(contains("CreateSkill"));
 
     Ok(())
 }
@@ -41,7 +46,10 @@ async fn intent_test_runs_test_suite() -> Result<()> {
     let jarvis_home = TempDir::new()?;
 
     let mut cmd = jarvis_command(jarvis_home.path())?;
-    cmd.args(["intent", "test"]).assert().success().stdout(contains("All tests completed"));
+    cmd.args(["intent", "test"])
+        .assert()
+        .success()
+        .stdout(contains("All tests completed"));
 
     Ok(())
 }

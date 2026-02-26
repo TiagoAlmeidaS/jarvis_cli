@@ -6,6 +6,109 @@
       "description": "A path that is guaranteed to be absolute and normalized (though it is not guaranteed to be canonicalized or exist on the filesystem).\n\nIMPORTANT: When deserializing an `AbsolutePathBuf`, a base path must be set using [AbsolutePathBufGuard::new]. If no base path is set, the deserialization will fail unless the path being deserialized is already absolute.",
       "type": "string"
     },
+    "AgentLoopConfigToml": {
+      "additionalProperties": false,
+      "description": "User-facing TOML configuration for the agent loop.\n\nExample `config.toml`: ```toml [agent_loop] mode = \"auto\" base_url = \"http://localhost:11434/v1\" model = \"mistral\" temperature = 0.7 max_tokens = 4096 max_iterations = 25 timeout_sec = 300 ```",
+      "properties": {
+        "api_key": {
+          "default": null,
+          "description": "API key for the LLM endpoint (can be empty for local models). Supports `env:VAR_NAME` syntax to read from environment variables, e.g. `env:OPENROUTER_API_KEY`.",
+          "type": "string"
+        },
+        "api_key_env": {
+          "default": null,
+          "description": "Environment variable name to read the API key from. Alternative to `api_key = \"env:VAR_NAME\"`. Common values: \"OPENROUTER_API_KEY\", \"OPENAI_API_KEY\", \"GOOGLE_API_KEY\".",
+          "type": "string"
+        },
+        "base_url": {
+          "default": null,
+          "description": "OpenAI-compatible API base URL for text-based mode. Defaults to \"http://localhost:11434/v1\" (Ollama).",
+          "type": "string"
+        },
+        "max_context_tokens": {
+          "default": null,
+          "description": "Maximum estimated context tokens before compaction kicks in.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_iterations": {
+          "default": null,
+          "description": "Maximum Think→Execute→Observe iterations before forced stop.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "max_tokens": {
+          "default": null,
+          "description": "Max tokens to generate per LLM call.",
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "mode": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/AgentLoopMode"
+            }
+          ],
+          "default": null,
+          "description": "Tool calling mode: \"auto\", \"text_based\", \"native\", or \"disabled\"."
+        },
+        "model": {
+          "default": null,
+          "description": "Model identifier for text-based mode (e.g. \"mistral\", \"llama3.1\"). When not set, falls back to the main `model` config field.",
+          "type": "string"
+        },
+        "temperature": {
+          "default": null,
+          "description": "Temperature for text-based mode (0.0 - 2.0).",
+          "format": "double",
+          "type": "number"
+        },
+        "timeout_sec": {
+          "default": null,
+          "description": "Maximum wall-clock time in seconds for the entire loop.",
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "AgentLoopMode": {
+      "description": "How the agent loop should handle tool calling.",
+      "oneOf": [
+        {
+          "description": "Automatically detect based on the model: if the model is known to lack native function calling, use the text-based agent loop; otherwise use the standard Responses API flow.",
+          "enum": [
+            "auto"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Always use the text-based agentic loop (useful for local Ollama models).",
+          "enum": [
+            "text_based"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Always use native function calling via Responses API (the default).",
+          "enum": [
+            "native"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Disable tool calling entirely.",
+          "enum": [
+            "disabled"
+          ],
+          "type": "string"
+        }
+      ]
+    },
     "AgentsToml": {
       "additionalProperties": false,
       "properties": {
@@ -49,14 +152,42 @@
       "description": "Analytics settings loaded from config.toml. Fields are optional so we can apply defaults.",
       "properties": {
         "enabled": {
-          "description": "When `false`, disables analytics across Codex product surfaces in this profile.",
+          "description": "When `false`, disables analytics across Jarvis product surfaces in this profile.",
           "type": "boolean"
         }
       },
       "type": "object"
     },
+    "ApiConfigToml": {
+      "additionalProperties": false,
+      "description": "API Web settings loaded from config.toml. Fields are optional so we can apply defaults.",
+      "properties": {
+        "api_key": {
+          "description": "API key for authentication. Required for API access.",
+          "type": "string"
+        },
+        "bind_address": {
+          "default": null,
+          "description": "Bind address for the API server. Defaults to \"0.0.0.0\".",
+          "type": "string"
+        },
+        "enable_cors": {
+          "default": null,
+          "description": "Enable CORS for cross-origin requests. Defaults to false.",
+          "type": "boolean"
+        },
+        "port": {
+          "default": null,
+          "description": "Port for the API server. Defaults to 3000.",
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "AskForApproval": {
-      "description": "Determines the conditions under which the user is consulted to approve running the command proposed by Codex.",
+      "description": "Determines the conditions under which the user is consulted to approve running the command proposed by Jarvis.",
       "oneOf": [
         {
           "description": "Under this policy, only \"known safe\" commands—as determined by `is_safe_command()`—that **only read files** are auto‑approved. Everything else will ask the user to approve.",
@@ -89,10 +220,10 @@
       ]
     },
     "AuthCredentialsStoreMode": {
-      "description": "Determine where Codex should store CLI auth credentials.",
+      "description": "Determine where Jarvis should store CLI auth credentials.",
       "oneOf": [
         {
-          "description": "Persist credentials in CODEX_HOME/auth.json.",
+          "description": "Persist credentials in jarvis_home/auth.json.",
           "enum": [
             "file"
           ],
@@ -106,7 +237,7 @@
           "type": "string"
         },
         {
-          "description": "Use keyring when available; otherwise, fall back to a file in CODEX_HOME.",
+          "description": "Use keyring when available; otherwise, fall back to a file in jarvis_home.",
           "enum": [
             "auto"
           ],
@@ -299,7 +430,7 @@
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "description": "When `false`, disables the feedback flow across Codex product surfaces.",
+          "description": "When `false`, disables the feedback flow across Jarvis product surfaces.",
           "type": "boolean"
         }
       },
@@ -307,7 +438,7 @@
     },
     "ForcedLoginMethod": {
       "enum": [
-        "chatgpt",
+        "google",
         "api"
       ],
       "type": "string"
@@ -332,9 +463,24 @@
       },
       "type": "object"
     },
+    "GitHubConfigToml": {
+      "additionalProperties": false,
+      "description": "GitHub settings loaded from config.toml. Fields are optional so we can apply defaults.",
+      "properties": {
+        "api_base_url": {
+          "description": "Base URL for GitHub API. Defaults to \"https://api.github.com\". Useful for GitHub Enterprise Server.",
+          "type": "string"
+        },
+        "pat_secret_name": {
+          "description": "Name of the secret in jarvis-secrets where the GitHub PAT is stored. Defaults to \"GITHUB_PAT\".",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "History": {
       "additionalProperties": false,
-      "description": "Settings that govern if and what will be written to `~/.codex/history.jsonl`.",
+      "description": "Settings that govern if and what will be written to `~/.jarvis/history.jsonl`.",
       "properties": {
         "max_bytes": {
           "description": "If set, the maximum size of the history file in bytes. The oldest entries are dropped once the file exceeds this limit.",
@@ -373,6 +519,70 @@
           "type": "string"
         }
       ]
+    },
+    "LlmConfigToml": {
+      "additionalProperties": false,
+      "description": "LLM routing strategies configuration for daemon pipelines.\n\nDefines fallback chains for different use cases: - heavy_context: For tasks requiring long context (code reading, video transcription) - reasoning: For tasks requiring logical reasoning (code review, planning) - fast_routing: For quick routing decisions",
+      "properties": {
+        "strategies": {
+          "additionalProperties": {
+            "$ref": "#/definitions/LlmStrategyConfigToml"
+          },
+          "default": {},
+          "description": "Map of strategy names to their configurations. Format: [llm.strategies.<strategy_name>]",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "LlmStrategyConfigToml": {
+      "additionalProperties": false,
+      "description": "Configuration for a single LLM routing strategy.",
+      "properties": {
+        "fallbacks": {
+          "default": [],
+          "description": "Fallback provider/model identifiers in order of preference. Example: [\"openrouter/google/gemini-2.0-flash:free\", \"github/gpt-4o-mini\"]",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "primary": {
+          "description": "Primary provider/model identifier (format: \"provider/model\"). Example: \"google/gemini-2.0-flash\"",
+          "type": "string"
+        }
+      },
+      "required": [
+        "primary"
+      ],
+      "type": "object"
+    },
+    "MessagingConfigToml": {
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "default": true,
+          "description": "When `false`, disables messaging integrations (WhatsApp, Telegram).",
+          "type": "boolean"
+        },
+        "telegram": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/TelegramConfigToml"
+            }
+          ],
+          "description": "Telegram Bot API configuration."
+        },
+        "whatsapp": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/WhatsAppConfigToml"
+            }
+          ],
+          "description": "WhatsApp Business API configuration."
+        }
+      },
+      "type": "object"
     },
     "ModeKind": {
       "description": "Initial collaboration mode to use when the TUI starts.",
@@ -455,6 +665,11 @@
           "description": "Whether this provider supports the Responses API WebSocket transport.",
           "type": "boolean"
         },
+        "uses_chat_completions_api": {
+          "default": false,
+          "description": "If true, this provider uses Chat Completions API (`/v1/chat/completions`) instead of Responses API (`/v1/responses`). When enabled, requests will be automatically converted from Responses format to Chat Completions format. This is used for providers like Ollama and others that implement the OpenAI Chat Completions API but not the Responses API.",
+          "type": "boolean"
+        },
         "wire_api": {
           "allOf": [
             {
@@ -471,14 +686,14 @@
       "type": "object"
     },
     "Notice": {
-      "description": "Settings for notices we display to users via the tui and app-server clients (primarily the Codex IDE extension). NOTE: these are different from notifications - notices are warnings, NUX screens, acknowledgements, etc.",
+      "description": "Settings for notices we display to users via the tui and app-server clients (primarily the Jarvis IDE extension). NOTE: these are different from notifications - notices are warnings, NUX screens, acknowledgements, etc.",
       "properties": {
         "hide_full_access_warning": {
           "description": "Tracks whether the user has acknowledged the full access warning prompt.",
           "type": "boolean"
         },
-        "hide_gpt-5.1-codex-max_migration_prompt": {
-          "description": "Tracks whether the user has seen the gpt-5.1-codex-max migration prompt",
+        "hide_gpt-5.1-Jarvis-max_migration_prompt": {
+          "description": "Tracks whether the user has seen the gpt-5.1-Jarvis-max migration prompt",
           "type": "boolean"
         },
         "hide_gpt5_1_migration_prompt": {
@@ -526,17 +741,17 @@
       ]
     },
     "OAuthCredentialsStoreMode": {
-      "description": "Determine where Codex should store and read MCP credentials.",
+      "description": "Determine where Jarvis should store and read MCP credentials.",
       "oneOf": [
         {
-          "description": "`Keyring` when available; otherwise, `File`. Credentials stored in the keyring will only be readable by Codex unless the user explicitly grants access via OS-level keyring access.",
+          "description": "`Keyring` when available; otherwise, `File`. Credentials stored in the keyring will only be readable by Jarvis unless the user explicitly grants access via OS-level keyring access.",
           "enum": [
             "auto"
           ],
           "type": "string"
         },
         {
-          "description": "CODEX_HOME/.credentials.json This file will be readable to Codex and other applications running as the same user.",
+          "description": "jarvis_home/.credentials.json This file will be readable to Jarvis and other applications running as the same user.",
           "enum": [
             "file"
           ],
@@ -715,6 +930,50 @@
       "properties": {
         "trust_level": {
           "$ref": "#/definitions/TrustLevel"
+        }
+      },
+      "type": "object"
+    },
+    "RagConfigToml": {
+      "additionalProperties": false,
+      "description": "RAG (Retrieval Augmented Generation) settings loaded from config.toml.",
+      "properties": {
+        "embedding_dimension": {
+          "default": null,
+          "description": "Expected embedding dimension. Defaults to 768 (nomic-embed-text).",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "enabled": {
+          "default": true,
+          "description": "When `false`, disables RAG entirely. Defaults to `true`.",
+          "type": "boolean"
+        },
+        "ollama_model": {
+          "default": null,
+          "description": "Ollama model used to generate embeddings. Defaults to \"nomic-embed-text\".",
+          "type": "string"
+        },
+        "ollama_url": {
+          "default": null,
+          "description": "Base URL for the Ollama embedding service. Can be set via environment variable JARVIS_RAG_OLLAMA_URL. Defaults to \"http://localhost:11434\".",
+          "type": "string"
+        },
+        "postgres_url": {
+          "default": null,
+          "description": "PostgreSQL connection URL for document storage. Can be set via environment variable JARVIS_RAG_POSTGRES_URL. When unset, falls back to JSON file storage in jarvis_home.",
+          "type": "string"
+        },
+        "qdrant_collection": {
+          "default": null,
+          "description": "Qdrant collection name. Defaults to \"jarvis_knowledge\".",
+          "type": "string"
+        },
+        "qdrant_url": {
+          "default": null,
+          "description": "URL for the Qdrant vector database. Can be set via environment variable JARVIS_RAG_QDRANT_URL. Defaults to \"http://localhost:6333\".",
+          "type": "string"
         }
       },
       "type": "object"
@@ -970,6 +1229,36 @@
       },
       "type": "object"
     },
+    "TelegramConfigToml": {
+      "additionalProperties": false,
+      "properties": {
+        "bot_token": {
+          "description": "Bot token from BotFather. Can be set via environment variable TELEGRAM_BOT_TOKEN.",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "description": "When `false`, disables Telegram integration.",
+          "type": "boolean"
+        },
+        "webhook_port": {
+          "default": null,
+          "description": "Port for Telegram webhook server. Defaults to 8081.",
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "webhook_secret": {
+          "description": "Secret token for webhook validation (optional). Can be set via environment variable TELEGRAM_WEBHOOK_SECRET.",
+          "type": "string"
+        },
+        "webhook_url": {
+          "description": "Webhook URL for Telegram (optional, for setting webhook via API).",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "ToolsToml": {
       "additionalProperties": false,
       "properties": {
@@ -1083,6 +1372,41 @@
       ],
       "type": "string"
     },
+    "WhatsAppConfigToml": {
+      "additionalProperties": false,
+      "properties": {
+        "access_token": {
+          "description": "Access token for WhatsApp Business API. Can be set via environment variable WHATSAPP_ACCESS_TOKEN.",
+          "type": "string"
+        },
+        "api_url": {
+          "default": null,
+          "description": "Base URL for WhatsApp Business API. Defaults to \"https://graph.facebook.com/v18.0\".",
+          "type": "string"
+        },
+        "enabled": {
+          "default": true,
+          "description": "When `false`, disables WhatsApp integration.",
+          "type": "boolean"
+        },
+        "phone_number_id": {
+          "description": "Phone number ID from WhatsApp Business API. Can be set via environment variable WHATSAPP_PHONE_NUMBER_ID.",
+          "type": "string"
+        },
+        "verify_token": {
+          "description": "Verify token for webhook verification. Can be set via environment variable WHATSAPP_VERIFY_TOKEN.",
+          "type": "string"
+        },
+        "webhook_port": {
+          "default": null,
+          "description": "Port for WhatsApp webhook server. Defaults to 8080.",
+          "format": "uint16",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
     "WireApi": {
       "description": "Wire protocol that the provider speaks.",
       "oneOf": [
@@ -1096,8 +1420,17 @@
       ]
     }
   },
-  "description": "Base config deserialized from ~/.codex/config.toml.",
+  "description": "Base config deserialized from ~/.jarvis/config.toml.",
   "properties": {
+    "agent_loop": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/AgentLoopConfigToml"
+        }
+      ],
+      "default": null,
+      "description": "Agent loop configuration for text-based tool calling with local/cheap models."
+    },
     "agents": {
       "allOf": [
         {
@@ -1112,7 +1445,15 @@
           "$ref": "#/definitions/AnalyticsConfigToml"
         }
       ],
-      "description": "When `false`, disables analytics across Codex product surfaces in this machine. Defaults to `true`."
+      "description": "When `false`, disables analytics across Jarvis product surfaces in this machine. Defaults to `true`."
+    },
+    "api": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/ApiConfigToml"
+        }
+      ],
+      "description": "API Web server configuration."
     },
     "approval_policy": {
       "allOf": [
@@ -1127,7 +1468,7 @@
       "type": "string"
     },
     "check_for_update_on_startup": {
-      "description": "When `true`, checks for Codex updates on startup and surfaces update prompts. Set to `false` only if your Codex updates are centrally managed. Defaults to `true`.",
+      "description": "When `true`, checks for Jarvis updates on startup and surfaces update prompts. Set to `false` only if your Jarvis updates are centrally managed. Defaults to `true`.",
       "type": "boolean"
     },
     "cli_auth_credentials_store": {
@@ -1137,7 +1478,7 @@
         }
       ],
       "default": null,
-      "description": "Preferred backend for storing CLI auth credentials. file (default): Use a file in the Codex home directory. keyring: Use an OS-specific keyring service. auto: Use the keyring if available, otherwise use a file."
+      "description": "Preferred backend for storing CLI auth credentials. file (default): Use a file in the Jarvis home directory. keyring: Use an OS-specific keyring service. auto: Use the keyring if available, otherwise use a file."
     },
     "compact_prompt": {
       "description": "Compact prompt used for history compaction.",
@@ -1271,7 +1612,7 @@
           "$ref": "#/definitions/FeedbackConfigToml"
         }
       ],
-      "description": "When `false`, disables feedback collection across Codex product surfaces. Defaults to `true`."
+      "description": "When `false`, disables feedback collection across Jarvis product surfaces. Defaults to `true`."
     },
     "file_opener": {
       "allOf": [
@@ -1304,6 +1645,14 @@
       "default": null,
       "description": "Settings for ghost snapshots (used for undo)."
     },
+    "github": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/GitHubConfigToml"
+        }
+      ],
+      "description": "GitHub API configuration."
+    },
     "hide_agent_reasoning": {
       "description": "When set to `true`, `AgentReasoning` events will be hidden from the UI/output. Defaults to `false`.",
       "type": "boolean"
@@ -1315,14 +1664,23 @@
         }
       ],
       "default": null,
-      "description": "Settings that govern if and what will be written to `~/.codex/history.jsonl`."
+      "description": "Settings that govern if and what will be written to `~/.jarvis/history.jsonl`."
     },
     "instructions": {
       "description": "System instructions.",
       "type": "string"
     },
+    "llm": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/LlmConfigToml"
+        }
+      ],
+      "default": null,
+      "description": "LLM routing strategies for daemon pipelines with automatic fallback. Format: [llm.strategies.<strategy_name>] Example: [llm.strategies.heavy_context] primary = \"google/gemini-2.0-flash\" fallbacks = [\"openrouter/google/gemini-2.0-flash:free\", \"github/gpt-4o-mini\"]"
+    },
     "mcp_oauth_callback_port": {
-      "description": "Optional fixed port for the local HTTP callback server used during MCP OAuth login. When unset, Codex will bind to an ephemeral port chosen by the OS.",
+      "description": "Optional fixed port for the local HTTP callback server used during MCP OAuth login. When unset, Jarvis will bind to an ephemeral port chosen by the OS.",
       "format": "uint16",
       "minimum": 0.0,
       "type": "integer"
@@ -1334,15 +1692,23 @@
         }
       ],
       "default": null,
-      "description": "Preferred backend for storing MCP OAuth credentials. keyring: Use an OS-specific keyring service. https://github.com/openai/jarvis/blob/main/jarvis-rs/rmcp-client/src/oauth.rs#L2 file: Use a file in the Jarvis home directory. auto (default): Use the OS-specific keyring service if available, otherwise use a file."
+      "description": "Preferred backend for storing MCP OAuth credentials. keyring: Use an OS-specific keyring service. https://github.com/openai/Jarvis/blob/main/Jarvis-rs/rmcp-client/src/oauth.rs#L2 file: Use a file in the Jarvis home directory. auto (default): Use the OS-specific keyring service if available, otherwise use a file."
     },
     "mcp_servers": {
       "additionalProperties": {
         "$ref": "#/definitions/RawMcpServerConfig"
       },
       "default": {},
-      "description": "Definition for MCP servers that Codex can reach out to for tool calls.",
+      "description": "Definition for MCP servers that Jarvis can reach out to for tool calls.",
       "type": "object"
+    },
+    "messaging": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/MessagingConfigToml"
+        }
+      ],
+      "description": "Messaging integrations configuration (WhatsApp, Telegram)."
     },
     "model": {
       "description": "Optional override of model selection.",
@@ -1364,7 +1730,7 @@
           "$ref": "#/definitions/AbsolutePathBuf"
         }
       ],
-      "description": "Optional path to a file containing model instructions that will override the built-in instructions for the selected model. Users are STRONGLY DISCOURAGED from using this field, as deviating from the instructions sanctioned by Codex will likely degrade model performance."
+      "description": "Optional path to a file containing model instructions that will override the built-in instructions for the selected model. Users are STRONGLY DISCOURAGED from using this field, as deviating from the instructions sanctioned by Jarvis will likely degrade model performance."
     },
     "model_provider": {
       "description": "Provider to use from the model_providers map.",
@@ -1459,7 +1825,7 @@
     },
     "project_root_markers": {
       "default": null,
-      "description": "Markers used to detect the project root when searching parent directories for `.codex` folders. Defaults to [\".git\"] when unset.",
+      "description": "Markers used to detect the project root when searching parent directories for `.jarvis` folders. Defaults to [\".git\"] when unset.",
       "items": {
         "type": "string"
       },
@@ -1470,6 +1836,14 @@
         "$ref": "#/definitions/ProjectConfig"
       },
       "type": "object"
+    },
+    "rag": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/RagConfigToml"
+        }
+      ],
+      "description": "RAG (Retrieval Augmented Generation) configuration."
     },
     "review_model": {
       "description": "Review model override used by the `/review` feature.",

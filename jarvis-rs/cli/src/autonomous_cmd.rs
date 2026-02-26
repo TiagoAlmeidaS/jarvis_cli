@@ -4,17 +4,23 @@
 //! context, safety) to provide end-to-end autonomous execution.
 
 use anyhow::Result;
-use clap::{Args, Subcommand};
+use clap::Args;
+use clap::Subcommand;
 use jarvis_common::CliConfigOverrides;
-use jarvis_core::autonomous::{
-    AnalyzedContext, ContextAnalyzer, ExecutionPlan, ExecutionPlanner, RuleBasedContextAnalyzer,
-    RuleBasedExecutionPlanner,
-};
+use jarvis_core::autonomous::AnalyzedContext;
+use jarvis_core::autonomous::ContextAnalyzer;
+use jarvis_core::autonomous::ExecutionPlan;
+use jarvis_core::autonomous::ExecutionPlanner;
+use jarvis_core::autonomous::RuleBasedContextAnalyzer;
+use jarvis_core::autonomous::RuleBasedExecutionPlanner;
 use jarvis_core::capability::registry::InMemoryCapabilityRegistry;
-use jarvis_core::intent::{IntentDetector, RuleBasedIntentDetector};
-use jarvis_core::safety::{
-    ProposedAction, RiskLevel, RuleBasedSafetyClassifier, SafetyClassifier, SafetyRules,
-};
+use jarvis_core::intent::IntentDetector;
+use jarvis_core::intent::RuleBasedIntentDetector;
+use jarvis_core::safety::ProposedAction;
+use jarvis_core::safety::RiskLevel;
+use jarvis_core::safety::RuleBasedSafetyClassifier;
+use jarvis_core::safety::SafetyClassifier;
+use jarvis_core::safety::SafetyRules;
 use owo_colors::OwoColorize;
 use serde_json;
 use std::collections::HashMap;

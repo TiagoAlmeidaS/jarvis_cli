@@ -1,10 +1,15 @@
 //! Document indexer for RAG system.
 
-use crate::rag::chunk::{ChunkMetadata, ChunkingConfig, TextChunk, TextChunker};
+use crate::rag::chunk::ChunkMetadata;
+use crate::rag::chunk::ChunkingConfig;
+use crate::rag::chunk::TextChunk;
+use crate::rag::chunk::TextChunker;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
+use std::path::PathBuf;
 
 /// Represents an indexed document.
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,12 +1,3 @@
-﻿use jarvis_core::config::Constrained;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::ReviewDecision;
-use jarvis_core::protocol::ReviewRequest;
-use jarvis_core::protocol::ReviewTarget;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_core::sandboxing::SandboxPermissions;
 use core_test_support::responses::ev_apply_patch_function_call;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
@@ -20,6 +11,15 @@ use core_test_support::responses::start_mock_server;
 use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::config::Constrained;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::ReviewDecision;
+use jarvis_core::protocol::ReviewRequest;
+use jarvis_core::protocol::ReviewTarget;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_core::sandboxing::SandboxPermissions;
 use pretty_assertions::assert_eq;
 
 /// Delegate should surface ExecApprovalRequest from sub-agent and proceed
@@ -68,7 +68,7 @@ async fn jarvis_delegate_forwards_exec_approval_and_proceeds_on_approval() {
     let test = builder.build(&server).await.expect("build test Jarvis");
 
     // Kick off review (sub-agent starts internally).
-    test.jarvis
+    test.Jarvis
         .submit(Op::Review {
             review_request: ReviewRequest {
                 target: ReviewTarget::Custom {
@@ -81,19 +81,19 @@ async fn jarvis_delegate_forwards_exec_approval_and_proceeds_on_approval() {
         .expect("submit review");
 
     // Lifecycle: Entered -> ExecApprovalRequest -> Exited(Some) -> TurnComplete.
-    wait_for_event(&test.jarvis, |ev| {
+    wait_for_event(&test.Jarvis, |ev| {
         matches!(ev, EventMsg::EnteredReviewMode(_))
     })
     .await;
 
     // Expect parent-side approval request (forwarded by delegate).
-    wait_for_event(&test.jarvis, |ev| {
+    wait_for_event(&test.Jarvis, |ev| {
         matches!(ev, EventMsg::ExecApprovalRequest(_))
     })
     .await;
 
     // Approve via parent; id "0" is the active sub_id in tests.
-    test.jarvis
+    test.Jarvis
         .submit(Op::ExecApproval {
             id: "0".into(),
             decision: ReviewDecision::Approved,
@@ -101,11 +101,11 @@ async fn jarvis_delegate_forwards_exec_approval_and_proceeds_on_approval() {
         .await
         .expect("submit exec approval");
 
-    wait_for_event(&test.jarvis, |ev| {
+    wait_for_event(&test.Jarvis, |ev| {
         matches!(ev, EventMsg::ExitedReviewMode(_))
     })
     .await;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 }
 
 /// Delegate should surface ApplyPatchApprovalRequest and honor parent decision
@@ -145,7 +145,7 @@ async fn jarvis_delegate_forwards_patch_approval_and_proceeds_on_decision() {
     });
     let test = builder.build(&server).await.expect("build test Jarvis");
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::Review {
             review_request: ReviewRequest {
                 target: ReviewTarget::Custom {
@@ -157,17 +157,17 @@ async fn jarvis_delegate_forwards_patch_approval_and_proceeds_on_decision() {
         .await
         .expect("submit review");
 
-    wait_for_event(&test.jarvis, |ev| {
+    wait_for_event(&test.Jarvis, |ev| {
         matches!(ev, EventMsg::EnteredReviewMode(_))
     })
     .await;
-    wait_for_event(&test.jarvis, |ev| {
+    wait_for_event(&test.Jarvis, |ev| {
         matches!(ev, EventMsg::ApplyPatchApprovalRequest(_))
     })
     .await;
 
     // Deny via parent so delegate can continue; id "0" is the active sub_id in tests.
-    test.jarvis
+    test.Jarvis
         .submit(Op::PatchApproval {
             id: "0".into(),
             decision: ReviewDecision::Denied,
@@ -175,11 +175,11 @@ async fn jarvis_delegate_forwards_patch_approval_and_proceeds_on_decision() {
         .await
         .expect("submit patch approval");
 
-    wait_for_event(&test.jarvis, |ev| {
+    wait_for_event(&test.Jarvis, |ev| {
         matches!(ev, EventMsg::ExitedReviewMode(_))
     })
     .await;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -201,7 +201,7 @@ async fn jarvis_delegate_ignores_legacy_deltas() {
     let test = builder.build(&server).await.expect("build test Jarvis");
 
     // Kick off review (delegated).
-    test.jarvis
+    test.Jarvis
         .submit(Op::Review {
             review_request: ReviewRequest {
                 target: ReviewTarget::Custom {
@@ -217,7 +217,7 @@ async fn jarvis_delegate_ignores_legacy_deltas() {
     let mut legacy_reasoning_delta_count = 0;
 
     loop {
-        let ev = wait_for_event(&test.jarvis, |_| true).await;
+        let ev = wait_for_event(&test.Jarvis, |_| true).await;
         match ev {
             EventMsg::ReasoningContentDelta(_) => reasoning_delta_count += 1,
             EventMsg::AgentReasoningDelta(_) => legacy_reasoning_delta_count += 1,

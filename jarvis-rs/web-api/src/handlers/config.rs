@@ -1,9 +1,9 @@
 //! Configuration endpoint.
 
-use axum::extract::State;
-use axum::Json;
-use serde::Serialize;
 use crate::state::AppState;
+use axum::Json;
+use axum::extract::State;
+use serde::Serialize;
 
 #[derive(Serialize)]
 pub struct ConfigResponse {
@@ -15,7 +15,7 @@ pub struct ConfigResponse {
 
 pub async fn get_config(State(state): State<AppState>) -> Json<ConfigResponse> {
     let api_config = state.config.api.as_ref();
-    
+
     Json(ConfigResponse {
         model_provider: state.config.model_provider_id.clone(),
         model: state.config.model.clone(),
@@ -27,10 +27,10 @@ pub async fn get_config(State(state): State<AppState>) -> Json<ConfigResponse> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::StatusCode;
-    use axum_test::TestServer;
     use crate::server::create_router;
     use crate::test_utils::create_test_app_state_with_api_key;
+    use axum::http::StatusCode;
+    use axum_test::TestServer;
 
     #[tokio::test]
     async fn test_get_config_with_auth() {
@@ -57,9 +57,7 @@ mod tests {
         let app = create_router(app_state, false);
         let server = TestServer::new(app).unwrap();
 
-        let response = server
-            .get("/api/config")
-            .await;
+        let response = server.get("/api/config").await;
 
         response.assert_status(StatusCode::UNAUTHORIZED);
     }

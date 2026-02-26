@@ -19,10 +19,10 @@ pub async fn health_check() -> Json<HealthResponse> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::StatusCode;
-    use axum_test::TestServer;
     use crate::server::create_router;
     use crate::test_utils::create_test_app_state;
+    use axum::http::StatusCode;
+    use axum_test::TestServer;
 
     #[tokio::test]
     async fn test_health_check() {
@@ -30,9 +30,7 @@ mod tests {
         let app = create_router(app_state, false);
         let server = TestServer::new(app).unwrap();
 
-        let response = server
-            .get("/api/health")
-            .await;
+        let response = server.get("/api/health").await;
 
         response.assert_status(StatusCode::OK);
         let body: HealthResponse = response.json();
@@ -47,9 +45,7 @@ mod tests {
         let server = TestServer::new(app).unwrap();
 
         // Should work without Authorization header
-        let response = server
-            .get("/api/health")
-            .await;
+        let response = server.get("/api/health").await;
 
         response.assert_status(StatusCode::OK);
     }

@@ -1,4 +1,4 @@
-﻿//! Smoke tests for skills commands.
+//! Smoke tests for skills commands.
 
 use anyhow::Result;
 use predicates::str::contains;
@@ -24,7 +24,9 @@ async fn skills_create_creates_skill() -> Result<()> {
         "--skill_type=library",
         "--evaluate=false",
         "--output=json",
-    ]).assert().success();
+    ])
+    .assert()
+    .success();
 
     Ok(())
 }

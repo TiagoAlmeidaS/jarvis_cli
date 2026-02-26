@@ -14,17 +14,34 @@ use std::time::Duration;
 
 use jarvis_core::agent::AgentSessionManager;
 use jarvis_core::agent::session_persistent::PersistentAgentSessionManager;
-use jarvis_core::agent_loop::bridge::{
-    BridgeLlmConfig, BridgeToolConfig, BridgeToolExecutor, default_tool_specs,
-};
+use jarvis_core::agent_loop::AgentLoop;
+use jarvis_core::agent_loop::AgentLoopConfig;
+use jarvis_core::agent_loop::SafeToolExecutor;
+use jarvis_core::agent_loop::bridge::BridgeLlmConfig;
+use jarvis_core::agent_loop::bridge::BridgeToolConfig;
+use jarvis_core::agent_loop::bridge::BridgeToolExecutor;
+use jarvis_core::agent_loop::bridge::default_tool_specs;
 use jarvis_core::agent_loop::events::AgentEvent;
-use jarvis_core::agent_loop::{AgentLoop, AgentLoopConfig};
 use jarvis_core::config::types::AgentLoopSettings;
-use jarvis_core::protocol::{
-    AgentMessageEvent, AskForApproval, ErrorEvent, Event, EventMsg, ExecCommandBeginEvent,
-    ExecCommandEndEvent, ExecCommandSource, SandboxPolicy, SessionConfiguredEvent,
-    TurnCompleteEvent, TurnStartedEvent, WarningEvent,
-};
+use jarvis_core::config::types::KnowledgeConfig;
+use jarvis_core::intent::RuleBasedIntentDetector;
+use jarvis_core::knowledge::InMemoryKnowledgeBase;
+use jarvis_core::knowledge::PersistentKnowledgeBase;
+use jarvis_core::knowledge::RuleBasedLearningSystem;
+use jarvis_core::protocol::AgentMessageEvent;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::ErrorEvent;
+use jarvis_core::protocol::Event;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::ExecCommandBeginEvent;
+use jarvis_core::protocol::ExecCommandEndEvent;
+use jarvis_core::protocol::ExecCommandSource;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_core::protocol::SessionConfiguredEvent;
+use jarvis_core::protocol::TurnCompleteEvent;
+use jarvis_core::protocol::TurnStartedEvent;
+use jarvis_core::protocol::WarningEvent;
+use jarvis_core::safety::RuleBasedSafetyClassifier;
 use jarvis_protocol::ThreadId;
 use jarvis_protocol::config_types::ModeKind;
 use tokio_util::sync::CancellationToken;
@@ -139,6 +156,7 @@ pub(crate) fn spawn_agent_loop_runner(
     app_event_tx: AppEventSender,
     cwd: PathBuf,
     jarvis_home: PathBuf,
+    knowledge_config: KnowledgeConfig,
 ) -> (
     tokio::sync::mpsc::UnboundedSender<AgentLoopMessage>,
     CancellationToken,
@@ -209,6 +227,27 @@ pub(crate) fn spawn_agent_loop_runner(
         };
         app_event_tx.send(AppEvent::CodexEvent(session_event));
 
+        // ---- KNOWLEDGE SYSTEM ----
+        let learning_system: Option<Arc<dyn jarvis_core::knowledge::LearningSystem>> =
+            if knowledge_config.enabled {
+                let kb: Box<dyn jarvis_core::knowledge::KnowledgeBase> =
+                    if knowledge_config.backend == "memory" {
+                        Box::new(InMemoryKnowledgeBase::new())
+                    } else {
+                        let kb_dir = jarvis_home.join(&knowledge_config.storage_dir);
+                        Box::new(PersistentKnowledgeBase::new(kb_dir))
+                    };
+                tracing::info!(
+                    "Knowledge system enabled (backend: {}, dir: {})",
+                    knowledge_config.backend,
+                    knowledge_config.storage_dir
+                );
+                Some(Arc::new(RuleBasedLearningSystem::new(kb)))
+            } else {
+                tracing::debug!("Knowledge system disabled");
+                None
+            };
+
         while let Some(message) = msg_rx.recv().await {
             let working_dir = message.cwd;
 
@@ -249,7 +288,12 @@ pub(crate) fn spawn_agent_loop_runner(
                 shell_timeout: Duration::from_secs(30),
                 require_approval: false,
             };
-            let tools = Arc::new(BridgeToolExecutor::new(tool_config));
+            let raw_tools = Arc::new(BridgeToolExecutor::new(tool_config));
+
+            // Wrap tools with the safety gate so destructive operations are
+            // blocked automatically.
+            let classifier = Arc::new(RuleBasedSafetyClassifier::default());
+            let safe_tools = Arc::new(SafeToolExecutor::new(raw_tools, classifier));
 
             let loop_config = AgentLoopConfig {
                 max_iterations: settings.max_iterations,
@@ -258,7 +302,16 @@ pub(crate) fn spawn_agent_loop_runner(
                 ..Default::default()
             };
 
-            let agent = AgentLoop::new(llm, tools, loop_config);
+            let mut agent = AgentLoop::new(llm, safe_tools, loop_config);
+
+            // Attach intent detector so user messages are classified.
+            let intent_detector = Arc::new(RuleBasedIntentDetector::default());
+            agent = agent.with_intent_detector(intent_detector);
+
+            // Attach learning system if enabled.
+            if let Some(ref ls) = learning_system {
+                agent = agent.with_learning_system(Arc::clone(ls));
+            }
 
             // Emit TurnStarted
             let turn_started = Event {
@@ -467,6 +520,71 @@ fn emit_agent_event(tx: &AppEventSender, event: &AgentEvent, cwd: &PathBuf) {
             };
             tx.send(AppEvent::CodexEvent(err_event));
         }
+        AgentEvent::IntentDetected {
+            intent_type,
+            confidence,
+        } => {
+            tracing::debug!("AgentLoop: intent detected: {intent_type} (confidence: {confidence})");
+            let bg_event = Event {
+                id: String::new(),
+                msg: EventMsg::BackgroundEvent(jarvis_core::protocol::BackgroundEventEvent {
+                    message: format!("Intent: {intent_type} (confidence: {confidence:.0}%)"),
+                }),
+            };
+            tx.send(AppEvent::CodexEvent(bg_event));
+        }
+        AgentEvent::SafetyWarning {
+            tool_name,
+            risk_level,
+            reasoning,
+        } => {
+            tracing::warn!("AgentLoop: safety warning for {tool_name}: {reasoning}");
+            let warn_event = Event {
+                id: String::new(),
+                msg: EventMsg::Warning(WarningEvent {
+                    message: format!("Safety warning ({risk_level}): {tool_name} — {reasoning}"),
+                }),
+            };
+            tx.send(AppEvent::CodexEvent(warn_event));
+        }
+        AgentEvent::SafetyBlocked {
+            tool_name,
+            risk_level,
+            reasoning,
+        } => {
+            tracing::error!("AgentLoop: safety blocked {tool_name}: {reasoning}");
+            let err_event = Event {
+                id: String::new(),
+                msg: EventMsg::Error(ErrorEvent {
+                    message: format!("Safety blocked ({risk_level}): {tool_name} — {reasoning}"),
+                    jarvis_error_info: None,
+                }),
+            };
+            tx.send(AppEvent::CodexEvent(err_event));
+        }
+        AgentEvent::KnowledgeLearned {
+            items_count,
+            summary,
+        } => {
+            tracing::info!("AgentLoop: learned {items_count} knowledge items");
+            let bg_event = Event {
+                id: String::new(),
+                msg: EventMsg::BackgroundEvent(jarvis_core::protocol::BackgroundEventEvent {
+                    message: format!("Learned {items_count} item(s): {summary}"),
+                }),
+            };
+            tx.send(AppEvent::CodexEvent(bg_event));
+        }
+        AgentEvent::KnowledgeRetrieved { items_count, query } => {
+            tracing::debug!("AgentLoop: retrieved {items_count} knowledge items for '{query}'");
+            let bg_event = Event {
+                id: String::new(),
+                msg: EventMsg::BackgroundEvent(jarvis_core::protocol::BackgroundEventEvent {
+                    message: format!("Retrieved {items_count} relevant knowledge item(s)"),
+                }),
+            };
+            tx.send(AppEvent::CodexEvent(bg_event));
+        }
     }
 }
 
@@ -507,7 +625,8 @@ async fn load_latest_session_context(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jarvis_core::config::types::{AgentLoopMode, AgentLoopSettings};
+    use jarvis_core::config::types::AgentLoopMode;
+    use jarvis_core::config::types::AgentLoopSettings;
     use pretty_assertions::assert_eq;
 
     #[test]
@@ -593,6 +712,28 @@ mod tests {
             AgentEvent::Cancelled,
             AgentEvent::Error {
                 message: "test error".to_string(),
+            },
+            AgentEvent::IntentDetected {
+                intent_type: "Explore".to_string(),
+                confidence: 0.8,
+            },
+            AgentEvent::SafetyWarning {
+                tool_name: "shell".to_string(),
+                risk_level: "medium".to_string(),
+                reasoning: "Unknown command".to_string(),
+            },
+            AgentEvent::SafetyBlocked {
+                tool_name: "shell".to_string(),
+                risk_level: "Critical".to_string(),
+                reasoning: "Destructive operation".to_string(),
+            },
+            AgentEvent::KnowledgeLearned {
+                items_count: 2,
+                summary: "Learned workflow pattern".to_string(),
+            },
+            AgentEvent::KnowledgeRetrieved {
+                items_count: 3,
+                query: "REST API".to_string(),
             },
         ];
 

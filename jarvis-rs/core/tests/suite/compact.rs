@@ -1,4 +1,10 @@
-﻿#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used)]
+use core_test_support::responses::ev_local_shell_call;
+use core_test_support::responses::ev_reasoning_item;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
+use core_test_support::wait_for_event_match;
 use jarvis_core::JarvisAuth;
 use jarvis_core::ModelProviderInfo;
 use jarvis_core::built_in_model_providers;
@@ -18,12 +24,6 @@ use jarvis_core::protocol::WarningEvent;
 use jarvis_protocol::config_types::ReasoningSummary;
 use jarvis_protocol::items::TurnItem;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::responses::ev_local_shell_call;
-use core_test_support::responses::ev_reasoning_item;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
-use core_test_support::wait_for_event_match;
 use std::collections::VecDeque;
 
 use core_test_support::responses::ev_assistant_message;
@@ -145,7 +145,7 @@ async fn summarize_context_three_requests_and_instructions() {
         config.model_auto_compact_token_limit = Some(200_000);
     });
     let test = builder.build(&server).await.unwrap();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let rollout_path = test.session_configured.rollout_path.expect("rollout path");
 
     // 1) Normal user input – should hit server once.
@@ -338,7 +338,7 @@ async fn manual_compact_uses_custom_prompt() {
         .build(&server)
         .await
         .expect("create conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis.submit(Op::Compact).await.expect("trigger compact");
     let warning_event = wait_for_event(&Jarvis, |ev| matches!(ev, EventMsg::Warning(_))).await;
@@ -405,7 +405,7 @@ async fn manual_compact_emits_api_and_local_token_usage_events() {
         config.model_provider = model_provider;
         set_test_compact_prompt(config);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     // Trigger manual compact and collect TokenCount events for the compact turn.
     Jarvis.submit(Op::Compact).await.unwrap();
@@ -464,7 +464,7 @@ async fn manual_compact_emits_context_compaction_items() {
         config.model_provider = model_provider;
         set_test_compact_prompt(config);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -531,7 +531,7 @@ async fn multiple_auto_compact_per_task_runs_after_token_limit_hit() {
         .build(&server)
         .await
         .expect("build Jarvis")
-        .jarvis;
+        .Jarvis;
 
     // user message
     let user_message = "create an app";
@@ -1100,7 +1100,7 @@ async fn auto_compact_runs_after_token_limit_hit() {
         set_test_compact_prompt(config);
         config.model_auto_compact_token_limit = Some(200_000);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1289,7 +1289,7 @@ async fn auto_compact_emits_context_compaction_items() {
         set_test_compact_prompt(config);
         config.model_auto_compact_token_limit = Some(200_000);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     let mut started_item = None;
     let mut completed_item = None;
@@ -1372,7 +1372,7 @@ async fn auto_compact_starts_after_turn_started() {
         set_test_compact_prompt(config);
         config.model_auto_compact_token_limit = Some(200_000);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1513,7 +1513,7 @@ async fn auto_compact_runs_after_resume_when_token_usage_is_over_limit() {
     mount_sse_once_match(&server, follow_up_matcher, sse_follow_up).await;
 
     resumed
-        .jarvis
+        .Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: follow_up_user.into(),
@@ -1532,11 +1532,11 @@ async fn auto_compact_runs_after_resume_when_token_usage_is_over_limit() {
         .await
         .unwrap();
 
-    wait_for_event(&resumed.jarvis, |event| {
+    wait_for_event(&resumed.Jarvis, |event| {
         matches!(event, EventMsg::ContextCompacted(_))
     })
     .await;
-    wait_for_event(&resumed.jarvis, |event| {
+    wait_for_event(&resumed.Jarvis, |event| {
         matches!(event, EventMsg::TurnComplete(_))
     })
     .await;
@@ -1616,7 +1616,7 @@ async fn auto_compact_persists_rollout_entries() {
         config.model_auto_compact_token_limit = Some(200_000);
     });
     let test = builder.build(&server).await.unwrap();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let session_configured = test.session_configured;
 
     Jarvis
@@ -1727,7 +1727,7 @@ async fn manual_compact_retries_after_context_window_error() {
         set_test_compact_prompt(config);
         config.model_auto_compact_token_limit = Some(200_000);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1854,7 +1854,7 @@ async fn manual_compact_twice_preserves_latest_user_messages() {
         config.model_provider = model_provider;
         set_test_compact_prompt(config);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -2058,7 +2058,7 @@ async fn auto_compact_allows_multiple_attempts_when_interleaved_with_other_turn_
         set_test_compact_prompt(config);
         config.model_auto_compact_token_limit = Some(200);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     let mut auto_compact_lifecycle_events = Vec::new();
     for user in [MULTI_AUTO_MSG, follow_up_user, final_user] {
@@ -2166,7 +2166,7 @@ async fn auto_compact_triggers_after_function_call_over_95_percent_usage() {
         config.model_context_window = Some(context_window);
         config.model_auto_compact_token_limit = Some(limit);
     });
-    let Jarvis = builder.build(&server).await.unwrap().jarvis;
+    let Jarvis = builder.build(&server).await.unwrap().Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -2295,7 +2295,7 @@ async fn auto_compact_counts_encrypted_reasoning_before_last_user() {
         .build(&server)
         .await
         .expect("build Jarvis")
-        .jarvis;
+        .Jarvis;
 
     for (idx, user) in [first_user, second_user, third_user]
         .into_iter()
@@ -2416,7 +2416,7 @@ async fn auto_compact_runs_when_reasoning_header_clears_between_turns() {
         .build(&server)
         .await
         .expect("build Jarvis")
-        .jarvis;
+        .Jarvis;
 
     for user in [first_user, second_user, third_user] {
         Jarvis

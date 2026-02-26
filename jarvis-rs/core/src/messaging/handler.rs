@@ -2,15 +2,20 @@
 
 use crate::Session;
 use crate::TurnContext;
-use crate::tools::context::{SharedTurnDiffTracker, ToolInvocation, ToolPayload};
+use crate::tools::context::SharedTurnDiffTracker;
+use crate::tools::context::ToolInvocation;
+use crate::tools::context::ToolPayload;
 use crate::tools::router::ToolRouter;
 use crate::turn_diff_tracker::TurnDiffTracker;
 use jarvis_messaging::handler::MessageHandler;
-use jarvis_messaging::message::{IncomingMessage, MessageType, OutgoingMessage};
+use jarvis_messaging::message::IncomingMessage;
+use jarvis_messaging::message::MessageType;
+use jarvis_messaging::message::OutgoingMessage;
 use jarvis_messaging::platform::MessagingPlatform;
 use std::sync::Arc;
 
-use super::command_parser::{CommandParser, ParsedCommand};
+use super::command_parser::CommandParser;
+use super::command_parser::ParsedCommand;
 use super::router::MessagingRouter;
 
 /// Handler que processa mensagens recebidas e as converte em comandos do Jarvis
@@ -184,6 +189,8 @@ impl MessageToJarvisHandler {
             chat_id,
             message_type: MessageType::Text(response),
             reply_to: None,
+            parse_mode: None,
+            disable_web_page_preview: false,
         };
 
         self.messaging_platform.send_message(message).await?;

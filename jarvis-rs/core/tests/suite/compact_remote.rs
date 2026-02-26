@@ -1,8 +1,16 @@
-﻿#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used)]
 
 use std::fs;
 
 use anyhow::Result;
+use core_test_support::responses;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::responses::sse;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::TestCodexHarness;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
+use core_test_support::wait_for_event_match;
 use jarvis_core::JarvisAuth;
 use jarvis_core::features::Feature;
 use jarvis_core::protocol::EventMsg;
@@ -15,14 +23,6 @@ use jarvis_protocol::items::TurnItem;
 use jarvis_protocol::models::ContentItem;
 use jarvis_protocol::models::ResponseItem;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::responses;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::responses::sse;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::TestCodexHarness;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
-use core_test_support::wait_for_event_match;
 use pretty_assertions::assert_eq;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -37,7 +37,7 @@ async fn remote_compact_replaces_history_for_followups() -> Result<()> {
             }),
     )
     .await?;
-    let Jarvis = harness.test().jarvis.clone();
+    let Jarvis = harness.test().Jarvis.clone();
 
     let responses_mock = responses::mount_sse_sequence(
         harness.server(),
@@ -158,7 +158,7 @@ async fn remote_compact_runs_automatically() -> Result<()> {
             }),
     )
     .await?;
-    let Jarvis = harness.test().jarvis.clone();
+    let Jarvis = harness.test().Jarvis.clone();
 
     mount_sse_once(
         harness.server(),
@@ -243,7 +243,7 @@ async fn remote_compact_trims_function_call_history_to_fit_context_window() -> R
             }),
     )
     .await?;
-    let Jarvis = harness.test().jarvis.clone();
+    let Jarvis = harness.test().Jarvis.clone();
 
     let response_log = responses::mount_sse_sequence(
         harness.server(),
@@ -363,7 +363,7 @@ async fn remote_manual_compact_emits_context_compaction_items() -> Result<()> {
             }),
     )
     .await?;
-    let Jarvis = harness.test().jarvis.clone();
+    let Jarvis = harness.test().Jarvis.clone();
 
     mount_sse_once(
         harness.server(),
@@ -459,7 +459,7 @@ async fn remote_compact_persists_replacement_history_in_rollout() -> Result<()> 
             }),
     )
     .await?;
-    let Jarvis = harness.test().jarvis.clone();
+    let Jarvis = harness.test().Jarvis.clone();
     let rollout_path = harness
         .test()
         .session_configured

@@ -1,12 +1,6 @@
-﻿#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use anyhow::Result;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_function_call;
@@ -16,6 +10,12 @@ use core_test_support::responses::sse;
 use core_test_support::responses::start_mock_server;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::user_input::UserInput;
 use serde_json::json;
 use std::fs;
 
@@ -68,7 +68,7 @@ async fn execpolicy_blocks_shell_invocation() -> Result<()> {
     .await;
 
     let session_model = test.session_configured.model.clone();
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "run shell command".into(),
@@ -86,14 +86,14 @@ async fn execpolicy_blocks_shell_invocation() -> Result<()> {
         })
         .await?;
 
-    let EventMsg::ExecCommandEnd(end) = wait_for_event(&test.jarvis, |event| {
+    let EventMsg::ExecCommandEnd(end) = wait_for_event(&test.Jarvis, |event| {
         matches!(event, EventMsg::ExecCommandEnd(_))
     })
     .await
     else {
         unreachable!()
     };
-    wait_for_event(&test.jarvis, |event| {
+    wait_for_event(&test.Jarvis, |event| {
         matches!(event, EventMsg::TurnComplete(_))
     })
     .await;

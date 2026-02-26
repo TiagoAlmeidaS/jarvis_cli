@@ -1,4 +1,4 @@
-﻿//! Smoke tests for autonomous commands.
+//! Smoke tests for autonomous commands.
 
 use anyhow::Result;
 use predicates::str::contains;
@@ -20,7 +20,9 @@ async fn autonomous_plan_creates_plan() -> Result<()> {
         "plan",
         "criar pipeline de SEO",
         "--output=json",
-    ]).assert().success();
+    ])
+    .assert()
+    .success();
 
     Ok(())
 }
@@ -36,7 +38,9 @@ async fn autonomous_run_runs_workflow() -> Result<()> {
         "criar pipeline de SEO",
         "--dry-run",
         "--output=json",
-    ]).assert().success();
+    ])
+    .assert()
+    .success();
 
     Ok(())
 }

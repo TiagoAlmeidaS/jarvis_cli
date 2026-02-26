@@ -1,6 +1,18 @@
-﻿#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
 use anyhow::Result;
+use core_test_support::responses::ev_apply_patch_function_call;
+use core_test_support::responses::ev_assistant_message;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_function_call;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::responses::sse;
+use core_test_support::responses::start_mock_server;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::TestCodex;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
 use jarvis_core::config::Constrained;
 use jarvis_core::features::Feature;
 use jarvis_core::protocol::ApplyPatchApprovalRequestEvent;
@@ -14,18 +26,6 @@ use jarvis_core::sandboxing::SandboxPermissions;
 use jarvis_protocol::config_types::ReasoningSummary;
 use jarvis_protocol::protocol::ReviewDecision;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::responses::ev_apply_patch_function_call;
-use core_test_support::responses::ev_assistant_message;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_function_call;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::responses::sse;
-use core_test_support::responses::start_mock_server;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::TestCodex;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use pretty_assertions::assert_eq;
 use regex_lite::Regex;
 use serde_json::Value;
@@ -488,7 +488,7 @@ async fn submit_turn(
 ) -> Result<()> {
     let session_model = test.session_configured.model.clone();
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: prompt.into(),
@@ -553,7 +553,7 @@ async fn expect_exec_approval(
     test: &TestCodex,
     expected_command: &str,
 ) -> ExecApprovalRequestEvent {
-    let event = wait_for_event(&test.jarvis, |event| {
+    let event = wait_for_event(&test.Jarvis, |event| {
         matches!(
             event,
             EventMsg::ExecApprovalRequest(_) | EventMsg::TurnComplete(_)
@@ -580,7 +580,7 @@ async fn expect_patch_approval(
     test: &TestCodex,
     expected_call_id: &str,
 ) -> ApplyPatchApprovalRequestEvent {
-    let event = wait_for_event(&test.jarvis, |event| {
+    let event = wait_for_event(&test.Jarvis, |event| {
         matches!(
             event,
             EventMsg::ApplyPatchApprovalRequest(_) | EventMsg::TurnComplete(_)
@@ -599,7 +599,7 @@ async fn expect_patch_approval(
 }
 
 async fn wait_for_completion_without_approval(test: &TestCodex) {
-    let event = wait_for_event(&test.jarvis, |event| {
+    let event = wait_for_event(&test.Jarvis, |event| {
         matches!(
             event,
             EventMsg::ExecApprovalRequest(_) | EventMsg::TurnComplete(_)
@@ -617,7 +617,7 @@ async fn wait_for_completion_without_approval(test: &TestCodex) {
 }
 
 async fn wait_for_completion(test: &TestCodex) {
-    wait_for_event(&test.jarvis, |event| {
+    wait_for_event(&test.Jarvis, |event| {
         matches!(event, EventMsg::TurnComplete(_))
     })
     .await;
@@ -1526,7 +1526,7 @@ async fn run_scenario(scenario: &ScenarioSpec) -> Result<()> {
                     scenario.name
                 );
             }
-            test.jarvis
+            test.Jarvis
                 .submit(Op::ExecApproval {
                     id: "0".into(),
                     decision: decision.clone(),
@@ -1547,7 +1547,7 @@ async fn run_scenario(scenario: &ScenarioSpec) -> Result<()> {
                     scenario.name
                 );
             }
-            test.jarvis
+            test.Jarvis
                 .submit(Op::PatchApproval {
                     id: "0".into(),
                     decision: decision.clone(),
@@ -1625,7 +1625,7 @@ async fn approving_apply_patch_for_session_skips_future_prompts_for_same_file() 
     )
     .await?;
     let _ = expect_patch_approval(&test, call_id_1).await;
-    test.jarvis
+    test.Jarvis
         .submit(Op::PatchApproval {
             id: "0".into(),
             decision: ReviewDecision::ApprovedForSession,
@@ -1660,7 +1660,7 @@ async fn approving_apply_patch_for_session_skips_future_prompts_for_same_file() 
     )
     .await?;
 
-    let event = wait_for_event(&test.jarvis, |event| {
+    let event = wait_for_event(&test.Jarvis, |event| {
         matches!(
             event,
             EventMsg::ApplyPatchApprovalRequest(_) | EventMsg::TurnComplete(_)
@@ -1744,7 +1744,7 @@ async fn approving_execpolicy_amendment_persists_policy_and_skips_future_prompts
         Some(expected_execpolicy_amendment.clone())
     );
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::ExecApproval {
             id: "0".into(),
             decision: ReviewDecision::ApprovedExecpolicyAmendment {

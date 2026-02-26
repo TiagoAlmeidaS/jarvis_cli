@@ -1,6 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use std::sync::Arc;
-use tiberius::{Client, Config};
+use tiberius::Client;
+use tiberius::Config;
 use tokio::net::TcpStream;
 use tokio_util::compat::TokioAsyncWriteCompatExt;
 

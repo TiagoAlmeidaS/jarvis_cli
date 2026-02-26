@@ -1,4 +1,7 @@
-use jarvis_messaging::message::{MessageId, MessageType, OutgoingMessage, Platform};
+use jarvis_messaging::message::MessageId;
+use jarvis_messaging::message::MessageType;
+use jarvis_messaging::message::OutgoingMessage;
+use jarvis_messaging::message::Platform;
 use reqwest::Client;
 
 use crate::config::TelegramConfig;
@@ -13,6 +16,16 @@ impl TelegramClient {
     pub fn new(config: TelegramConfig) -> Self {
         let client = Client::new();
         Self { client, config }
+    }
+
+    /// Send a Markdown-formatted text message to the given chat.
+    ///
+    /// This is a convenience wrapper around [`send_message`] that builds an
+    /// [`OutgoingMessage`] with `parse_mode = "Markdown"` and link-preview
+    /// disabled — matching the format used by the daemon notifier.
+    pub async fn send_text(&self, chat_id: &str, text: &str) -> anyhow::Result<MessageId> {
+        self.send_message(OutgoingMessage::text(chat_id, text))
+            .await
     }
 
     pub async fn send_message(&self, message: OutgoingMessage) -> anyhow::Result<MessageId> {
@@ -68,6 +81,14 @@ impl TelegramClient {
 
         if let Some(reply_to) = &message.reply_to {
             payload["reply_to_message_id"] = serde_json::json!(reply_to);
+        }
+
+        if let Some(parse_mode) = &message.parse_mode {
+            payload["parse_mode"] = serde_json::json!(parse_mode);
+        }
+
+        if message.disable_web_page_preview {
+            payload["disable_web_page_preview"] = serde_json::json!(true);
         }
 
         Ok(payload)

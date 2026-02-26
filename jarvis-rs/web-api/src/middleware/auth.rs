@@ -1,8 +1,9 @@
 //! Authentication middleware.
 
-use axum::extract::{Request, State};
-use axum::http::header::AUTHORIZATION;
+use axum::extract::Request;
+use axum::extract::State;
 use axum::http::StatusCode;
+use axum::http::header::AUTHORIZATION;
 use axum::middleware::Next;
 use axum::response::Response;
 use tracing::warn;
@@ -25,6 +26,11 @@ pub async fn validate_auth(
         return Ok(next.run(request).await);
     }
 
+    // Skip auth for WebSocket (it validates token in query string)
+    if request.uri().path() == "/ws/daemon" {
+        return Ok(next.run(request).await);
+    }
+
     // Get API config
     let api_config = state.config.api.as_ref().ok_or_else(|| {
         warn!("API not configured");
@@ -42,12 +48,10 @@ pub async fn validate_auth(
         })?;
 
     // Extract Bearer token
-    let token = auth_header
-        .strip_prefix("Bearer ")
-        .ok_or_else(|| {
-            warn!("Invalid Authorization header format");
-            StatusCode::UNAUTHORIZED
-        })?;
+    let token = auth_header.strip_prefix("Bearer ").ok_or_else(|| {
+        warn!("Invalid Authorization header format");
+        StatusCode::UNAUTHORIZED
+    })?;
 
     // Validate token against configured API key
     if token != api_config.api_key {
@@ -61,14 +65,14 @@ pub async fn validate_auth(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_utils::create_test_app_state_with_api_key;
+    use axum::Router;
     use axum::body::Body;
     use axum::http::Request;
     use axum::http::StatusCode;
     use axum::middleware::from_fn_with_state;
     use axum::routing::get;
-    use axum::Router;
     use axum_test::TestServer;
-    use crate::test_utils::create_test_app_state_with_api_key;
 
     async fn test_handler() -> &'static str {
         "ok"
@@ -78,13 +82,10 @@ mod tests {
     async fn test_auth_middleware_valid_token() {
         let api_key = "test-api-key-123".to_string();
         let app_state = create_test_app_state_with_api_key(api_key.clone());
-        
+
         let app = Router::new()
             .route("/api/test", get(test_handler))
-            .layer(from_fn_with_state(
-                app_state.clone(),
-                validate_auth,
-            ))
+            .layer(from_fn_with_state(app_state.clone(), validate_auth))
             .with_state(app_state);
 
         let server = TestServer::new(app).unwrap();
@@ -102,13 +103,10 @@ mod tests {
     async fn test_auth_middleware_invalid_token() {
         let api_key = "test-api-key-123".to_string();
         let app_state = create_test_app_state_with_api_key(api_key);
-        
+
         let app = Router::new()
             .route("/api/test", get(test_handler))
-            .layer(from_fn_with_state(
-                app_state.clone(),
-                validate_auth,
-            ))
+            .layer(from_fn_with_state(app_state.clone(), validate_auth))
             .with_state(app_state);
 
         let server = TestServer::new(app).unwrap();
@@ -125,20 +123,15 @@ mod tests {
     async fn test_auth_middleware_missing_header() {
         let api_key = "test-api-key-123".to_string();
         let app_state = create_test_app_state_with_api_key(api_key);
-        
+
         let app = Router::new()
             .route("/api/test", get(test_handler))
-            .layer(from_fn_with_state(
-                app_state.clone(),
-                validate_auth,
-            ))
+            .layer(from_fn_with_state(app_state.clone(), validate_auth))
             .with_state(app_state);
 
         let server = TestServer::new(app).unwrap();
 
-        let response = server
-            .get("/api/test")
-            .await;
+        let response = server.get("/api/test").await;
 
         response.assert_status(StatusCode::UNAUTHORIZED);
     }
@@ -147,21 +140,16 @@ mod tests {
     async fn test_auth_middleware_skips_health() {
         let api_key = "test-api-key-123".to_string();
         let app_state = create_test_app_state_with_api_key(api_key);
-        
+
         let app = Router::new()
             .route("/api/health", get(|| async { "healthy" }))
-            .layer(from_fn_with_state(
-                app_state.clone(),
-                validate_auth,
-            ))
+            .layer(from_fn_with_state(app_state.clone(), validate_auth))
             .with_state(app_state);
 
         let server = TestServer::new(app).unwrap();
 
         // Should work without auth
-        let response = server
-            .get("/api/health")
-            .await;
+        let response = server.get("/api/health").await;
 
         response.assert_status(StatusCode::OK);
         assert_eq!(response.text(), "healthy");
@@ -171,21 +159,16 @@ mod tests {
     async fn test_auth_middleware_skips_static_files() {
         let api_key = "test-api-key-123".to_string();
         let app_state = create_test_app_state_with_api_key(api_key);
-        
+
         let app = Router::new()
             .route("/static/test", get(|| async { "static content" }))
-            .layer(from_fn_with_state(
-                app_state.clone(),
-                validate_auth,
-            ))
+            .layer(from_fn_with_state(app_state.clone(), validate_auth))
             .with_state(app_state);
 
         let server = TestServer::new(app).unwrap();
 
         // Should work without auth
-        let response = server
-            .get("/static/test")
-            .await;
+        let response = server.get("/static/test").await;
 
         response.assert_status(StatusCode::OK);
         assert_eq!(response.text(), "static content");

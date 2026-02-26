@@ -7,9 +7,10 @@
 # Usage: ./dev-jarvis.sh [provider] [model]
 #
 # Providers:
-#   free       - OpenRouter Free Strategy (default, best free reasoning model)
+#   (default)  - Google Gemini (free with daily quotas, best for development)
+#   free       - OpenRouter Free Strategy
 #   openrouter - OpenRouter API (same as free, explicit)
-#   free_google - Google AI Studio Free (requires GOOGLE_API_KEY)
+#   free_google - Google AI Studio Free (same as default, explicit)
 #   qwen       - OpenRouter + Qwen3 Coder 80B MoE (best cheap paid for TUI, ~$0.09/day)
 #   nemo       - OpenRouter + Mistral Nemo 12B (daemon only, no tool calling)
 #   agent      - AgentLoop + OpenRouter + Mistral Nemo (text-based tool calling)
@@ -45,9 +46,9 @@ echo "  Jarvis CLI - Dev Mode (Native)"
 echo "========================================"
 echo ""
 
-# Defaults - Free Strategy
-PROVIDER="openrouter"
-MODEL="deepseek/deepseek-r1:free"
+# Defaults - Google Gemini (free with daily quotas)
+PROVIDER="google"
+MODEL="gemini-2.5-flash"
 CARGO_FLAGS=""
 FREE_STRATEGY=1
 AGENT_LOOP=""
@@ -61,7 +62,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         free)
             PROVIDER="openrouter"
-            MODEL="deepseek/deepseek-r1:free"
+            MODEL="openrouter/free"
             FREE_STRATEGY=1
             shift
             ;;
@@ -73,7 +74,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         openrouter)
             PROVIDER="openrouter"
-            MODEL="deepseek/deepseek-r1:free"
+            MODEL="openrouter/free"
             FREE_STRATEGY=1
             shift
             ;;

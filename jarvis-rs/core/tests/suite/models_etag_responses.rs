@@ -1,17 +1,8 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 
 use std::sync::Arc;
 
 use anyhow::Result;
-use jarvis_core::JarvisAuth;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::openai_models::ModelsResponse;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
@@ -22,6 +13,15 @@ use core_test_support::responses::sse_response;
 use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::JarvisAuth;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::openai_models::ModelsResponse;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 use wiremock::MockServer;
 
@@ -55,7 +55,7 @@ async fn refresh_models_on_models_etag_mismatch_and_avoid_duplicate_models_fetch
         });
 
     let test = builder.build(&server).await?;
-    let Jarvis = Arc::clone(&test.jarvis);
+    let Jarvis = Arc::clone(&test.Jarvis);
     let cwd = Arc::clone(&test.cwd);
     let session_model = test.session_configured.model.clone();
 

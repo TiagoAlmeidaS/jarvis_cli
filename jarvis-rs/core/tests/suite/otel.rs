@@ -1,11 +1,3 @@
-﻿use jarvis_core::config::Constrained;
-use jarvis_core::features::Feature;
-use jarvis_protocol::protocol::AskForApproval;
-use jarvis_protocol::protocol::EventMsg;
-use jarvis_protocol::protocol::Op;
-use jarvis_protocol::protocol::ReviewDecision;
-use jarvis_protocol::protocol::SandboxPolicy;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_custom_tool_call;
@@ -25,6 +17,14 @@ use core_test_support::responses::start_mock_server;
 use core_test_support::test_codex::TestCodex;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::config::Constrained;
+use jarvis_core::features::Feature;
+use jarvis_protocol::protocol::AskForApproval;
+use jarvis_protocol::protocol::EventMsg;
+use jarvis_protocol::protocol::Op;
+use jarvis_protocol::protocol::ReviewDecision;
+use jarvis_protocol::protocol::SandboxPolicy;
+use jarvis_protocol::user_input::UserInput;
 use std::sync::Mutex;
 use tracing::Level;
 use tracing_test::traced_test;
@@ -917,7 +917,8 @@ fn tool_decision_assertion<'a>(
         let line = lines
             .iter()
             .find(|line| {
-                line.contains("Jarvis.tool_decision") && line.contains(&format!("call_id={call_id}"))
+                line.contains("Jarvis.tool_decision")
+                    && line.contains(&format!("call_id={call_id}"))
             })
             .ok_or_else(|| format!("missing Jarvis.tool_decision event for {call_id}"))?;
 

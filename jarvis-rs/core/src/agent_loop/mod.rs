@@ -16,15 +16,23 @@
 pub mod bridge;
 pub mod context;
 pub mod events;
+pub mod safety_gate;
 
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Result;
 use tokio_util::sync::CancellationToken;
 
 pub use context::ContextStrategy;
 pub use events::AgentEvent;
+pub use safety_gate::SafeToolExecutor;
+
+use crate::intent::IntentDetector;
+use crate::knowledge::LearningSystem;
+use crate::knowledge::learning::Interaction;
+use crate::knowledge::learning::Outcome;
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -168,11 +176,35 @@ pub struct AgentLoop<L: AgentLlmClient, T: AgentToolExecutor> {
     llm: Arc<L>,
     tools: Arc<T>,
     config: AgentLoopConfig,
+    /// Optional intent detector for classifying user messages.
+    intent_detector: Option<Arc<dyn IntentDetector>>,
+    /// Optional learning system for extracting and querying knowledge.
+    learning_system: Option<Arc<dyn LearningSystem>>,
 }
 
 impl<L: AgentLlmClient, T: AgentToolExecutor> AgentLoop<L, T> {
     pub fn new(llm: Arc<L>, tools: Arc<T>, config: AgentLoopConfig) -> Self {
-        Self { llm, tools, config }
+        Self {
+            llm,
+            tools,
+            config,
+            intent_detector: None,
+            learning_system: None,
+        }
+    }
+
+    /// Attaches an intent detector to classify user messages at the start of
+    /// each run.
+    pub fn with_intent_detector(mut self, detector: Arc<dyn IntentDetector>) -> Self {
+        self.intent_detector = Some(detector);
+        self
+    }
+
+    /// Attaches a learning system for extracting knowledge from interactions
+    /// and retrieving relevant knowledge for context injection.
+    pub fn with_learning_system(mut self, system: Arc<dyn LearningSystem>) -> Self {
+        self.learning_system = Some(system);
+        self
     }
 
     /// Run the agentic loop.
@@ -193,6 +225,39 @@ impl<L: AgentLlmClient, T: AgentToolExecutor> AgentLoop<L, T> {
             AgentMessage::System(system_prompt.to_string()),
             AgentMessage::User(user_message.to_string()),
         ];
+
+        // ---- INTENT DETECTION ----
+        if let Some(detector) = &self.intent_detector {
+            if let Ok(intent) = detector.detect_intent(user_message).await {
+                on_event(AgentEvent::IntentDetected {
+                    intent_type: format!("{:?}", intent.intent_type),
+                    confidence: intent.confidence,
+                });
+            }
+        }
+
+        // ---- KNOWLEDGE RETRIEVAL ----
+        if let Some(learning) = &self.learning_system {
+            if let Ok(relevant) = learning.get_relevant_knowledge(user_message, 5).await {
+                if !relevant.is_empty() {
+                    on_event(AgentEvent::KnowledgeRetrieved {
+                        items_count: relevant.len(),
+                        query: context::truncate_for_preview(user_message, 80),
+                    });
+
+                    // Inject relevant knowledge into the system context.
+                    let mut kb_context =
+                        String::from("\n\n## Relevant Knowledge from Previous Sessions\n");
+                    for item in &relevant {
+                        kb_context.push_str(&format!("- [{}] {}\n", item.category, item.content));
+                    }
+                    // Append to the system message.
+                    if let Some(AgentMessage::System(sys)) = messages.first_mut() {
+                        sys.push_str(&kb_context);
+                    }
+                }
+            }
+        }
 
         let tool_schemas = self.tools.tool_schemas();
         let mut iteration: usize = 0;
@@ -270,6 +335,38 @@ impl<L: AgentLlmClient, T: AgentToolExecutor> AgentLoop<L, T> {
                     content: response.content.clone(),
                     iteration,
                 });
+
+                // ---- LEARN from this interaction ----
+                if let Some(learning) = &self.learning_system {
+                    let interaction = Interaction {
+                        id: format!("loop-{}", start.elapsed().as_millis()),
+                        user_input: user_message.to_string(),
+                        system_response: response.content.clone(),
+                        actions: tools_used.clone(),
+                        outcome: Outcome::Success,
+                        timestamp: std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap_or_default()
+                            .as_secs() as i64,
+                    };
+                    match learning.learn_from_interaction(&interaction).await {
+                        Ok(learned) if !learned.is_empty() => {
+                            on_event(AgentEvent::KnowledgeLearned {
+                                items_count: learned.len(),
+                                summary: learned
+                                    .iter()
+                                    .map(|k| k.content.clone())
+                                    .collect::<Vec<_>>()
+                                    .join("; "),
+                            });
+                        }
+                        Ok(_) => {}
+                        Err(e) => {
+                            tracing::warn!("Failed to learn from interaction: {e:#}");
+                        }
+                    }
+                }
+
                 return Ok(AgentLoopResult {
                     response: response.content,
                     iterations: iteration + 1,

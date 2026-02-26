@@ -1,8 +1,10 @@
 //! Skill evaluation service for assessing skill quality and complexity.
 
-use crate::skills::development::{SkillDefinition, SkillDevelopmentResult};
+use crate::skills::development::SkillDefinition;
+use crate::skills::development::SkillDevelopmentResult;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Quality metrics for a skill.
 #[derive(Debug, Clone, Serialize, Deserialize)]

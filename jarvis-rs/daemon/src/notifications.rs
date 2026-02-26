@@ -10,44 +10,58 @@
 //!
 //! If the environment variables are not set, the notifier silently exits.
 
-use anyhow::{Context, Result};
-use jarvis_daemon_common::{
-    DaemonDb, GoalFilter, GoalStatus, JobFilter, JobStatus, ProposalFilter, ProposalStatus,
-};
+use anyhow::Result;
+use jarvis_daemon_common::DaemonDb;
+use jarvis_daemon_common::GoalFilter;
+use jarvis_daemon_common::GoalStatus;
+use jarvis_daemon_common::JobFilter;
+use jarvis_daemon_common::JobStatus;
+use jarvis_daemon_common::ProposalFilter;
+use jarvis_daemon_common::ProposalStatus;
+use jarvis_telegram::client::TelegramClient;
+use jarvis_telegram::config::TelegramConfig;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, warn};
-
-/// Telegram API base URL.
-const TELEGRAM_API: &str = "https://api.telegram.org";
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 /// Configuration read from environment.
 struct NotifierConfig {
-    bot_token: String,
     chat_id: String,
     /// Hour of day (0-23) for daily summary.
     notify_hour: u32,
 }
 
-impl NotifierConfig {
-    /// Try to build config from environment. Returns None if not configured.
-    fn from_env() -> Option<Self> {
-        let bot_token = std::env::var("JARVIS_TELEGRAM_BOT_TOKEN").ok()?;
-        let chat_id = std::env::var("JARVIS_TELEGRAM_CHAT_ID").ok()?;
-        if bot_token.is_empty() || chat_id.is_empty() {
-            return None;
-        }
-        let notify_hour = std::env::var("JARVIS_NOTIFY_HOUR")
-            .ok()
-            .and_then(|s| s.parse::<u32>().ok())
-            .unwrap_or(8)
-            .min(23);
-        Some(Self {
-            bot_token,
+/// Try to build a [`TelegramClient`] and [`NotifierConfig`] from environment.
+///
+/// Returns `None` if the required env vars are not set.
+fn from_env() -> Option<(TelegramClient, NotifierConfig)> {
+    let bot_token = std::env::var("JARVIS_TELEGRAM_BOT_TOKEN").ok()?;
+    let chat_id = std::env::var("JARVIS_TELEGRAM_CHAT_ID").ok()?;
+    if bot_token.is_empty() || chat_id.is_empty() {
+        return None;
+    }
+    let notify_hour = std::env::var("JARVIS_NOTIFY_HOUR")
+        .ok()
+        .and_then(|s| s.parse::<u32>().ok())
+        .unwrap_or(8)
+        .min(23);
+
+    let telegram = TelegramClient::new(TelegramConfig {
+        bot_token,
+        webhook_url: None,
+        webhook_port: 0,
+        webhook_secret: None,
+    });
+
+    Some((
+        telegram,
+        NotifierConfig {
             chat_id,
             notify_hour,
-        })
-    }
+        },
+    ))
 }
 
 /// Run the daily notifier loop until shutdown is signalled.
@@ -55,8 +69,8 @@ impl NotifierConfig {
 /// Checks every 5 minutes whether it's time for the daily summary.
 /// Also sends immediate alerts for critical events (failed proposals, etc.).
 pub async fn run_daily_notifier(db: Arc<DaemonDb>, shutdown: CancellationToken) -> Result<()> {
-    let config = match NotifierConfig::from_env() {
-        Some(c) => c,
+    let (telegram, config) = match from_env() {
+        Some(pair) => pair,
         None => {
             info!(
                 "Telegram notifications not configured (set JARVIS_TELEGRAM_BOT_TOKEN and JARVIS_TELEGRAM_CHAT_ID)"
@@ -70,7 +84,6 @@ pub async fn run_daily_notifier(db: Arc<DaemonDb>, shutdown: CancellationToken) 
         config.chat_id, config.notify_hour
     );
 
-    let client = reqwest::Client::new();
     let mut last_summary_date: Option<chrono::NaiveDate> = None;
     let mut interval = tokio::time::interval(std::time::Duration::from_secs(300)); // 5 min
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -83,16 +96,16 @@ pub async fn run_daily_notifier(db: Arc<DaemonDb>, shutdown: CancellationToken) 
                 let hour = now.hour();
 
                 // Check for critical alerts (always).
-                if let Err(e) = check_and_send_alerts(&client, &config, &db).await {
+                if let Err(e) = check_and_send_alerts(&telegram, &config, &db).await {
                     error!("Notification alert check failed: {e:#}");
                 }
 
                 // Send daily summary at the configured hour, once per day.
-                let already_sent = last_summary_date.map_or(false, |d| d == today);
+                let already_sent = last_summary_date.is_some_and(|d| d == today);
                 if hour >= config.notify_hour && !already_sent {
                     match build_daily_summary(&db).await {
                         Ok(message) => {
-                            if let Err(e) = send_telegram(&client, &config, &message).await {
+                            if let Err(e) = telegram.send_text(&config.chat_id, &message).await {
                                 error!("Failed to send daily summary: {e:#}");
                             } else {
                                 info!("Daily summary sent to Telegram");
@@ -222,7 +235,7 @@ async fn build_daily_summary(db: &DaemonDb) -> Result<String> {
 
 /// Check for critical conditions and send immediate alerts.
 async fn check_and_send_alerts(
-    client: &reqwest::Client,
+    telegram: &TelegramClient,
     config: &NotifierConfig,
     db: &DaemonDb,
 ) -> Result<()> {
@@ -250,7 +263,7 @@ async fn check_and_send_alerts(
                 .collect::<Vec<_>>()
                 .join("\n")
         );
-        if let Err(e) = send_telegram(client, config, &msg).await {
+        if let Err(e) = telegram.send_text(&config.chat_id, &msg).await {
             warn!("Failed to send failure alert: {e}");
         }
     }
@@ -278,45 +291,13 @@ async fn check_and_send_alerts(
                     "⚠️ *Goal at risk*: {} — {:.0}% complete with only {} days left!",
                     goal.name, progress_pct, remaining_days
                 );
-                if let Err(e) = send_telegram(client, config, &msg).await {
+                if let Err(e) = telegram.send_text(&config.chat_id, &msg).await {
                     warn!("Failed to send goal alert: {e}");
                 }
             }
         }
     }
 
-    Ok(())
-}
-
-/// Send a message via the Telegram Bot API.
-async fn send_telegram(
-    client: &reqwest::Client,
-    config: &NotifierConfig,
-    text: &str,
-) -> Result<()> {
-    let url = format!("{TELEGRAM_API}/bot{}/sendMessage", config.bot_token);
-
-    let payload = serde_json::json!({
-        "chat_id": config.chat_id,
-        "text": text,
-        "parse_mode": "Markdown",
-        "disable_web_page_preview": true,
-    });
-
-    let resp = client
-        .post(&url)
-        .json(&payload)
-        .send()
-        .await
-        .context("Telegram API request failed")?;
-
-    if !resp.status().is_success() {
-        let status = resp.status();
-        let body = resp.text().await.unwrap_or_default();
-        anyhow::bail!("Telegram API error {status}: {body}");
-    }
-
-    debug!("Telegram message sent successfully");
     Ok(())
 }
 
@@ -358,9 +339,9 @@ mod tests {
         // Ensure it returns None when env vars are not set.
         // We can't easily test positive cases without setting env, but
         // the important thing is that it doesn't panic.
-        let config = NotifierConfig::from_env();
+        let result = from_env();
         // If JARVIS_TELEGRAM_BOT_TOKEN is not set in the test env, this is None.
         // We just verify it doesn't panic.
-        let _ = config;
+        let _ = result;
     }
 }

@@ -1,10 +1,13 @@
 //! Autonomous decision engine for making execution decisions.
 
-use crate::autonomous::context::{AnalyzedContext, ContextAnalyzer};
-use crate::autonomous::planner::{ExecutionPlan, ExecutionPlanner};
+use crate::autonomous::context::AnalyzedContext;
+use crate::autonomous::context::ContextAnalyzer;
+use crate::autonomous::planner::ExecutionPlan;
+use crate::autonomous::planner::ExecutionPlanner;
 use crate::capability::registry::CapabilityRegistry;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Represents a decision made by the decision engine.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -170,8 +173,11 @@ impl AutonomousDecisionEngine for RuleBasedDecisionEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::autonomous::context::{AnalyzedContext, ContextAnalyzer, RuleBasedContextAnalyzer};
-    use crate::capability::metadata::{CapabilityMetadata, CapabilityType};
+    use crate::autonomous::context::AnalyzedContext;
+    use crate::autonomous::context::ContextAnalyzer;
+    use crate::autonomous::context::RuleBasedContextAnalyzer;
+    use crate::capability::metadata::CapabilityMetadata;
+    use crate::capability::metadata::CapabilityType;
     use crate::capability::registry::InMemoryCapabilityRegistry;
 
     #[tokio::test]

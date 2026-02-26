@@ -2,9 +2,11 @@
 
 use crate::rag::chunk::TextChunk;
 use crate::rag::indexer::DocumentIndexer;
-use crate::rag::store::{SearchResult, VectorStore};
+use crate::rag::store::SearchResult;
+use crate::rag::store::VectorStore;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 
 /// Result of a retrieval operation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,8 +163,10 @@ impl KnowledgeRetriever for SimpleKnowledgeRetriever {
 mod tests {
     use super::*;
     use crate::rag::chunk::ChunkingConfig;
-    use crate::rag::indexer::{DocumentIndexer, InMemoryDocumentIndexer};
-    use crate::rag::store::{InMemoryVectorStore, VectorStore};
+    use crate::rag::indexer::DocumentIndexer;
+    use crate::rag::indexer::InMemoryDocumentIndexer;
+    use crate::rag::store::InMemoryVectorStore;
+    use crate::rag::store::VectorStore;
 
     #[tokio::test]
     async fn test_retrieve() {

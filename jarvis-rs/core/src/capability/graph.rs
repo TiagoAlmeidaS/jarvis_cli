@@ -3,8 +3,10 @@
 use crate::capability::metadata::CapabilityMetadata;
 use crate::capability::registry::CapabilityRegistry;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use serde::Deserialize;
+use serde::Serialize;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /// Represents a relationship between capabilities.
 #[derive(Debug, Clone, Serialize, Deserialize)]

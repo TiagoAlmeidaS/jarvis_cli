@@ -161,7 +161,8 @@ pub fn truncate_for_preview(text: &str, max_chars: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent_loop::{AssistantContent, ToolCallRequest};
+    use crate::agent_loop::AssistantContent;
+    use crate::agent_loop::ToolCallRequest;
     use pretty_assertions::assert_eq;
 
     #[test]

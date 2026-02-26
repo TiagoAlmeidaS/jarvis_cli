@@ -1,12 +1,4 @@
-﻿use anyhow::Context;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::ExecCommandEndEvent;
-use jarvis_core::protocol::ExecCommandSource;
-use jarvis_core::protocol::ExecOutputStream;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_core::protocol::TurnAbortReason;
+use anyhow::Context;
 use core_test_support::assert_regex_match;
 use core_test_support::responses;
 use core_test_support::responses::ev_assistant_message;
@@ -20,6 +12,14 @@ use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
 use core_test_support::wait_for_event_match;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::ExecCommandEndEvent;
+use jarvis_core::protocol::ExecCommandSource;
+use jarvis_core::protocol::ExecOutputStream;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_core::protocol::TurnAbortReason;
 use regex_lite::escape;
 use std::path::PathBuf;
 use tempfile::TempDir;
@@ -45,7 +45,7 @@ async fn user_shell_cmd_ls_and_cat_in_temp_dir() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     // 1) shell command should list the file
     let list_cmd = "ls".to_string();
@@ -98,7 +98,7 @@ async fn user_shell_cmd_can_be_interrupted() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     // Start a long-running command and then interrupt it.
     let sleep_cmd = "sleep 5".to_string();
@@ -133,13 +133,13 @@ async fn user_shell_command_history_is_persisted_and_shared_with_model() -> anyh
     #[cfg(not(windows))]
     let command = r#"sh -c "printf '%s' \"${jarvis_SANDBOX:-not-set}\"""#.to_string();
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::RunUserShellCommand {
             command: command.clone(),
         })
         .await?;
 
-    let begin_event = wait_for_event_match(&test.jarvis, |ev| match ev {
+    let begin_event = wait_for_event_match(&test.Jarvis, |ev| match ev {
         EventMsg::ExecCommandBegin(event) => Some(event.clone()),
         _ => None,
     })
@@ -153,7 +153,7 @@ async fn user_shell_command_history_is_persisted_and_shared_with_model() -> anyh
         begin_event.command
     );
 
-    let delta_event = wait_for_event_match(&test.jarvis, |ev| match ev {
+    let delta_event = wait_for_event_match(&test.Jarvis, |ev| match ev {
         EventMsg::ExecCommandOutputDelta(event) => Some(event.clone()),
         _ => None,
     })
@@ -163,7 +163,7 @@ async fn user_shell_command_history_is_persisted_and_shared_with_model() -> anyh
         String::from_utf8(delta_event.chunk.clone()).expect("user command chunk is valid utf-8");
     assert_eq!(chunk_text.trim(), "not-set");
 
-    let end_event = wait_for_event_match(&test.jarvis, |ev| match ev {
+    let end_event = wait_for_event_match(&test.Jarvis, |ev| match ev {
         EventMsg::ExecCommandEnd(event) => Some(event.clone()),
         _ => None,
     })
@@ -171,7 +171,7 @@ async fn user_shell_command_history_is_persisted_and_shared_with_model() -> anyh
     assert_eq!(end_event.exit_code, 0);
     assert_eq!(end_event.stdout.trim(), "not-set");
 
-    let _ = wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    let _ = wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let responses = vec![responses::sse(vec![
         responses::ev_response_created("resp-1"),
@@ -216,20 +216,20 @@ async fn user_shell_command_output_is_truncated_in_history() -> anyhow::Result<(
     #[cfg(not(windows))]
     let command = "seq 1 400".to_string();
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::RunUserShellCommand {
             command: command.clone(),
         })
         .await?;
 
-    let end_event = wait_for_event_match(&test.jarvis, |ev| match ev {
+    let end_event = wait_for_event_match(&test.Jarvis, |ev| match ev {
         EventMsg::ExecCommandEnd(event) => Some(event.clone()),
         _ => None,
     })
     .await;
     assert_eq!(end_event.exit_code, 0);
 
-    let _ = wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    let _ = wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let responses = vec![responses::sse(vec![
         responses::ev_response_created("resp-1"),

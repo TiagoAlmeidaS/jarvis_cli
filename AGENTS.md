@@ -113,6 +113,68 @@ If you don’t have the tool:
   // assert using request.function_call_output(call_id) or request.json_body() or other helpers.
   ```
 
+## Codebase Exploration for Analysis
+
+**CRITICAL: You MUST use available tools to explore the codebase. DO NOT use shell commands. DO NOT ask for confirmation. ACT AUTONOMOUSLY.**
+
+When analyzing the project or answering questions about its architecture, autonomy, or capabilities, **always explore the codebase first** before making claims. Do not rely solely on documentation like this `AGENTS.md` file.
+
+### Required Process (USE TOOLS IMMEDIATELY)
+
+1. **Semantic Search First**: **IMMEDIATELY** use `codebase_search` to find relevant implementations:
+   - Search for concepts: "How does X work?", "Where is Y implemented?"
+   - Example: Before saying "planning engine is missing", search for "planning and task decomposition"
+   - **DO NOT ask for permission. USE THE TOOL.**
+
+2. **Validate with Direct Search**: **IMMEDIATELY** confirm findings with direct searches:
+   - Use `grep` to find specific symbols/patterns
+   - Use `glob_file_search` to find related files
+   - Use `list_dir` to explore directory structure
+   - Example: `grep("AgentLoop", "jarvis-rs")` or `glob_file_search("**/agent_loop*.rs")`
+   - **DO NOT use shell commands like `ls`. USE THE TOOLS.**
+
+3. **Read Key Files**: **IMMEDIATELY** read main implementation files:
+   - Use `read_file` to read file contents
+   - At minimum, read `mod.rs` or main files of relevant modules
+   - Understand the implementation before analyzing
+   - **DO NOT ask for file paths. USE `read_file` TOOL.**
+
+4. **Check Integration Status**: Distinguish between "doesn't exist" vs "not integrated":
+   - A component may exist but not be connected to the main flow
+   - Always clarify: "X exists but is not integrated" vs "X is missing"
+   - Use `grep` to check where components are used
+
+### Critical Rules
+
+**NEVER claim something is missing without searching for it first.**
+
+**NEVER use shell commands when tools are available.**
+
+**NEVER ask for confirmation when you can explore autonomously.**
+
+Before saying "X is not implemented", you MUST:
+- **IMMEDIATELY** search semantically for X using `codebase_search`
+- **IMMEDIATELY** search directly for X using `grep` or `glob_file_search`
+- **IMMEDIATELY** read relevant files using `read_file`
+- Check integration status using `grep` to find usages
+
+### Key Components to Check
+
+When analyzing autonomy/architecture, always verify:
+- Agent Loop: `core/src/agent_loop/`
+- Planning: `core/src/agent/plan.rs`, `core/src/autonomous/planner.rs`
+- Memory/Context: `core/src/agent/session.rs`, `core/src/context_manager/`
+- RAG: `core/src/rag/`
+- Knowledge Base: `core/src/knowledge/`
+- Daemon: `daemon/src/`
+- Decision Engine: `core/src/autonomous/decision.rs`, `daemon/src/decision_engine.rs`
+
+### Reference Documentation
+
+- `docs/reports/codebase-exploration-guide.md` - Detailed exploration process
+- `docs/reports/gap-analysis-response-vs-reality.md` - Example of correct vs incorrect analysis
+- `docs/ANALISE_AUTONOMIA_JARVIS.md` - Current state of autonomy implementation
+
 ## App-server API Development Best Practices
 
 These guidelines apply to app-server protocol work in `jarvis-rs`, especially:

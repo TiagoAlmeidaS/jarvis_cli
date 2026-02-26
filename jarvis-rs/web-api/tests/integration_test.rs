@@ -69,55 +69,55 @@ async fn test_auth_required_for_protected_endpoints() {
     response.assert_status(StatusCode::UNAUTHORIZED);
 }
 
-    #[tokio::test]
-    async fn test_invalid_auth_token() {
-        let api_key = "integration-test-key".to_string();
-        let app_state = create_test_app_state_with_api_key(api_key);
-        let app = create_router(app_state, false);
-        let server = TestServer::new(app).unwrap();
+#[tokio::test]
+async fn test_invalid_auth_token() {
+    let api_key = "integration-test-key".to_string();
+    let app_state = create_test_app_state_with_api_key(api_key);
+    let app = create_router(app_state, false);
+    let server = TestServer::new(app).unwrap();
 
-        let response = server
-            .get("/api/config")
-            .add_header("Authorization", "Bearer wrong-token")
-            .await;
+    let response = server
+        .get("/api/config")
+        .add_header("Authorization", "Bearer wrong-token")
+        .await;
 
-        response.assert_status(StatusCode::UNAUTHORIZED);
-    }
-    
-    #[tokio::test]
-    async fn test_cors_enabled() {
-        let api_key = "integration-test-key".to_string();
-        let app_state = create_test_app_state_with_api_key(api_key);
-        let app = create_router(app_state, true); // Enable CORS
-        let server = TestServer::new(app).unwrap();
+    response.assert_status(StatusCode::UNAUTHORIZED);
+}
 
-        let response = server
-            .get("/api/health")
-            .add_header("Origin", "http://localhost:3000")
-            .await;
+#[tokio::test]
+async fn test_cors_enabled() {
+    let api_key = "integration-test-key".to_string();
+    let app_state = create_test_app_state_with_api_key(api_key);
+    let app = create_router(app_state, true); // Enable CORS
+    let server = TestServer::new(app).unwrap();
 
-        response.assert_status(StatusCode::OK);
-        // CORS headers should be present
-        // Note: axum_test may not expose CORS headers, but the layer is applied
-    }
-    
-    #[tokio::test]
-    async fn test_chat_validation() {
-        let api_key = "integration-test-key".to_string();
-        let app_state = create_test_app_state_with_api_key(api_key.clone());
-        let app = create_router(app_state, false);
-        let server = TestServer::new(app).unwrap();
+    let response = server
+        .get("/api/health")
+        .add_header("Origin", "http://localhost:3000")
+        .await;
 
-        // Test empty prompt
-        let response = server
-            .post("/api/chat")
-            .add_header("Authorization", format!("Bearer {}", api_key))
-            .add_header("Content-Type", "application/json")
-            .json(&serde_json::json!({
-                "prompt": "",
-                "thread_id": null
-            }))
-            .await;
+    response.assert_status(StatusCode::OK);
+    // CORS headers should be present
+    // Note: axum_test may not expose CORS headers, but the layer is applied
+}
 
-        response.assert_status(StatusCode::BAD_REQUEST);
-    }
+#[tokio::test]
+async fn test_chat_validation() {
+    let api_key = "integration-test-key".to_string();
+    let app_state = create_test_app_state_with_api_key(api_key.clone());
+    let app = create_router(app_state, false);
+    let server = TestServer::new(app).unwrap();
+
+    // Test empty prompt
+    let response = server
+        .post("/api/chat")
+        .add_header("Authorization", format!("Bearer {}", api_key))
+        .add_header("Content-Type", "application/json")
+        .json(&serde_json::json!({
+            "prompt": "",
+            "thread_id": null
+        }))
+        .await;
+
+    response.assert_status(StatusCode::BAD_REQUEST);
+}

@@ -49,4 +49,40 @@ pub enum AgentEvent {
 
     /// Unrecoverable error.
     Error { message: String },
+
+    /// Intent detected from user message.
+    IntentDetected {
+        intent_type: String,
+        confidence: f32,
+    },
+
+    /// Safety classifier issued a warning (medium risk) but allowed execution.
+    SafetyWarning {
+        tool_name: String,
+        risk_level: String,
+        reasoning: String,
+    },
+
+    /// Safety classifier blocked a tool call (high/critical risk).
+    SafetyBlocked {
+        tool_name: String,
+        risk_level: String,
+        reasoning: String,
+    },
+
+    /// Knowledge was extracted and stored from the current interaction.
+    KnowledgeLearned {
+        /// Number of new knowledge items stored.
+        items_count: usize,
+        /// Short summary of what was learned.
+        summary: String,
+    },
+
+    /// Relevant knowledge was retrieved and injected into context.
+    KnowledgeRetrieved {
+        /// Number of knowledge items found.
+        items_count: usize,
+        /// The query used to search.
+        query: String,
+    },
 }

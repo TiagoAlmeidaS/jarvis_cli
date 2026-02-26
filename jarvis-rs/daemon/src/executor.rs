@@ -3,13 +3,22 @@
 //! The executor reads proposals with status `approved` and applies the corresponding
 //! actions to the system (create/modify pipelines, add/remove sources, etc.).
 
-use anyhow::{Context, Result};
-use jarvis_daemon_common::{
-    ActionType, CreatePipeline, CreateSource, DaemonDb, DaemonProposal, LogLevel, ProposalFilter,
-    ProposalStatus, SourceType, Strategy,
-};
+use anyhow::Context;
+use anyhow::Result;
+use jarvis_daemon_common::ActionType;
+use jarvis_daemon_common::CreatePipeline;
+use jarvis_daemon_common::CreateSource;
+use jarvis_daemon_common::DaemonDb;
+use jarvis_daemon_common::DaemonProposal;
+use jarvis_daemon_common::LogLevel;
+use jarvis_daemon_common::ProposalFilter;
+use jarvis_daemon_common::ProposalStatus;
+use jarvis_daemon_common::SourceType;
+use jarvis_daemon_common::Strategy;
 use std::sync::Arc;
-use tracing::{error, info, warn};
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 /// Summary of a proposal execution batch.
 #[derive(Debug, Default)]
@@ -317,9 +326,12 @@ impl ProposalExecutor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jarvis_daemon_common::{
-        CreatePipeline, CreateProposal, CreateSource, RiskLevel, SourceType, Strategy,
-    };
+    use jarvis_daemon_common::CreatePipeline;
+    use jarvis_daemon_common::CreateProposal;
+    use jarvis_daemon_common::CreateSource;
+    use jarvis_daemon_common::RiskLevel;
+    use jarvis_daemon_common::SourceType;
+    use jarvis_daemon_common::Strategy;
     use pretty_assertions::assert_eq;
 
     /// Helper: create a DB + executor + a base pipeline for tests.

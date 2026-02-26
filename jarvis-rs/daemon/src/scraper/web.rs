@@ -3,8 +3,10 @@
 use super::Scraper;
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{DaemonSource, ScrapedContent};
-use sha2::{Digest, Sha256};
+use jarvis_daemon_common::DaemonSource;
+use jarvis_daemon_common::ScrapedContent;
+use sha2::Digest;
+use sha2::Sha256;
 
 /// Basic web scraper that fetches HTML and extracts text.
 pub struct WebScraper {

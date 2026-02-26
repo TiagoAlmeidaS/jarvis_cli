@@ -1,7 +1,8 @@
 //! Rate limiting para mensageria
 
 use std::collections::HashMap;
-use std::time::{Duration, Instant};
+use std::time::Duration;
+use std::time::Instant;
 use tokio::sync::Mutex;
 
 /// Rate limiter simples baseado em token bucket

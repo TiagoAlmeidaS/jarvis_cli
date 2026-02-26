@@ -1,6 +1,21 @@
-﻿use jarvis_core::AuthManager;
-use jarvis_core::JarvisAuth;
+use core_test_support::load_default_config_for_test;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_completed_with_tokens;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::responses::mount_sse_once_match;
+use core_test_support::responses::mount_sse_sequence;
+use core_test_support::responses::sse;
+use core_test_support::responses::sse_failed;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::TestCodex;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
+use dunce::canonicalize as normalize_path;
+use futures::StreamExt;
+use jarvis_core::AuthManager;
 use jarvis_core::ContentItem;
+use jarvis_core::JarvisAuth;
 use jarvis_core::LocalShellAction;
 use jarvis_core::LocalShellExecAction;
 use jarvis_core::LocalShellStatus;
@@ -35,21 +50,6 @@ use jarvis_protocol::models::ReasoningItemReasoningSummary;
 use jarvis_protocol::models::WebSearchAction;
 use jarvis_protocol::openai_models::ReasoningEffort;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::load_default_config_for_test;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_completed_with_tokens;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::responses::mount_sse_once_match;
-use core_test_support::responses::mount_sse_sequence;
-use core_test_support::responses::sse;
-use core_test_support::responses::sse_failed;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::TestCodex;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
-use dunce::canonicalize as normalize_path;
-use futures::StreamExt;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 use std::io::Write;
@@ -273,7 +273,7 @@ async fn resume_includes_initial_messages_and_sends_prior_items() {
         .resume(&server, jarvis_home, session_path.clone())
         .await
         .expect("resume conversation");
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let session_configured = test.session_configured;
 
     // 1) Assert initial_messages only includes existing EventMsg entries; response items are not converted
@@ -388,7 +388,7 @@ async fn includes_conversation_id_and_model_headers_in_request() {
         .build(&server)
         .await
         .expect("create new conversation");
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let session_id = test.session_configured.session_id;
 
     Jarvis
@@ -437,7 +437,7 @@ async fn includes_base_instructions_override_in_request() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -487,7 +487,7 @@ async fn chatgpt_auth_sends_correct_request() {
         .build(&server)
         .await
         .expect("create new conversation");
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let thread_id = test.session_configured.session_id;
 
     Jarvis
@@ -620,7 +620,7 @@ async fn includes_user_instructions_message_in_request() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -697,7 +697,7 @@ async fn skills_append_to_instructions() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1162,7 +1162,7 @@ async fn includes_developer_instructions_message_in_request() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1238,6 +1238,7 @@ async fn azure_responses_request_includes_store_and_reasoning_ids() {
         stream_idle_timeout_ms: Some(5_000),
         requires_openai_auth: false,
         supports_websockets: false,
+        uses_chat_completions_api: false,
     };
 
     let jarvis_home = TempDir::new().unwrap();
@@ -1413,7 +1414,7 @@ async fn token_count_includes_rate_limits_snapshot() {
         .build(&server)
         .await
         .expect("create conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1557,7 +1558,7 @@ async fn usage_limit_error_emits_rate_limit_event() -> anyhow::Result<()> {
 
     let mut builder = test_codex();
     let jarvis_fixture = builder.build(&server).await?;
-    let Jarvis = jarvis_fixture.jarvis.clone();
+    let Jarvis = jarvis_fixture.Jarvis.clone();
 
     let expected_limits = json!({
         "primary": {
@@ -1767,6 +1768,7 @@ async fn azure_overrides_assign_properties_used_for_responses_url() {
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
         supports_websockets: false,
+        uses_chat_completions_api: false,
     };
 
     // Init session
@@ -1779,7 +1781,7 @@ async fn azure_overrides_assign_properties_used_for_responses_url() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1851,6 +1853,7 @@ async fn env_var_overrides_loaded_auth() {
         stream_idle_timeout_ms: None,
         requires_openai_auth: false,
         supports_websockets: false,
+        uses_chat_completions_api: false,
     };
 
     // Init session
@@ -1863,7 +1866,7 @@ async fn env_var_overrides_loaded_auth() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     Jarvis
         .submit(Op::UserInput {
@@ -1923,7 +1926,7 @@ async fn history_dedupes_streamed_and_final_messages_across_turns() {
         .build(&server)
         .await
         .expect("create new conversation")
-        .jarvis;
+        .Jarvis;
 
     // Turn 1: user sends U1; wait for completion.
     Jarvis

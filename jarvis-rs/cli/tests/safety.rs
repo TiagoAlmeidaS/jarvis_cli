@@ -1,4 +1,4 @@
-﻿//! Smoke tests for safety commands.
+//! Smoke tests for safety commands.
 
 use anyhow::Result;
 use predicates::str::contains;
@@ -22,7 +22,9 @@ async fn safety_check_checks_safety() -> Result<()> {
         "--context=test",
         "--files=test.rs",
         "--output=json",
-    ]).assert().success();
+    ])
+    .assert()
+    .success();
 
     Ok(())
 }

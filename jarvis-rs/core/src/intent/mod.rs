@@ -6,5 +6,8 @@
 pub mod detector;
 pub mod types;
 
-pub use detector::{IntentDetector, RuleBasedIntentDetector};
-pub use types::{Intent, IntentParameters, IntentType};
+pub use detector::IntentDetector;
+pub use detector::RuleBasedIntentDetector;
+pub use types::Intent;
+pub use types::IntentParameters;
+pub use types::IntentType;

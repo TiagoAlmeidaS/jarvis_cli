@@ -1,8 +1,11 @@
 //! Explore agent for autonomously exploring codebases.
 
-use crate::agent::session::{AgentSession, AgentSessionManager, SessionError};
+use crate::agent::session::AgentSession;
+use crate::agent::session::AgentSessionManager;
+use crate::agent::session::SessionError;
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::path::PathBuf;
 use std::sync::Arc;
 

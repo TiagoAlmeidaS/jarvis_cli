@@ -9,5 +9,6 @@ pub mod init;
 pub mod router;
 
 pub use handler::MessageToJarvisHandler;
-pub use init::{initialize_messaging_servers, initialize_messaging_servers_from_thread};
+pub use init::initialize_messaging_servers;
+pub use init::initialize_messaging_servers_from_thread;
 pub use router::MessagingRouter;

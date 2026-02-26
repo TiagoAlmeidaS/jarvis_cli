@@ -1,19 +1,6 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 
 use anyhow::Ok;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::ItemCompletedEvent;
-use jarvis_core::protocol::ItemStartedEvent;
-use jarvis_core::protocol::Op;
-use jarvis_protocol::config_types::CollaborationMode;
-use jarvis_protocol::config_types::ModeKind;
-use jarvis_protocol::config_types::Settings;
-use jarvis_protocol::items::AgentMessageContent;
-use jarvis_protocol::items::TurnItem;
-use jarvis_protocol::models::WebSearchAction;
-use jarvis_protocol::user_input::ByteRange;
-use jarvis_protocol::user_input::TextElement;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_message_item_added;
@@ -33,6 +20,19 @@ use core_test_support::test_codex::TestCodex;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
 use core_test_support::wait_for_event_match;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::ItemCompletedEvent;
+use jarvis_core::protocol::ItemStartedEvent;
+use jarvis_core::protocol::Op;
+use jarvis_protocol::config_types::CollaborationMode;
+use jarvis_protocol::config_types::ModeKind;
+use jarvis_protocol::config_types::Settings;
+use jarvis_protocol::items::AgentMessageContent;
+use jarvis_protocol::items::TurnItem;
+use jarvis_protocol::models::WebSearchAction;
+use jarvis_protocol::user_input::ByteRange;
+use jarvis_protocol::user_input::TextElement;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -136,7 +136,8 @@ async fn assistant_message_item_is_emitted() -> anyhow::Result<()> {
     .await;
 
     assert_eq!(started.id, completed.id);
-    let Some(jarvis_protocol::items::AgentMessageContent::Text { text }) = completed.content.first()
+    let Some(jarvis_protocol::items::AgentMessageContent::Text { text }) =
+        completed.content.first()
     else {
         panic!("expected agent message text content");
     };

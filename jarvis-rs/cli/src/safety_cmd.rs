@@ -1,12 +1,15 @@
 //! CLI commands for safety verification and risk assessment.
 
 use anyhow::Result;
-use clap::{Args, Subcommand};
+use clap::Args;
+use clap::Subcommand;
 use jarvis_common::CliConfigOverrides;
-use jarvis_core::safety::{
-    ProposedAction, RiskLevel, RuleBasedSafetyClassifier, SafetyAssessment, SafetyClassifier,
-    SafetyRules,
-};
+use jarvis_core::safety::ProposedAction;
+use jarvis_core::safety::RiskLevel;
+use jarvis_core::safety::RuleBasedSafetyClassifier;
+use jarvis_core::safety::SafetyAssessment;
+use jarvis_core::safety::SafetyClassifier;
+use jarvis_core::safety::SafetyRules;
 use owo_colors::OwoColorize;
 use serde_json;
 

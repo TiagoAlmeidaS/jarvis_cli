@@ -1,11 +1,11 @@
-﻿use assert_cmd::Command as AssertCommand;
+use assert_cmd::Command as AssertCommand;
+use core_test_support::fs_wait;
+use core_test_support::responses;
+use core_test_support::skip_if_no_network;
 use jarvis_core::RolloutRecorder;
 use jarvis_core::auth::jarvis_API_KEY_ENV_VAR;
 use jarvis_core::protocol::GitInfo;
 use jarvis_utils_cargo_bin::find_resource;
-use core_test_support::fs_wait;
-use core_test_support::responses;
-use core_test_support::skip_if_no_network;
 use std::time::Duration;
 use tempfile::TempDir;
 use uuid::Uuid;

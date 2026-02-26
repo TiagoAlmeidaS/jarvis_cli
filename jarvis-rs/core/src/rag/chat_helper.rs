@@ -3,7 +3,8 @@
 //! This module provides utilities to inject RAG context into chat messages
 //! before they are sent to the LLM.
 
-use crate::rag::chat_integration::{RagContextConfig, RagContextInjector};
+use crate::rag::chat_integration::RagContextConfig;
+use crate::rag::chat_integration::RagContextInjector;
 use anyhow::Result;
 use std::sync::Arc;
 
@@ -58,7 +59,28 @@ pub async fn inject_rag_context(
     Ok(enhanced_message)
 }
 
-/// Creates a RAG context injector with smart fallback.
+/// Creates a RAG context injector from a [`RagConfig`].
+///
+/// This function attempts to create a RAG injector using the supplied
+/// configuration. If the config has `enabled: false` or setup fails,
+/// returns a disabled injector.
+pub async fn create_rag_injector_from_config(
+    cfg: &crate::config::types::RagConfig,
+) -> Arc<RagContextInjector> {
+    if !cfg.enabled {
+        return Arc::new(create_disabled_injector());
+    }
+
+    match RagContextInjector::from_rag_config(cfg).await {
+        Ok(injector) => Arc::new(injector),
+        Err(e) => {
+            tracing::warn!("Failed to initialize RAG context injector: {e}. RAG will be disabled.",);
+            Arc::new(create_disabled_injector())
+        }
+    }
+}
+
+/// Creates a RAG context injector with smart fallback (legacy).
 ///
 /// This function attempts to create a RAG injector with the following priority:
 /// 1. Full setup: Qdrant + PostgreSQL + Ollama
@@ -94,17 +116,31 @@ pub async fn create_rag_injector() -> Arc<RagContextInjector> {
 
 /// Creates a disabled RAG injector (for when RAG setup fails).
 fn create_disabled_injector() -> RagContextInjector {
-    use crate::rag::{InMemoryDocumentStore, InMemoryVectorStore, OllamaEmbeddingGenerator};
+    create_disabled_injector_with_config(None)
+}
+
+/// Creates a disabled RAG injector, optionally using [`RagConfig`] defaults.
+///
+/// If a config is provided the Ollama embedding generator will use its URL,
+/// model and dimension settings instead of hardcoded localhost defaults.
+pub fn create_disabled_injector_with_config(
+    cfg: Option<&crate::config::types::RagConfig>,
+) -> RagContextInjector {
+    use crate::rag::InMemoryDocumentStore;
+    use crate::rag::InMemoryVectorStore;
+    use crate::rag::OllamaEmbeddingGenerator;
     use std::sync::Arc;
 
-    // Create minimal in-memory stores
-    let embedding_gen = Arc::new(OllamaEmbeddingGenerator::from_config().unwrap_or_else(|_| {
-        OllamaEmbeddingGenerator::new(
-            "http://localhost:11434".to_string(),
-            "nomic-embed-text".to_string(),
-            768,
-        )
-    }));
+    let embedding_gen = Arc::new(match cfg {
+        Some(c) => OllamaEmbeddingGenerator::from_rag_config(c),
+        None => OllamaEmbeddingGenerator::from_config().unwrap_or_else(|_| {
+            OllamaEmbeddingGenerator::new(
+                "http://localhost:11434".to_string(),
+                "nomic-embed-text".to_string(),
+                768,
+            )
+        }),
+    });
     let vector_store = Arc::new(InMemoryVectorStore::new());
     let doc_store = Arc::new(InMemoryDocumentStore::new());
 

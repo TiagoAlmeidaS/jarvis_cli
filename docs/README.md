@@ -80,6 +80,16 @@ Roadmap e especificações para transformar o Jarvis em agente autônomo:
 - [Agentic Loop](./features/agentic-loop.md) — G5: Think→Execute→Observe→Repeat
 - [Sandbox Execution](./features/sandbox-execution.md) — G6: Execução segura com rollback
 
+### 6. Relatórios e Análises
+**Diretório**: [`reports/`](./reports/)
+
+Análises técnicas e relatórios sobre o estado do projeto:
+- [Análise de Autonomia](./ANALISE_AUTONOMIA_JARVIS.md) — Estado atual da implementação autônoma
+- [Guia de Exploração do Codebase](./reports/codebase-exploration-guide.md) — **NOVO**: Como explorar o codebase antes de análises
+- [Análise de Gaps: Resposta vs Realidade](./reports/gap-analysis-response-vs-reality.md) — **NOVO**: Comparação de análise genérica vs código real
+- [Autonomy Gap Analysis](./reports/autonomy-gap-analysis-2026-02-14.md) — Análise detalhada de gaps
+- [Integration Progress](./reports/integration-progress-2026-02-14.md) — Progresso de integrações
+
 ---
 
 ## 🐛 Resolução de Problemas

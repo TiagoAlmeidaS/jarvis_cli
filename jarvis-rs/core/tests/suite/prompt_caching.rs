@@ -1,5 +1,14 @@
-﻿#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used)]
 
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::responses::sse;
+use core_test_support::responses::start_mock_server;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::TestCodex;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
 use jarvis_apply_patch::APPLY_PATCH_TOOL_INSTRUCTIONS;
 use jarvis_core::features::Feature;
 use jarvis_core::models_manager::model_info::BASE_INSTRUCTIONS;
@@ -18,15 +27,6 @@ use jarvis_protocol::config_types::WebSearchMode;
 use jarvis_protocol::openai_models::ReasoningEffort;
 use jarvis_protocol::user_input::UserInput;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::responses::sse;
-use core_test_support::responses::start_mock_server;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::TestCodex;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use pretty_assertions::assert_eq;
 use tempfile::TempDir;
 

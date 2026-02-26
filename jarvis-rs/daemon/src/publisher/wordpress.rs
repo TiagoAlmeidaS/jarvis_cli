@@ -6,7 +6,9 @@
 use super::Publisher;
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{ContentOutput, Platform, PublishResult};
+use jarvis_daemon_common::ContentOutput;
+use jarvis_daemon_common::Platform;
+use jarvis_daemon_common::PublishResult;
 use serde::Deserialize;
 
 /// Configuration for WordPress publishing.

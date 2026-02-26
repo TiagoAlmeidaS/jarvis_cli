@@ -1,7 +1,10 @@
 //! Intent detection system for analyzing user input and determining intent.
 
-use crate::intent::types::{Intent, IntentParameters, IntentType};
-use anyhow::{Context, Result};
+use crate::intent::types::Intent;
+use crate::intent::types::IntentParameters;
+use crate::intent::types::IntentType;
+use anyhow::Context;
+use anyhow::Result;
 use std::collections::HashMap;
 
 /// Trait for intent detection.

@@ -1,5 +1,7 @@
 use jarvis_messaging::handler::MessageHandler;
-use jarvis_messaging::message::{IncomingMessage, MessageId, OutgoingMessage};
+use jarvis_messaging::message::IncomingMessage;
+use jarvis_messaging::message::MessageId;
+use jarvis_messaging::message::OutgoingMessage;
 use jarvis_messaging::platform::MessagingPlatform;
 
 use crate::client::WhatsAppClient;

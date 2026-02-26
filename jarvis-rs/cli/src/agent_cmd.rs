@@ -1,12 +1,16 @@
 //! CLI commands for autonomous agent operations.
 
 use anyhow::Result;
-use clap::{Args, Subcommand};
+use clap::Args;
+use clap::Subcommand;
 use jarvis_common::CliConfigOverrides;
-use jarvis_core::agent::{
-    AgentSessionManager, ExploreAgent, InMemoryAgentSessionManager, PlanAgent,
-    RuleBasedExploreAgent, RuleBasedPlanAgent, Thoroughness,
-};
+use jarvis_core::agent::AgentSessionManager;
+use jarvis_core::agent::ExploreAgent;
+use jarvis_core::agent::InMemoryAgentSessionManager;
+use jarvis_core::agent::PlanAgent;
+use jarvis_core::agent::RuleBasedExploreAgent;
+use jarvis_core::agent::RuleBasedPlanAgent;
+use jarvis_core::agent::Thoroughness;
 use owo_colors::OwoColorize;
 use serde_json;
 use std::path::PathBuf;

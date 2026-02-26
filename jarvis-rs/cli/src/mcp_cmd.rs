@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use std::collections::BTreeMap;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -772,7 +772,9 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
             let headers_display = match http_headers {
                 Some(map) if !map.is_empty() => {
                     let mut pairs: Vec<(&String, &String)> = map.iter().collect();
-                    pairs.sort_by(|(a, _): &(&String, &String), (b, _): &(&String, &String)| a.cmp(b));
+                    pairs.sort_by(|(a, _): &(&String, &String), (b, _): &(&String, &String)| {
+                        a.cmp(b)
+                    });
                     pairs
                         .into_iter()
                         .map(|(k, _)| format!("{k}=*****"))
@@ -785,7 +787,9 @@ async fn run_get(config_overrides: &CliConfigOverrides, get_args: GetArgs) -> Re
             let env_headers_display = match env_http_headers {
                 Some(map) if !map.is_empty() => {
                     let mut pairs: Vec<(&String, &String)> = map.iter().collect();
-                    pairs.sort_by(|(a, _): &(&String, &String), (b, _): &(&String, &String)| a.cmp(b));
+                    pairs.sort_by(|(a, _): &(&String, &String), (b, _): &(&String, &String)| {
+                        a.cmp(b)
+                    });
                     pairs
                         .into_iter()
                         .map(|(k, var)| format!("{k}={var}"))

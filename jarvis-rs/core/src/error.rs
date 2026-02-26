@@ -354,17 +354,54 @@ impl std::fmt::Display for UnexpectedResponseError {
         } else {
             let status = self.status;
             let body = self.display_body();
-            let mut message = format!("unexpected status {status}: {body}");
-            if let Some(url) = &self.url {
-                message.push_str(&format!(", url: {url}"));
+
+            // Special handling for OpenRouter 404 errors with formatted messages
+            if status == StatusCode::NOT_FOUND
+                && self
+                    .url
+                    .as_ref()
+                    .map(|u| u.contains("openrouter.ai"))
+                    .unwrap_or(false)
+                && (body.contains("Free models available")
+                    || body.contains("is not available on OpenRouter"))
+            {
+                // The body already contains a well-formatted message with suggestions
+                write!(f, "{body}")
+            } else if status == StatusCode::FORBIDDEN
+                && self
+                    .url
+                    .as_ref()
+                    .map(|u| u.contains("openrouter.ai"))
+                    .unwrap_or(false)
+                && (body.to_lowercase().contains("limit exceeded")
+                    || body.to_lowercase().contains("key limit")
+                    || body.to_lowercase().contains("quota"))
+            {
+                // OpenRouter 403 with quota/limit exceeded - suggest using Gemini as alternative
+                let mut message = format!("OpenRouter quota/limit exceeded: {}\n\n", body);
+                message.push_str("Suggestions:\n");
+                message.push_str("• Use Google Gemini (free with daily quotas): jarvis chat -c \"model_provider=google\" -m \"gemini-2.5-flash\"\n");
+                message.push_str(
+                    "• Check your OpenRouter quota: https://openrouter.ai/settings/keys\n",
+                );
+                message.push_str("• Wait for quota reset or upgrade your OpenRouter plan");
+                if let Some(cf_ray) = &self.cf_ray {
+                    message.push_str(&format!("\n\ncf-ray: {cf_ray}"));
+                }
+                write!(f, "{message}")
+            } else {
+                let mut message = format!("unexpected status {status}: {body}");
+                if let Some(url) = &self.url {
+                    message.push_str(&format!(", url: {url}"));
+                }
+                if let Some(cf_ray) = &self.cf_ray {
+                    message.push_str(&format!(", cf-ray: {cf_ray}"));
+                }
+                if let Some(id) = &self.request_id {
+                    message.push_str(&format!(", request id: {id}"));
+                }
+                write!(f, "{message}")
             }
-            if let Some(cf_ray) = &self.cf_ray {
-                message.push_str(&format!(", cf-ray: {cf_ray}"));
-            }
-            if let Some(id) = &self.request_id {
-                message.push_str(&format!(", request id: {id}"));
-            }
-            write!(f, "{message}")
         }
     }
 }

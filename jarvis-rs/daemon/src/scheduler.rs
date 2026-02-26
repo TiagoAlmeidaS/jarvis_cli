@@ -2,11 +2,16 @@
 //! are due for execution, and enqueues jobs.
 
 use anyhow::Result;
-use jarvis_daemon_common::{CronSchedule, DaemonDb, LogLevel};
+use jarvis_daemon_common::CronSchedule;
+use jarvis_daemon_common::DaemonDb;
+use jarvis_daemon_common::LogLevel;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
-use tracing::{debug, error, info, warn};
+use tracing::debug;
+use tracing::error;
+use tracing::info;
+use tracing::warn;
 
 use crate::executor::ProposalExecutor;
 use crate::runner::PipelineRunner;

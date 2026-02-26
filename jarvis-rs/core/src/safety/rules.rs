@@ -1,6 +1,7 @@
 //! Safety rules for autonomous action classification.
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashSet;
 
 /// Safety rules configuration.
@@ -15,8 +16,8 @@ pub struct SafetyRules {
 }
 
 impl SafetyRules {
-    /// Creates default safety rules.
-    pub fn default() -> Self {
+    /// Creates a new `SafetyRules` with the built-in defaults.
+    pub fn new() -> Self {
         let mut autonomous_whitelist = HashSet::new();
         autonomous_whitelist.insert("fix_test_file".to_string());
         autonomous_whitelist.insert("fix_comment".to_string());
@@ -24,6 +25,9 @@ impl SafetyRules {
         autonomous_whitelist.insert("update_test_assertion".to_string());
         autonomous_whitelist.insert("format_code".to_string());
         autonomous_whitelist.insert("add_comment".to_string());
+        // Agent loop safety gate: read-only operations are safe.
+        autonomous_whitelist.insert("read_file".to_string());
+        autonomous_whitelist.insert("read_only_operation".to_string());
 
         let mut prohibited_actions = HashSet::new();
         prohibited_actions.insert("delete_file".to_string());
@@ -39,6 +43,7 @@ impl SafetyRules {
         risk_thresholds.insert("production_code".to_string(), 0.9);
         risk_thresholds.insert("config_file".to_string(), 0.8);
         risk_thresholds.insert("database".to_string(), 0.95);
+        risk_thresholds.insert("read_only".to_string(), 0.1);
 
         Self {
             autonomous_whitelist,
@@ -65,7 +70,7 @@ impl SafetyRules {
 
 impl Default for SafetyRules {
     fn default() -> Self {
-        Self::default()
+        Self::new()
     }
 }
 

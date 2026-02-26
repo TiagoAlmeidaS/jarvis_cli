@@ -5,7 +5,8 @@ pub mod web;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{DaemonSource, ScrapedContent};
+use jarvis_daemon_common::DaemonSource;
+use jarvis_daemon_common::ScrapedContent;
 
 /// Trait for scraping content from a data source.
 #[async_trait]

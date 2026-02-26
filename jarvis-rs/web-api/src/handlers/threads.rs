@@ -1,14 +1,18 @@
 //! Threads endpoint.
 
-use axum::extract::{Query, State};
-use axum::Json;
-use serde::{Deserialize, Serialize};
 use crate::state::AppState;
+use axum::Json;
+use axum::extract::Query;
+use axum::extract::State;
 use jarvis_core::RolloutRecorder;
-use jarvis_core::{ThreadItem, ThreadSortKey, parse_cursor};
-use jarvis_protocol::protocol::SessionSource;
-use jarvis_protocol::protocol::EventMsg;
+use jarvis_core::ThreadItem;
+use jarvis_core::ThreadSortKey;
+use jarvis_core::parse_cursor;
 use jarvis_protocol::models::ResponseItem;
+use jarvis_protocol::protocol::EventMsg;
+use jarvis_protocol::protocol::SessionSource;
+use serde::Deserialize;
+use serde::Serialize;
 use std::path::Path;
 
 #[derive(Deserialize)]
@@ -40,7 +44,7 @@ pub struct ThreadsResponse {
 /// Extract preview text from ThreadItem head records
 fn extract_preview(item: &ThreadItem) -> String {
     use jarvis_protocol::models::ContentItem;
-    
+
     // Look for first user message in head records
     for record in &item.head {
         // Try to parse as ResponseItem with user message
@@ -69,9 +73,11 @@ fn extract_preview(item: &ThreadItem) -> String {
                 }
             }
         }
-        
+
         // Try to parse as EventMsg with UserMessage
-        if let Ok(rollout_line) = serde_json::from_value::<jarvis_protocol::protocol::RolloutLine>(record.clone()) {
+        if let Ok(rollout_line) =
+            serde_json::from_value::<jarvis_protocol::protocol::RolloutLine>(record.clone())
+        {
             if let jarvis_protocol::protocol::RolloutItem::EventMsg(ev) = rollout_line.item {
                 if let EventMsg::UserMessage(user_msg) = ev {
                     let preview = if user_msg.message.len() > 100 {
@@ -84,7 +90,7 @@ fn extract_preview(item: &ThreadItem) -> String {
             }
         }
     }
-    
+
     "Nova conversa".to_string()
 }
 
@@ -94,7 +100,10 @@ fn extract_thread_id(path: &Path) -> Option<String> {
     // Format is typically: rollout-<timestamp>-<uuid>.jsonl
     // Extract UUID from filename - format is rollout-YYYY-MM-DDThh-mm-ss-<uuid>.jsonl
     // We need to find the last '-' before the UUID
-    if let Some(core) = file_name.strip_prefix("rollout-").and_then(|s| s.strip_suffix(".jsonl")) {
+    if let Some(core) = file_name
+        .strip_prefix("rollout-")
+        .and_then(|s| s.strip_suffix(".jsonl"))
+    {
         // Find the last '-' and parse UUID from the suffix
         // UUID format: 8-4-4-4-12 hex digits
         if let Some((_, uuid_str)) = core.rsplit_once('-') {
@@ -112,31 +121,32 @@ pub async fn list_threads(
     Query(query): Query<ThreadsQuery>,
 ) -> Json<ThreadsResponse> {
     let jarvis_home = &state.config.jarvis_home;
-    
+
     // Determine sort key
     let sort_key = match query.sort.as_deref() {
         Some("updated_at") => ThreadSortKey::UpdatedAt,
         _ => ThreadSortKey::CreatedAt,
     };
-    
+
     // Parse cursor if provided
-    let cursor = query.cursor.as_ref().and_then(|c| {
-        parse_cursor(c)
-    });
-    
+    let cursor = query.cursor.as_ref().and_then(|c| parse_cursor(c));
+
     // List threads using RolloutRecorder
     let page = RolloutRecorder::list_threads(
         jarvis_home,
         query.limit,
         cursor.as_ref(),
         sort_key,
-        &[], // Allow all session sources for now
+        &[],  // Allow all session sources for now
         None, // No provider filter
         &state.config.model_provider_id,
-    ).await.unwrap_or_default();
-    
+    )
+    .await
+    .unwrap_or_default();
+
     // Convert ThreadItem to Thread
-    let threads: Vec<Thread> = page.items
+    let threads: Vec<Thread> = page
+        .items
         .into_iter()
         .filter_map(|item| {
             let id = extract_thread_id(&item.path)?;
@@ -149,11 +159,12 @@ pub async fn list_threads(
             })
         })
         .collect();
-    
+
     // Serialize next cursor
-    let next_cursor = page.next_cursor
+    let next_cursor = page
+        .next_cursor
         .and_then(|c| serde_json::to_string(&c).ok());
-    
+
     Json(ThreadsResponse {
         threads,
         next_cursor,
@@ -163,10 +174,10 @@ pub async fn list_threads(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::http::StatusCode;
-    use axum_test::TestServer;
     use crate::server::create_router;
     use crate::test_utils::create_test_app_state_with_api_key;
+    use axum::http::StatusCode;
+    use axum_test::TestServer;
 
     #[tokio::test]
     async fn test_list_threads() {
@@ -185,7 +196,7 @@ mod tests {
         // May be empty if no threads exist, which is valid
         assert!(body.threads.len() <= body.threads.capacity() || body.threads.is_empty());
     }
-    
+
     #[tokio::test]
     async fn test_list_threads_with_query_params() {
         let api_key = "test-api-key".to_string();
@@ -210,9 +221,7 @@ mod tests {
         let app = create_router(app_state, false);
         let server = TestServer::new(app).unwrap();
 
-        let response = server
-            .get("/api/threads")
-            .await;
+        let response = server.get("/api/threads").await;
 
         response.assert_status(StatusCode::UNAUTHORIZED);
     }

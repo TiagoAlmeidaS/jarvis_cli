@@ -1,4 +1,6 @@
-﻿use anyhow::Result;
+use anyhow::Result;
+use core_test_support::load_default_config_for_test;
+use indoc::indoc;
 use jarvis_core::JarvisAuth;
 use jarvis_core::ThreadManager;
 use jarvis_core::built_in_model_providers;
@@ -8,8 +10,6 @@ use jarvis_protocol::openai_models::ModelUpgrade;
 use jarvis_protocol::openai_models::ReasoningEffort;
 use jarvis_protocol::openai_models::ReasoningEffortPreset;
 use jarvis_protocol::openai_models::default_input_modalities;
-use core_test_support::load_default_config_for_test;
-use indoc::indoc;
 use pretty_assertions::assert_eq;
 use std::collections::HashMap;
 use tempfile::tempdir;

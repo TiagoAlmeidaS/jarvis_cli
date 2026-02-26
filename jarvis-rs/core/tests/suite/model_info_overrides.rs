@@ -1,6 +1,6 @@
-﻿use jarvis_core::models_manager::manager::ModelsManager;
-use jarvis_protocol::openai_models::TruncationPolicyConfig;
 use core_test_support::load_default_config_for_test;
+use jarvis_core::models_manager::manager::ModelsManager;
+use jarvis_protocol::openai_models::TruncationPolicyConfig;
 use pretty_assertions::assert_eq;
 use tempfile::TempDir;
 

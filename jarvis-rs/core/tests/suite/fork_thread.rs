@@ -1,4 +1,10 @@
-﻿use jarvis_core::NewThread;
+use core_test_support::responses::ev_completed;
+use core_test_support::responses::ev_response_created;
+use core_test_support::responses::sse;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
+use jarvis_core::NewThread;
 use jarvis_core::parse_turn_item;
 use jarvis_core::protocol::EventMsg;
 use jarvis_core::protocol::Op;
@@ -6,12 +12,6 @@ use jarvis_core::protocol::RolloutItem;
 use jarvis_core::protocol::RolloutLine;
 use jarvis_protocol::items::TurnItem;
 use jarvis_protocol::user_input::UserInput;
-use core_test_support::responses::ev_completed;
-use core_test_support::responses::ev_response_created;
-use core_test_support::responses::sse;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use wiremock::Mock;
 use wiremock::MockServer;
 use wiremock::ResponseTemplate;
@@ -39,7 +39,7 @@ async fn fork_thread_twice_drops_to_first_message() {
 
     let mut builder = test_codex();
     let test = builder.build(&server).await.expect("create conversation");
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let thread_manager = test.thread_manager.clone();
     let config_for_fork = test.config.clone();
 

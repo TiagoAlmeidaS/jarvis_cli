@@ -1,5 +1,8 @@
-﻿#![allow(clippy::unwrap_used, clippy::expect_used)]
+#![allow(clippy::unwrap_used, clippy::expect_used)]
 
+use core::time::Duration;
+use core_test_support::load_default_config_for_test;
+use core_test_support::wait_for_event;
 use jarvis_core::AuthManager;
 use jarvis_core::JarvisAuth;
 use jarvis_core::NewThread;
@@ -10,9 +13,6 @@ use jarvis_core::protocol::EventMsg;
 use jarvis_core::protocol::InitialHistory;
 use jarvis_core::protocol::WarningEvent;
 use jarvis_utils_absolute_path::AbsolutePathBuf;
-use core::time::Duration;
-use core_test_support::load_default_config_for_test;
-use core_test_support::wait_for_event;
 use tempfile::TempDir;
 use tokio::time::timeout;
 use toml::toml;

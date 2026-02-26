@@ -506,6 +506,193 @@ impl From<MessagingConfigToml> for MessagingConfig {
     }
 }
 
+// ===== RAG configuration =====
+
+/// RAG (Retrieval Augmented Generation) settings loaded from config.toml.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct RagConfigToml {
+    /// When `false`, disables RAG entirely. Defaults to `true`.
+    #[serde(default = "default_enabled")]
+    pub enabled: bool,
+
+    /// Base URL for the Ollama embedding service.
+    /// Can be set via environment variable JARVIS_RAG_OLLAMA_URL.
+    /// Defaults to "http://localhost:11434".
+    #[serde(default)]
+    pub ollama_url: Option<String>,
+
+    /// Ollama model used to generate embeddings.
+    /// Defaults to "nomic-embed-text".
+    #[serde(default)]
+    pub ollama_model: Option<String>,
+
+    /// Expected embedding dimension. Defaults to 768 (nomic-embed-text).
+    #[serde(default)]
+    pub embedding_dimension: Option<usize>,
+
+    /// URL for the Qdrant vector database.
+    /// Can be set via environment variable JARVIS_RAG_QDRANT_URL.
+    /// Defaults to "http://localhost:6333".
+    #[serde(default)]
+    pub qdrant_url: Option<String>,
+
+    /// Qdrant collection name. Defaults to "jarvis_knowledge".
+    #[serde(default)]
+    pub qdrant_collection: Option<String>,
+
+    /// PostgreSQL connection URL for document storage.
+    /// Can be set via environment variable JARVIS_RAG_POSTGRES_URL.
+    /// When unset, falls back to JSON file storage in jarvis_home.
+    #[serde(default)]
+    pub postgres_url: Option<String>,
+}
+
+/// Effective RAG settings after defaults and environment variables are applied.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RagConfig {
+    pub enabled: bool,
+    pub ollama_url: String,
+    pub ollama_model: String,
+    pub embedding_dimension: usize,
+    pub qdrant_url: String,
+    pub qdrant_collection: String,
+    pub postgres_url: Option<String>,
+}
+
+impl Default for RagConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            ollama_url: "http://localhost:11434".to_string(),
+            ollama_model: "nomic-embed-text".to_string(),
+            embedding_dimension: 768,
+            qdrant_url: "http://localhost:6333".to_string(),
+            qdrant_collection: "jarvis_knowledge".to_string(),
+            postgres_url: None,
+        }
+    }
+}
+
+impl From<RagConfigToml> for RagConfig {
+    fn from(toml: RagConfigToml) -> Self {
+        let ollama_url = toml
+            .ollama_url
+            .or_else(|| std::env::var("JARVIS_RAG_OLLAMA_URL").ok())
+            .unwrap_or_else(|| "http://localhost:11434".to_string());
+
+        let ollama_model = toml
+            .ollama_model
+            .unwrap_or_else(|| "nomic-embed-text".to_string());
+
+        let embedding_dimension = toml.embedding_dimension.unwrap_or(768);
+
+        let qdrant_url = toml
+            .qdrant_url
+            .or_else(|| std::env::var("JARVIS_RAG_QDRANT_URL").ok())
+            .unwrap_or_else(|| "http://localhost:6333".to_string());
+
+        let qdrant_collection = toml
+            .qdrant_collection
+            .unwrap_or_else(|| "jarvis_knowledge".to_string());
+
+        let postgres_url = toml
+            .postgres_url
+            .or_else(|| std::env::var("JARVIS_RAG_POSTGRES_URL").ok());
+
+        Self {
+            enabled: toml.enabled,
+            ollama_url,
+            ollama_model,
+            embedding_dimension,
+            qdrant_url,
+            qdrant_collection,
+            postgres_url,
+        }
+    }
+}
+
+// ===== Knowledge configuration =====
+
+/// Knowledge base settings loaded from config.toml.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct KnowledgeConfigToml {
+    /// When `true`, enables the knowledge base for persistent learning across
+    /// sessions.  Defaults to `false`.
+    #[serde(default)]
+    pub enabled: Option<bool>,
+
+    /// Storage backend: `"memory"` (in-process only) or `"persistent"` (JSON
+    /// files on disk).  Defaults to `"persistent"`.
+    #[serde(default)]
+    pub backend: Option<String>,
+
+    /// Directory for persistent knowledge storage (relative to jarvis home).
+    /// Can be overridden via `JARVIS_KNOWLEDGE_DIR`.
+    /// Defaults to `"knowledge"`.
+    #[serde(default)]
+    pub storage_dir: Option<String>,
+
+    /// Maximum number of knowledge items to retrieve per query.
+    /// Defaults to 5.
+    #[serde(default)]
+    pub max_results: Option<usize>,
+
+    /// Whether to automatically learn from completed agent loop interactions.
+    /// Defaults to `true` when knowledge is enabled.
+    #[serde(default)]
+    pub auto_learn: Option<bool>,
+}
+
+/// Effective knowledge settings after defaults and environment variables are
+/// applied.
+#[derive(Debug, Clone, PartialEq)]
+pub struct KnowledgeConfig {
+    pub enabled: bool,
+    pub backend: String,
+    pub storage_dir: String,
+    pub max_results: usize,
+    pub auto_learn: bool,
+}
+
+impl Default for KnowledgeConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            backend: "persistent".to_string(),
+            storage_dir: "knowledge".to_string(),
+            max_results: 5,
+            auto_learn: true,
+        }
+    }
+}
+
+impl From<KnowledgeConfigToml> for KnowledgeConfig {
+    fn from(toml: KnowledgeConfigToml) -> Self {
+        let enabled = toml.enabled.unwrap_or(false);
+
+        let backend = toml.backend.unwrap_or_else(|| "persistent".to_string());
+
+        let storage_dir = toml
+            .storage_dir
+            .or_else(|| std::env::var("JARVIS_KNOWLEDGE_DIR").ok())
+            .unwrap_or_else(|| "knowledge".to_string());
+
+        let max_results = toml.max_results.unwrap_or(5);
+
+        let auto_learn = toml.auto_learn.unwrap_or(true);
+
+        Self {
+            enabled,
+            backend,
+            storage_dir,
+            max_results,
+            auto_learn,
+        }
+    }
+}
+
 // ===== API Web configuration =====
 
 /// API Web settings loaded from config.toml. Fields are optional so we can apply defaults.
@@ -1482,10 +1669,13 @@ mod tests {
 
     #[test]
     fn messaging_config_from_toml_with_env_vars() {
-        std::env::set_var("WHATSAPP_ACCESS_TOKEN", "env_token");
-        std::env::set_var("WHATSAPP_VERIFY_TOKEN", "env_verify");
-        std::env::set_var("WHATSAPP_PHONE_NUMBER_ID", "env_phone");
-        std::env::set_var("TELEGRAM_BOT_TOKEN", "env_bot_token");
+        // SAFETY: test-only, single-threaded test runner for this module.
+        unsafe {
+            std::env::set_var("WHATSAPP_ACCESS_TOKEN", "env_token");
+            std::env::set_var("WHATSAPP_VERIFY_TOKEN", "env_verify");
+            std::env::set_var("WHATSAPP_PHONE_NUMBER_ID", "env_phone");
+            std::env::set_var("TELEGRAM_BOT_TOKEN", "env_bot_token");
+        }
 
         let toml = MessagingConfigToml {
             enabled: true,
@@ -1519,10 +1709,13 @@ mod tests {
         let telegram = config.telegram.unwrap();
         assert_eq!(telegram.bot_token, "env_bot_token");
 
-        std::env::remove_var("WHATSAPP_ACCESS_TOKEN");
-        std::env::remove_var("WHATSAPP_VERIFY_TOKEN");
-        std::env::remove_var("WHATSAPP_PHONE_NUMBER_ID");
-        std::env::remove_var("TELEGRAM_BOT_TOKEN");
+        // SAFETY: test-only cleanup.
+        unsafe {
+            std::env::remove_var("WHATSAPP_ACCESS_TOKEN");
+            std::env::remove_var("WHATSAPP_VERIFY_TOKEN");
+            std::env::remove_var("WHATSAPP_PHONE_NUMBER_ID");
+            std::env::remove_var("TELEGRAM_BOT_TOKEN");
+        }
     }
 
     #[test]
@@ -1782,19 +1975,27 @@ mod agent_loop_tests {
 
     #[test]
     fn resolve_api_key_env_syntax() {
-        std::env::set_var("TEST_JARVIS_AGENT_KEY_1", "key-from-env-syntax");
+        // SAFETY: test-only env setup.
+        unsafe {
+            std::env::set_var("TEST_JARVIS_AGENT_KEY_1", "key-from-env-syntax");
+        }
         let key = super::resolve_agent_loop_api_key(
             Some("env:TEST_JARVIS_AGENT_KEY_1"),
             None,
             "http://localhost",
         );
         assert_eq!(key, "key-from-env-syntax");
-        std::env::remove_var("TEST_JARVIS_AGENT_KEY_1");
+        unsafe {
+            std::env::remove_var("TEST_JARVIS_AGENT_KEY_1");
+        }
     }
 
     #[test]
     fn resolve_api_key_api_key_env_field() {
-        std::env::set_var("TEST_JARVIS_AGENT_KEY_2", "key-from-env-field");
+        // SAFETY: test-only env setup.
+        unsafe {
+            std::env::set_var("TEST_JARVIS_AGENT_KEY_2", "key-from-env-field");
+        }
         let key = super::resolve_agent_loop_api_key(
             Some("sk-should-be-ignored"),
             Some("TEST_JARVIS_AGENT_KEY_2"),
@@ -1802,23 +2003,35 @@ mod agent_loop_tests {
         );
         // api_key_env takes priority over api_key literal
         assert_eq!(key, "key-from-env-field");
-        std::env::remove_var("TEST_JARVIS_AGENT_KEY_2");
+        unsafe {
+            std::env::remove_var("TEST_JARVIS_AGENT_KEY_2");
+        }
     }
 
     #[test]
     fn resolve_api_key_auto_detect_openrouter() {
-        std::env::set_var("OPENROUTER_API_KEY", "sk-or-auto");
+        // SAFETY: test-only env setup.
+        unsafe {
+            std::env::set_var("OPENROUTER_API_KEY", "sk-or-auto");
+        }
         let key = super::resolve_agent_loop_api_key(None, None, "https://openrouter.ai/api/v1");
         assert_eq!(key, "sk-or-auto");
-        std::env::remove_var("OPENROUTER_API_KEY");
+        unsafe {
+            std::env::remove_var("OPENROUTER_API_KEY");
+        }
     }
 
     #[test]
     fn resolve_api_key_auto_detect_openai() {
-        std::env::set_var("OPENAI_API_KEY", "sk-openai-auto");
+        // SAFETY: test-only env setup.
+        unsafe {
+            std::env::set_var("OPENAI_API_KEY", "sk-openai-auto");
+        }
         let key = super::resolve_agent_loop_api_key(None, None, "https://api.openai.com/v1");
         assert_eq!(key, "sk-openai-auto");
-        std::env::remove_var("OPENAI_API_KEY");
+        unsafe {
+            std::env::remove_var("OPENAI_API_KEY");
+        }
     }
 
     #[test]
@@ -1829,7 +2042,10 @@ mod agent_loop_tests {
 
     #[test]
     fn resolve_api_key_config_toml_with_api_key_env() {
-        std::env::set_var("TEST_JARVIS_AGENT_KEY_3", "key-via-toml-env");
+        // SAFETY: test-only env setup.
+        unsafe {
+            std::env::set_var("TEST_JARVIS_AGENT_KEY_3", "key-via-toml-env");
+        }
         let toml: AgentLoopConfigToml = serde_json::from_value(serde_json::json!({
             "base_url": "https://openrouter.ai/api/v1",
             "api_key_env": "TEST_JARVIS_AGENT_KEY_3",
@@ -1837,26 +2053,33 @@ mod agent_loop_tests {
         .unwrap();
         let settings: AgentLoopSettings = toml.into();
         assert_eq!(settings.api_key, "key-via-toml-env");
-        std::env::remove_var("TEST_JARVIS_AGENT_KEY_3");
+        unsafe {
+            std::env::remove_var("TEST_JARVIS_AGENT_KEY_3");
+        }
     }
 
     #[test]
     fn resolve_api_key_config_toml_openrouter_auto() {
-        std::env::set_var("OPENROUTER_API_KEY", "sk-or-toml-auto");
+        // SAFETY: test-only env setup.
+        unsafe {
+            std::env::set_var("OPENROUTER_API_KEY", "sk-or-toml-auto");
+        }
         let toml: AgentLoopConfigToml = serde_json::from_value(serde_json::json!({
             "base_url": "https://openrouter.ai/api/v1",
         }))
         .unwrap();
         let settings: AgentLoopSettings = toml.into();
         assert_eq!(settings.api_key, "sk-or-toml-auto");
-        std::env::remove_var("OPENROUTER_API_KEY");
+        unsafe {
+            std::env::remove_var("OPENROUTER_API_KEY");
+        }
     }
 }
 
 // ===== LLM Router Strategies Configuration =====
 
 /// LLM routing strategies configuration for daemon pipelines.
-/// 
+///
 /// Defines fallback chains for different use cases:
 /// - heavy_context: For tasks requiring long context (code reading, video transcription)
 /// - reasoning: For tasks requiring logical reasoning (code review, planning)
@@ -1877,7 +2100,7 @@ pub struct LlmStrategyConfigToml {
     /// Primary provider/model identifier (format: "provider/model").
     /// Example: "google/gemini-2.0-flash"
     pub primary: String,
-    
+
     /// Fallback provider/model identifiers in order of preference.
     /// Example: ["openrouter/google/gemini-2.0-flash:free", "github/gpt-4o-mini"]
     #[serde(default)]

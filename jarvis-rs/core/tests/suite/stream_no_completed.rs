@@ -1,11 +1,6 @@
-﻿//! Verifies that the agent retries when the SSE stream terminates before
+//! Verifies that the agent retries when the SSE stream terminates before
 //! delivering a `response.completed` event.
 
-use jarvis_core::ModelProviderInfo;
-use jarvis_core::WireApi;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::load_sse_fixture;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_response_created;
@@ -14,6 +9,11 @@ use core_test_support::skip_if_no_network;
 use core_test_support::test_codex::TestCodex;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::ModelProviderInfo;
+use jarvis_core::WireApi;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_protocol::user_input::UserInput;
 use wiremock::Mock;
 use wiremock::MockServer;
 use wiremock::Request;
@@ -86,6 +86,7 @@ async fn retries_on_early_close() {
         stream_idle_timeout_ms: Some(2000),
         requires_openai_auth: false,
         supports_websockets: false,
+        uses_chat_completions_api: false,
     };
 
     let TestCodex { Jarvis, .. } = test_codex()

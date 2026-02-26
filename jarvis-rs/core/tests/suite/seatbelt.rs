@@ -1,4 +1,4 @@
-﻿#![cfg(target_os = "macos")]
+#![cfg(target_os = "macos")]
 
 //! Tests for the macOS sandboxing that are specific to Seatbelt.
 //! Tests that apply to both Mac and Linux sandboxing should go in sandbox.rs.
@@ -9,8 +9,8 @@ use std::path::PathBuf;
 
 use jarvis_core::protocol::SandboxPolicy;
 use jarvis_core::seatbelt::spawn_command_under_seatbelt;
-use jarvis_core::spawn::jarvis_SANDBOX_ENV_VAR;
 use jarvis_core::spawn::StdioPolicy;
+use jarvis_core::spawn::jarvis_SANDBOX_ENV_VAR;
 use tempfile::TempDir;
 
 struct TestScenario {

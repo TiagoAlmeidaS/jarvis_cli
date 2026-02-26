@@ -1,7 +1,9 @@
 //! Agent session management for maintaining context across agent operations.
 
-use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
+use serde::Deserialize;
+use serde::Serialize;
+use std::collections::HashMap;
+use std::collections::HashSet;
 use std::path::PathBuf;
 use uuid::Uuid;
 

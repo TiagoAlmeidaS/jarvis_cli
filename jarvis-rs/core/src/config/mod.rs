@@ -372,6 +372,12 @@ pub struct Config {
     /// Messaging integrations configuration (WhatsApp, Telegram).
     pub messaging: crate::config::types::MessagingConfig,
 
+    /// RAG (Retrieval Augmented Generation) configuration.
+    pub rag: crate::config::types::RagConfig,
+
+    /// Knowledge base configuration for persistent learning.
+    pub knowledge: crate::config::types::KnowledgeConfig,
+
     /// API Web server configuration.
     pub api: Option<crate::config::types::ApiConfig>,
 
@@ -996,6 +1002,14 @@ pub struct ConfigToml {
     /// Messaging integrations configuration (WhatsApp, Telegram).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub messaging: Option<crate::config::types::MessagingConfigToml>,
+
+    /// RAG (Retrieval Augmented Generation) configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rag: Option<crate::config::types::RagConfigToml>,
+
+    /// Knowledge base configuration for persistent learning.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub knowledge: Option<crate::config::types::KnowledgeConfigToml>,
 
     /// API Web server configuration.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1748,6 +1762,8 @@ impl Config {
             },
             github: cfg.github.unwrap_or_default().into(),
             messaging: cfg.messaging.unwrap_or_default().into(),
+            rag: cfg.rag.unwrap_or_default().into(),
+            knowledge: cfg.knowledge.unwrap_or_default().into(),
             api: cfg.api.map(Into::into),
             agent_loop: cfg.agent_loop.unwrap_or_default().into(),
         };
@@ -3807,6 +3823,7 @@ model_verbosity = "high"
             stream_idle_timeout_ms: Some(300_000),
             requires_openai_auth: false,
             supports_websockets: false,
+            uses_chat_completions_api: false,
         };
         let model_provider_map = {
             let mut model_provider_map = built_in_model_providers();
@@ -3923,6 +3940,9 @@ model_verbosity = "high"
                 otel: OtelConfig::default(),
                 github: Default::default(),
                 messaging: Default::default(),
+                rag: Default::default(),
+                knowledge: Default::default(),
+                agent_loop: Default::default(),
                 api: None,
             },
             o3_profile_config
@@ -4011,6 +4031,10 @@ model_verbosity = "high"
             otel: OtelConfig::default(),
             github: Default::default(),
             messaging: Default::default(),
+            rag: Default::default(),
+            knowledge: Default::default(),
+            agent_loop: Default::default(),
+            api: None,
         };
 
         assert_eq!(expected_gpt3_profile_config, gpt3_profile_config);
@@ -4113,6 +4137,10 @@ model_verbosity = "high"
             otel: OtelConfig::default(),
             github: Default::default(),
             messaging: Default::default(),
+            rag: Default::default(),
+            knowledge: Default::default(),
+            agent_loop: Default::default(),
+            api: None,
         };
 
         assert_eq!(expected_zdr_profile_config, zdr_profile_config);
@@ -4201,6 +4229,10 @@ model_verbosity = "high"
             otel: OtelConfig::default(),
             github: Default::default(),
             messaging: Default::default(),
+            rag: Default::default(),
+            knowledge: Default::default(),
+            agent_loop: Default::default(),
+            api: None,
         };
 
         assert_eq!(expected_gpt5_profile_config, gpt5_profile_config);

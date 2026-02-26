@@ -1,7 +1,10 @@
 use crate::integrations::sqlserver::Database;
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 
-use super::metrics::{CommandMetrics, ErrorMetrics, SkillMetrics};
+use super::metrics::CommandMetrics;
+use super::metrics::ErrorMetrics;
+use super::metrics::SkillMetrics;
 
 /// SQL queries for analytics
 pub struct AnalyticsQueries {

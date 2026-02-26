@@ -2,7 +2,9 @@
 
 use crate::client::GitHubClient;
 use crate::errors::GitHubError;
-use crate::models::{Issue, IssueCreateRequest, IssueUpdateRequest};
+use crate::models::Issue;
+use crate::models::IssueCreateRequest;
+use crate::models::IssueUpdateRequest;
 
 /// Create a new issue in a repository.
 pub async fn create_issue(

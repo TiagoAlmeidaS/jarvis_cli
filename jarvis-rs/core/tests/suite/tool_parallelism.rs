@@ -1,16 +1,10 @@
-﻿#![cfg(not(target_os = "windows"))]
+#![cfg(not(target_os = "windows"))]
 #![allow(clippy::unwrap_used)]
 
 use std::fs;
 use std::time::Duration;
 use std::time::Instant;
 
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_function_call;
@@ -26,6 +20,12 @@ use core_test_support::streaming_sse::start_streaming_sse_server;
 use core_test_support::test_codex::TestCodex;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 use serde_json::Value;
 use serde_json::json;
@@ -34,7 +34,7 @@ use tokio::sync::oneshot;
 async fn run_turn(test: &TestCodex, prompt: &str) -> anyhow::Result<()> {
     let session_model = test.session_configured.model.clone();
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: prompt.into(),
@@ -52,7 +52,7 @@ async fn run_turn(test: &TestCodex, prompt: &str) -> anyhow::Result<()> {
         })
         .await?;
 
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     Ok(())
 }
@@ -347,7 +347,7 @@ async fn shell_tools_start_before_response_completed_when_stream_delayed() -> an
         .await?;
 
     let session_model = test.session_configured.model.clone();
-    test.jarvis
+    test.Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "stream delayed completion".into(),
@@ -389,7 +389,7 @@ async fn shell_tools_start_before_response_completed_when_stream_delayed() -> an
     .await??;
 
     let _ = completion_gate_tx.send(());
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
 
     let mut completion_iter = completion_receivers.into_iter();
     let completed_at = completion_iter

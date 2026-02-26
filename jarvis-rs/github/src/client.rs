@@ -1,16 +1,23 @@
 //! GitHub API client implementation.
 
 use crate::errors::GitHubError;
-use crate::issues::{create_issue, list_issues, update_issue};
+use crate::issues::create_issue;
+use crate::issues::list_issues;
+use crate::issues::update_issue;
 use crate::models::Issue;
 use crate::models::IssueCreateRequest;
 use crate::models::IssueUpdateRequest;
 use crate::models::PRComment;
 use crate::models::PullRequest;
 use crate::models::Repository;
-use crate::pull_requests::{comment_pr, get_pr, list_pr_comments};
-use crate::repositories::{clone_repo, get_repo, list_repositories};
-use http::header::{AUTHORIZATION, HeaderValue};
+use crate::pull_requests::comment_pr;
+use crate::pull_requests::get_pr;
+use crate::pull_requests::list_pr_comments;
+use crate::repositories::clone_repo;
+use crate::repositories::get_repo;
+use crate::repositories::list_repositories;
+use http::header::AUTHORIZATION;
+use http::header::HeaderValue;
 use reqwest::Client;
 use std::time::Duration;
 

@@ -1,4 +1,4 @@
-﻿#![allow(clippy::expect_used)]
+#![allow(clippy::expect_used)]
 
 use anyhow::Result;
 use core_test_support::responses::ev_apply_patch_call;
@@ -10,13 +10,6 @@ use std::fs;
 use std::sync::atomic::AtomicI32;
 use std::sync::atomic::Ordering;
 
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::user_input::UserInput;
 use core_test_support::assert_regex_match;
 use core_test_support::responses::ev_apply_patch_function_call;
 use core_test_support::responses::ev_assistant_message;
@@ -30,6 +23,13 @@ use core_test_support::test_codex::TestCodexBuilder;
 use core_test_support::test_codex::TestCodexHarness;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::user_input::UserInput;
 use serde_json::json;
 use test_case::test_case;
 use wiremock::Mock;
@@ -285,7 +285,7 @@ async fn apply_patch_cli_move_without_content_change_has_no_turn_diff(
 
     let harness = apply_patch_harness().await?;
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd.clone();
 
     let original = harness.path("old/name.txt");
@@ -861,7 +861,7 @@ async fn apply_patch_shell_command_heredoc_with_cd_emits_turn_diff() -> Result<(
 
     let harness = apply_patch_harness_with(|builder| builder.with_model("gpt-5.1")).await?;
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd.clone();
 
     // Prepare a file inside a subdir; update it via cd && apply_patch heredoc form.
@@ -944,7 +944,7 @@ async fn apply_patch_shell_command_failure_propagates_error_and_skips_diff() -> 
 
     let harness = apply_patch_harness_with(|builder| builder.with_model("gpt-5.1")).await?;
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd.clone();
 
     let target = cwd.path().join("invalid.txt");
@@ -1108,7 +1108,7 @@ async fn apply_patch_emits_turn_diff_event_with_unified_diff(
 
     let harness = apply_patch_harness().await?;
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd.clone();
 
     let call_id = "apply-diff-event";
@@ -1167,7 +1167,7 @@ async fn apply_patch_turn_diff_for_rename_with_content_change(
 
     let harness = apply_patch_harness().await?;
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd.clone();
 
     // Seed original file
@@ -1226,7 +1226,7 @@ async fn apply_patch_aggregates_diff_across_multiple_tool_calls() -> Result<()> 
 
     let harness = apply_patch_harness().await?;
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd.clone();
 
     let call1 = "agg-1";
@@ -1294,7 +1294,7 @@ async fn apply_patch_aggregates_diff_preserves_success_after_failure() -> Result
 
     let harness = apply_patch_harness().await?;
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd.clone();
 
     let call_success = "agg-success";

@@ -7,10 +7,14 @@
 //! 4. Tokens are persisted to `~/.jarvis/credentials/google.json`.
 //! 5. The daemon uses the refresh token to obtain fresh access tokens silently.
 
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
-use tracing::{debug, info};
+use anyhow::Context;
+use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
+use std::path::Path;
+use std::path::PathBuf;
+use tracing::debug;
+use tracing::info;
 
 // ---------------------------------------------------------------------------
 // Configuration

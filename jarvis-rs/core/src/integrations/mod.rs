@@ -12,8 +12,12 @@ pub mod sqlserver;
 pub mod qdrant;
 
 // Re-exports for convenience
-pub use redis::{DistributedCache, MultiLevelCache};
-pub use sqlserver::{Database, Repository};
+pub use redis::DistributedCache;
+pub use redis::MultiLevelCache;
+pub use sqlserver::Database;
+pub use sqlserver::Repository;
 
 #[cfg(feature = "qdrant")]
-pub use qdrant::{QdrantVectorStore, VectorStore};
+pub use qdrant::QdrantVectorStore;
+#[cfg(feature = "qdrant")]
+pub use qdrant::VectorStore;

@@ -9,16 +9,23 @@
 //! These metrics are matched against `daemon_content` by URL and persisted
 //! into `daemon_metrics`.
 
-use anyhow::{Context, Result};
+use anyhow::Context;
+use anyhow::Result;
 use async_trait::async_trait;
-use jarvis_daemon_common::{DaemonDb, MetricType};
+use jarvis_daemon_common::DaemonDb;
+use jarvis_daemon_common::MetricType;
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
+use serde::Serialize;
 use std::path::PathBuf;
-use tracing::{debug, info};
+use tracing::debug;
+use tracing::info;
 
-use super::google_auth::{self, GoogleOAuthConfig, GoogleTokens};
-use super::{DataSource, SyncResult};
+use super::DataSource;
+use super::SyncResult;
+use super::google_auth::GoogleOAuthConfig;
+use super::google_auth::GoogleTokens;
+use super::google_auth::{self};
 
 // ---------------------------------------------------------------------------
 // Configuration

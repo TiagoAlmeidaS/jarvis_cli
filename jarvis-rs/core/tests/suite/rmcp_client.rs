@@ -1,4 +1,4 @@
-﻿use std::collections::HashMap;
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::ffi::OsString;
 use std::fs;
@@ -11,6 +11,12 @@ use std::time::UNIX_EPOCH;
 use jarvis_core::config::types::McpServerConfig;
 use jarvis_core::config::types::McpServerTransportConfig;
 
+use core_test_support::responses;
+use core_test_support::responses::mount_sse_once;
+use core_test_support::skip_if_no_network;
+use core_test_support::stdio_server_bin;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
 use jarvis_core::protocol::AskForApproval;
 use jarvis_core::protocol::EventMsg;
 use jarvis_core::protocol::McpInvocation;
@@ -20,12 +26,6 @@ use jarvis_core::protocol::SandboxPolicy;
 use jarvis_protocol::config_types::ReasoningSummary;
 use jarvis_protocol::user_input::UserInput;
 use jarvis_utils_cargo_bin::cargo_bin;
-use core_test_support::responses;
-use core_test_support::responses::mount_sse_once;
-use core_test_support::skip_if_no_network;
-use core_test_support::stdio_server_bin;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use serde_json::Value;
 use serde_json::json;
 use serial_test::serial;
@@ -105,7 +105,7 @@ async fn stdio_server_round_trip() -> anyhow::Result<()> {
     let session_model = fixture.session_configured.model.clone();
 
     fixture
-        .jarvis
+        .Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "call the rmcp echo tool".into(),
@@ -123,7 +123,7 @@ async fn stdio_server_round_trip() -> anyhow::Result<()> {
         })
         .await?;
 
-    let begin_event = wait_for_event(&fixture.jarvis, |ev| {
+    let begin_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallBegin(_))
     })
     .await;
@@ -134,7 +134,7 @@ async fn stdio_server_round_trip() -> anyhow::Result<()> {
     assert_eq!(begin.invocation.server, server_name);
     assert_eq!(begin.invocation.tool, "echo");
 
-    let end_event = wait_for_event(&fixture.jarvis, |ev| {
+    let end_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallEnd(_))
     })
     .await;
@@ -170,7 +170,10 @@ async fn stdio_server_round_trip() -> anyhow::Result<()> {
         .expect("env snapshot inserted");
     assert_eq!(env_value, expected_env_value);
 
-    wait_for_event(&fixture.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&fixture.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     server.verify().await;
 
@@ -246,7 +249,7 @@ async fn stdio_image_responses_round_trip() -> anyhow::Result<()> {
     let session_model = fixture.session_configured.model.clone();
 
     fixture
-        .jarvis
+        .Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "call the rmcp image tool".into(),
@@ -265,7 +268,7 @@ async fn stdio_image_responses_round_trip() -> anyhow::Result<()> {
         .await?;
 
     // Wait for tool begin/end and final completion.
-    let begin_event = wait_for_event(&fixture.jarvis, |ev| {
+    let begin_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallBegin(_))
     })
     .await;
@@ -284,7 +287,7 @@ async fn stdio_image_responses_round_trip() -> anyhow::Result<()> {
         },
     );
 
-    let end_event = wait_for_event(&fixture.jarvis, |ev| {
+    let end_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallEnd(_))
     })
     .await;
@@ -311,7 +314,10 @@ async fn stdio_image_responses_round_trip() -> anyhow::Result<()> {
     assert_eq!(entry.get("mimeType"), Some(&json!("image/png")));
     assert_eq!(entry.get("data"), Some(&json!(base64_only)));
 
-    wait_for_event(&fixture.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&fixture.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     let output_item = final_mock.single_request().function_call_output(call_id);
     assert_eq!(
@@ -394,7 +400,7 @@ async fn stdio_server_propagates_whitelisted_env_vars() -> anyhow::Result<()> {
     let session_model = fixture.session_configured.model.clone();
 
     fixture
-        .jarvis
+        .Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "call the rmcp echo tool".into(),
@@ -412,7 +418,7 @@ async fn stdio_server_propagates_whitelisted_env_vars() -> anyhow::Result<()> {
         })
         .await?;
 
-    let begin_event = wait_for_event(&fixture.jarvis, |ev| {
+    let begin_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallBegin(_))
     })
     .await;
@@ -423,7 +429,7 @@ async fn stdio_server_propagates_whitelisted_env_vars() -> anyhow::Result<()> {
     assert_eq!(begin.invocation.server, server_name);
     assert_eq!(begin.invocation.tool, "echo");
 
-    let end_event = wait_for_event(&fixture.jarvis, |ev| {
+    let end_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallEnd(_))
     })
     .await;
@@ -459,7 +465,10 @@ async fn stdio_server_propagates_whitelisted_env_vars() -> anyhow::Result<()> {
         .expect("env snapshot inserted");
     assert_eq!(env_value, expected_env_value);
 
-    wait_for_event(&fixture.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&fixture.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     server.verify().await;
 
@@ -552,7 +561,7 @@ async fn streamable_http_tool_call_round_trip() -> anyhow::Result<()> {
     let session_model = fixture.session_configured.model.clone();
 
     fixture
-        .jarvis
+        .Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "call the rmcp streamable http echo tool".into(),
@@ -570,7 +579,7 @@ async fn streamable_http_tool_call_round_trip() -> anyhow::Result<()> {
         })
         .await?;
 
-    let begin_event = wait_for_event(&fixture.jarvis, |ev| {
+    let begin_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallBegin(_))
     })
     .await;
@@ -581,7 +590,7 @@ async fn streamable_http_tool_call_round_trip() -> anyhow::Result<()> {
     assert_eq!(begin.invocation.server, server_name);
     assert_eq!(begin.invocation.tool, "echo");
 
-    let end_event = wait_for_event(&fixture.jarvis, |ev| {
+    let end_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallEnd(_))
     })
     .await;
@@ -617,7 +626,10 @@ async fn streamable_http_tool_call_round_trip() -> anyhow::Result<()> {
         .expect("env snapshot inserted");
     assert_eq!(env_value, expected_env_value);
 
-    wait_for_event(&fixture.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&fixture.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     server.verify().await;
 
@@ -742,7 +754,7 @@ async fn streamable_http_with_oauth_round_trip() -> anyhow::Result<()> {
     let session_model = fixture.session_configured.model.clone();
 
     fixture
-        .jarvis
+        .Jarvis
         .submit(Op::UserTurn {
             items: vec![UserInput::Text {
                 text: "call the rmcp streamable http oauth echo tool".into(),
@@ -760,7 +772,7 @@ async fn streamable_http_with_oauth_round_trip() -> anyhow::Result<()> {
         })
         .await?;
 
-    let begin_event = wait_for_event(&fixture.jarvis, |ev| {
+    let begin_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallBegin(_))
     })
     .await;
@@ -771,7 +783,7 @@ async fn streamable_http_with_oauth_round_trip() -> anyhow::Result<()> {
     assert_eq!(begin.invocation.server, server_name);
     assert_eq!(begin.invocation.tool, "echo");
 
-    let end_event = wait_for_event(&fixture.jarvis, |ev| {
+    let end_event = wait_for_event(&fixture.Jarvis, |ev| {
         matches!(ev, EventMsg::McpToolCallEnd(_))
     })
     .await;
@@ -807,7 +819,10 @@ async fn streamable_http_with_oauth_round_trip() -> anyhow::Result<()> {
         .expect("env snapshot inserted");
     assert_eq!(env_value, expected_env_value);
 
-    wait_for_event(&fixture.jarvis, |ev| matches!(ev, EventMsg::TurnComplete(_))).await;
+    wait_for_event(&fixture.Jarvis, |ev| {
+        matches!(ev, EventMsg::TurnComplete(_))
+    })
+    .await;
 
     server.verify().await;
 

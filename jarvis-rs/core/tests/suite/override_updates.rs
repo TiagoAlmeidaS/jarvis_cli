@@ -1,22 +1,22 @@
-﻿use anyhow::Result;
+use anyhow::Result;
+use core_test_support::responses::start_mock_server;
+use core_test_support::skip_if_no_network;
+use core_test_support::test_codex::test_codex;
+use core_test_support::wait_for_event;
 use jarvis_core::config::Constrained;
 use jarvis_core::protocol::AskForApproval;
 use jarvis_core::protocol::COLLABORATION_MODE_CLOSE_TAG;
 use jarvis_core::protocol::COLLABORATION_MODE_OPEN_TAG;
+use jarvis_core::protocol::ENVIRONMENT_CONTEXT_OPEN_TAG;
 use jarvis_core::protocol::EventMsg;
 use jarvis_core::protocol::Op;
 use jarvis_core::protocol::RolloutItem;
 use jarvis_core::protocol::RolloutLine;
-use jarvis_core::protocol::ENVIRONMENT_CONTEXT_OPEN_TAG;
 use jarvis_protocol::config_types::CollaborationMode;
 use jarvis_protocol::config_types::ModeKind;
 use jarvis_protocol::config_types::Settings;
 use jarvis_protocol::models::ContentItem;
 use jarvis_protocol::models::ResponseItem;
-use core_test_support::responses::start_mock_server;
-use core_test_support::skip_if_no_network;
-use core_test_support::test_codex::test_codex;
-use core_test_support::wait_for_event;
 use pretty_assertions::assert_eq;
 use std::path::Path;
 use std::time::Duration;
@@ -61,8 +61,7 @@ fn rollout_developer_texts(text: &str) -> Vec<String> {
             Ok(rollout) => rollout,
             Err(_) => continue,
         };
-        if let RolloutItem::ResponseItem(ResponseItem::Message { role, content, .. }) =
-            rollout.item
+        if let RolloutItem::ResponseItem(ResponseItem::Message { role, content, .. }) = rollout.item
             && role == "developer"
         {
             for item in content {
@@ -86,8 +85,7 @@ fn rollout_environment_texts(text: &str) -> Vec<String> {
             Ok(rollout) => rollout,
             Err(_) => continue,
         };
-        if let RolloutItem::ResponseItem(ResponseItem::Message { role, content, .. }) =
-            rollout.item
+        if let RolloutItem::ResponseItem(ResponseItem::Message { role, content, .. }) = rollout.item
             && role == "user"
         {
             for item in content {
@@ -103,7 +101,8 @@ fn rollout_environment_texts(text: &str) -> Vec<String> {
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn override_turn_context_without_user_turn_does_not_record_permissions_update() -> Result<()> {
+async fn override_turn_context_without_user_turn_does_not_record_permissions_update() -> Result<()>
+{
     skip_if_no_network!(Ok(()));
 
     let server = start_mock_server().await;
@@ -112,7 +111,7 @@ async fn override_turn_context_without_user_turn_does_not_record_permissions_upd
     });
     let test = builder.build(&server).await?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: Some(AskForApproval::Never),
@@ -126,10 +125,10 @@ async fn override_turn_context_without_user_turn_does_not_record_permissions_upd
         })
         .await?;
 
-    test.jarvis.submit(Op::Shutdown).await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::ShutdownComplete)).await;
+    test.Jarvis.submit(Op::Shutdown).await?;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::ShutdownComplete)).await;
 
-    let rollout_path = test.jarvis.rollout_path().expect("rollout path");
+    let rollout_path = test.Jarvis.rollout_path().expect("rollout path");
     let rollout_text = read_rollout_text(&rollout_path).await?;
     let developer_texts = rollout_developer_texts(&rollout_text);
     let approval_texts: Vec<&String> = developer_texts
@@ -145,14 +144,15 @@ async fn override_turn_context_without_user_turn_does_not_record_permissions_upd
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn override_turn_context_without_user_turn_does_not_record_environment_update() -> Result<()> {
+async fn override_turn_context_without_user_turn_does_not_record_environment_update() -> Result<()>
+{
     skip_if_no_network!(Ok(()));
 
     let server = start_mock_server().await;
     let test = test_codex().build(&server).await?;
     let new_cwd = TempDir::new()?;
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: Some(new_cwd.path().to_path_buf()),
             approval_policy: None,
@@ -166,10 +166,10 @@ async fn override_turn_context_without_user_turn_does_not_record_environment_upd
         })
         .await?;
 
-    test.jarvis.submit(Op::Shutdown).await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::ShutdownComplete)).await;
+    test.Jarvis.submit(Op::Shutdown).await?;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::ShutdownComplete)).await;
 
-    let rollout_path = test.jarvis.rollout_path().expect("rollout path");
+    let rollout_path = test.Jarvis.rollout_path().expect("rollout path");
     let rollout_text = read_rollout_text(&rollout_path).await?;
     let env_texts = rollout_environment_texts(&rollout_text);
     assert!(
@@ -181,7 +181,8 @@ async fn override_turn_context_without_user_turn_does_not_record_environment_upd
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-async fn override_turn_context_without_user_turn_does_not_record_collaboration_update() -> Result<()> {
+async fn override_turn_context_without_user_turn_does_not_record_collaboration_update() -> Result<()>
+{
     skip_if_no_network!(Ok(()));
 
     let server = start_mock_server().await;
@@ -189,7 +190,7 @@ async fn override_turn_context_without_user_turn_does_not_record_collaboration_u
     let collab_text = "override collaboration instructions";
     let collaboration_mode = collab_mode_with_instructions(Some(collab_text));
 
-    test.jarvis
+    test.Jarvis
         .submit(Op::OverrideTurnContext {
             cwd: None,
             approval_policy: None,
@@ -203,10 +204,10 @@ async fn override_turn_context_without_user_turn_does_not_record_collaboration_u
         })
         .await?;
 
-    test.jarvis.submit(Op::Shutdown).await?;
-    wait_for_event(&test.jarvis, |ev| matches!(ev, EventMsg::ShutdownComplete)).await;
+    test.Jarvis.submit(Op::Shutdown).await?;
+    wait_for_event(&test.Jarvis, |ev| matches!(ev, EventMsg::ShutdownComplete)).await;
 
-    let rollout_path = test.jarvis.rollout_path().expect("rollout path");
+    let rollout_path = test.Jarvis.rollout_path().expect("rollout path");
     let rollout_text = read_rollout_text(&rollout_path).await?;
     let developer_texts = rollout_developer_texts(&rollout_text);
     let collab_text = collab_xml(collab_text);

@@ -2,7 +2,7 @@
 # Script para executar Jarvis CLI com estratégia Free
 # Uso: ./scripts/run-jarvis-free.sh
 
-MODEL="${1:-deepseek/deepseek-r1:free}"
+MODEL="${1:-openrouter/free}"
 PROVIDER="${2:-openrouter}"
 PROMPT="${3:-}"
 

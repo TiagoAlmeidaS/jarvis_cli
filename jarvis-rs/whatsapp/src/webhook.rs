@@ -1,18 +1,22 @@
-use axum::{
-    Router,
-    extract::{Query, State},
-    http::{HeaderMap, StatusCode},
-    response::Json,
-    routing::get,
-};
+use axum::Router;
+use axum::extract::Query;
+use axum::extract::State;
+use axum::http::HeaderMap;
+use axum::http::StatusCode;
+use axum::response::Json;
+use axum::routing::get;
 use jarvis_messaging::handler::MessageHandler;
-use jarvis_messaging::message::{Contact, IncomingMessage, MessageType, Platform};
+use jarvis_messaging::message::Contact;
+use jarvis_messaging::message::IncomingMessage;
+use jarvis_messaging::message::MessageType;
+use jarvis_messaging::message::Platform;
 use jarvis_messaging::rate_limit::RateLimiter;
 use jarvis_messaging::security::validate_whatsapp_token;
 use serde::Deserialize;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{Duration, interval};
+use tokio::time::Duration;
+use tokio::time::interval;
 
 use crate::config::WhatsAppConfig;
 

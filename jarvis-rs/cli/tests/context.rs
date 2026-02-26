@@ -1,4 +1,4 @@
-﻿//! Smoke tests for context commands.
+//! Smoke tests for context commands.
 
 use anyhow::Result;
 use predicates::str::contains;
@@ -23,7 +23,9 @@ async fn context_add_adds_document() -> Result<()> {
         temp_file.path().join("test.md").to_str().unwrap(),
         "--type=docs",
         "--output=json",
-    ]).assert().success();
+    ])
+    .assert()
+    .success();
 
     Ok(())
 }

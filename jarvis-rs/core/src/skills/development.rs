@@ -1,8 +1,10 @@
 //! Skill development service for autonomous skill generation.
 
 use crate::intent::types::IntentParameters;
-use anyhow::{Context, Result};
-use serde::{Deserialize, Serialize};
+use anyhow::Context;
+use anyhow::Result;
+use serde::Deserialize;
+use serde::Serialize;
 use std::collections::HashMap;
 
 /// Represents a skill that can be developed.

@@ -1,8 +1,9 @@
-﻿use anyhow::Context;
+use anyhow::Context;
 use anyhow::Result;
 use base64::Engine;
 use chrono::Duration;
 use chrono::Utc;
+use core_test_support::skip_if_no_network;
 use jarvis_app_server_protocol::AuthMode;
 use jarvis_core::AuthManager;
 use jarvis_core::auth::AuthCredentialsStoreMode;
@@ -14,7 +15,6 @@ use jarvis_core::auth::save_auth;
 use jarvis_core::error::RefreshTokenFailedReason;
 use jarvis_core::token_data::IdTokenInfo;
 use jarvis_core::token_data::TokenData;
-use core_test_support::skip_if_no_network;
 use pretty_assertions::assert_eq;
 use serde::Serialize;
 use serde_json::Value;

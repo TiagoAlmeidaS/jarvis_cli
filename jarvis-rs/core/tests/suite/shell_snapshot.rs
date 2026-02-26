@@ -1,13 +1,4 @@
-﻿use anyhow::Result;
-use jarvis_core::features::Feature;
-use jarvis_core::protocol::AskForApproval;
-use jarvis_core::protocol::EventMsg;
-use jarvis_core::protocol::ExecCommandBeginEvent;
-use jarvis_core::protocol::ExecCommandEndEvent;
-use jarvis_core::protocol::Op;
-use jarvis_core::protocol::SandboxPolicy;
-use jarvis_protocol::config_types::ReasoningSummary;
-use jarvis_protocol::user_input::UserInput;
+use anyhow::Result;
 use core_test_support::responses::ev_assistant_message;
 use core_test_support::responses::ev_completed;
 use core_test_support::responses::ev_function_call;
@@ -18,6 +9,15 @@ use core_test_support::test_codex::TestCodexHarness;
 use core_test_support::test_codex::test_codex;
 use core_test_support::wait_for_event;
 use core_test_support::wait_for_event_match;
+use jarvis_core::features::Feature;
+use jarvis_core::protocol::AskForApproval;
+use jarvis_core::protocol::EventMsg;
+use jarvis_core::protocol::ExecCommandBeginEvent;
+use jarvis_core::protocol::ExecCommandEndEvent;
+use jarvis_core::protocol::Op;
+use jarvis_core::protocol::SandboxPolicy;
+use jarvis_protocol::config_types::ReasoningSummary;
+use jarvis_protocol::user_input::UserInput;
 use pretty_assertions::assert_eq;
 use serde_json::json;
 use std::path::Path;
@@ -82,7 +82,7 @@ async fn run_snapshot_command(command: &str) -> Result<SnapshotRun> {
     mount_sse_sequence(harness.server(), responses).await;
 
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let jarvis_home = test.home.path().to_path_buf();
     let session_model = test.session_configured.model.clone();
     let cwd = test.cwd_path().to_path_buf();
@@ -156,7 +156,7 @@ async fn run_shell_command_snapshot(command: &str) -> Result<SnapshotRun> {
     mount_sse_sequence(harness.server(), responses).await;
 
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let jarvis_home = test.home.path().to_path_buf();
     let session_model = test.session_configured.model.clone();
     let cwd = test.cwd_path().to_path_buf();
@@ -270,7 +270,7 @@ async fn shell_command_snapshot_still_intercepts_apply_patch() -> Result<()> {
     let harness = TestCodexHarness::with_builder(builder).await?;
 
     let test = harness.test();
-    let Jarvis = test.jarvis.clone();
+    let Jarvis = test.Jarvis.clone();
     let cwd = test.cwd_path().to_path_buf();
     let jarvis_home = test.home.path().to_path_buf();
     let target = cwd.join("snapshot-apply.txt");
@@ -334,7 +334,7 @@ async fn shell_snapshot_deleted_after_shutdown_with_skills() -> Result<()> {
     let harness = TestCodexHarness::with_builder(builder).await?;
     let home = harness.test().home.clone();
     let jarvis_home = home.path().to_path_buf();
-    let Jarvis = harness.test().jarvis.clone();
+    let Jarvis = harness.test().Jarvis.clone();
 
     let snapshot_path = wait_for_snapshot(&jarvis_home).await?;
     assert!(snapshot_path.exists());
