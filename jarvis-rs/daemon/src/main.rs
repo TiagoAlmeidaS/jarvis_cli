@@ -19,26 +19,15 @@ use tracing::error;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-mod data_sources;
-mod decision_engine;
-mod executor;
-mod notifications;
-mod pipeline;
-mod pipelines;
-mod processor;
-mod publisher;
-mod runner;
-mod scheduler;
-mod scraper;
-
+use jarvis_daemon::notifications;
+use jarvis_daemon::pipeline::PipelineRegistry;
+use jarvis_daemon::processor::router::DailyMetrics;
+use jarvis_daemon::processor::router::HourlyMetrics;
+use jarvis_daemon::processor::router::LlmRouter;
+use jarvis_daemon::processor::router::ProviderMetrics;
+use jarvis_daemon::runner::PipelineRunner;
+use jarvis_daemon::scheduler::Scheduler;
 use jarvis_daemon_common::DaemonDb;
-use pipeline::PipelineRegistry;
-use processor::router::DailyMetrics;
-use processor::router::HourlyMetrics;
-use processor::router::LlmRouter;
-use processor::router::ProviderMetrics;
-use runner::PipelineRunner;
-use scheduler::Scheduler;
 
 /// Jarvis Daemon — autonomous content generation engine.
 #[derive(Debug, Parser)]
@@ -185,16 +174,16 @@ async fn handle_auth(provider: AuthProvider) -> Result<()> {
                     ]
                 });
 
-            let config = data_sources::google_auth::GoogleOAuthConfig {
+            let config = jarvis_daemon::data_sources::google_auth::GoogleOAuthConfig {
                 client_id,
                 client_secret,
                 scopes,
             };
 
             let creds_path = credentials_path
-                .unwrap_or_else(data_sources::google_auth::default_credentials_path);
+                .unwrap_or_else(jarvis_daemon::data_sources::google_auth::default_credentials_path);
 
-            let url = data_sources::google_auth::authorization_url(&config);
+            let url = jarvis_daemon::data_sources::google_auth::authorization_url(&config);
 
             println!("=== Google OAuth2 Authorization ===\n");
             println!("1. Open this URL in your browser:\n");
@@ -211,8 +200,9 @@ async fn handle_auth(provider: AuthProvider) -> Result<()> {
             }
 
             println!("\nExchanging code for tokens...");
-            let tokens = data_sources::google_auth::exchange_code(&config, code).await?;
-            data_sources::google_auth::save_tokens(&creds_path, &tokens)?;
+            let tokens =
+                jarvis_daemon::data_sources::google_auth::exchange_code(&config, code).await?;
+            jarvis_daemon::data_sources::google_auth::save_tokens(&creds_path, &tokens)?;
 
             println!("Tokens saved to: {}", creds_path.display());
             println!(

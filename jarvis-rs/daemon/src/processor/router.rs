@@ -823,8 +823,6 @@ impl LlmRouter {
 
     /// Write alert to log file.
     async fn write_alert_log(&self, identifier: &str, alerts: &[String]) -> Result<()> {
-        use std::io::Write;
-
         let jarvis_home = dirs::home_dir()
             .ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?
             .join(".jarvis");
@@ -1039,8 +1037,6 @@ impl LlmRouter {
         using: &str,
         error: &LlmError,
     ) -> Result<()> {
-        use std::io::Write;
-
         // Get jarvis home directory
         let jarvis_home = dirs::home_dir()
             .ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?
@@ -1410,8 +1406,8 @@ mod tests {
         assert!(state.last_failure.is_some());
     }
 
-    #[test]
-    fn test_router_default_strategies() {
+    #[tokio::test]
+    async fn test_router_default_strategies() {
         let router = LlmRouter::new();
         assert!(router.strategies.contains_key("heavy_context"));
         assert!(router.strategies.contains_key("reasoning"));
@@ -1431,8 +1427,8 @@ mod tests {
         assert!(!fast_routing.fallbacks.is_empty());
     }
 
-    #[test]
-    fn test_parse_provider_model() {
+    #[tokio::test]
+    async fn test_parse_provider_model() {
         let router = LlmRouter::new();
 
         // Test Google provider
@@ -1522,7 +1518,7 @@ mod tests {
         };
 
         // Should create a single-provider client (backward compatible)
-        let result = LlmRouter::from_pipeline_config(&pipeline);
+        let result = LlmRouter::from_pipeline_config(&pipeline).await;
         // This will fail if API keys are not set, but that's expected
         // We're just testing that it doesn't panic and returns the right type
         if let Err(e) = &result {
@@ -1560,7 +1556,7 @@ mod tests {
         };
 
         // Should create a strategy client
-        let result = LlmRouter::from_pipeline_config(&pipeline);
+        let result = LlmRouter::from_pipeline_config(&pipeline).await;
         // This will fail if API keys are not set, but that's expected
         // We're just testing that it doesn't panic and recognizes the strategy
         if let Err(e) = &result {
@@ -1598,8 +1594,8 @@ mod tests {
         assert!(router.can_attempt_provider(identifier).await);
     }
 
-    #[test]
-    fn test_router_clone() {
+    #[tokio::test]
+    async fn test_router_clone() {
         // Test that router can be cloned (needed for StrategyClient)
         let router1 = LlmRouter::new();
         let router2 = router1.clone();
