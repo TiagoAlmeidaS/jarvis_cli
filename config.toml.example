@@ -93,7 +93,7 @@ stream_idle_timeout_ms = 300000
 # Provedor Ollama (local)
 [model_providers.ollama]
 name = "Ollama"
-base_url = "http://100.98.213.86:11434/v1"
+base_url = "http://localhost:11434/v1"
 env_key = null
 wire_api = "responses"
 request_max_retries = 2
@@ -248,7 +248,7 @@ username = "your_github_username"
 # Configurações de busca (Search)
 [search]
 provider = "searxng"
-searxng_url = "http://100.98.213.86:8888"
+searxng_url = "http://localhost:8888"
 
 # ============================================================================
 # INTEGRAÇÕES DE MENSAGERIA (Messaging Integrations)

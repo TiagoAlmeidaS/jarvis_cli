@@ -110,6 +110,38 @@ pub enum PipelineCommand {
         /// Path to a JSON config file.
         config_file: PathBuf,
     },
+    /// Create a new pipeline from inline arguments (no JSON file needed).
+    Create {
+        /// Pipeline ID (e.g. "seo-blog-tech").
+        id: String,
+        /// Pipeline name (e.g. "SEO Blog - Technology").
+        #[arg(long)]
+        name: String,
+        /// Pipeline strategy: seo_blog, metrics_collector, strategy_analyzer, ab_tester, prompt_optimizer.
+        #[arg(long)]
+        strategy: String,
+        /// Cron schedule (default: "0 */4 * * *" = every 4 hours).
+        #[arg(long, default_value = "0 */4 * * *")]
+        cron: String,
+        /// LLM provider (openrouter, google, openai, ollama).
+        #[arg(long, default_value = "openrouter")]
+        llm_provider: String,
+        /// LLM model (e.g. "mistralai/mistral-nemo").
+        #[arg(long, default_value = "mistralai/mistral-nemo")]
+        llm_model: String,
+        /// Content language (e.g. "pt-BR").
+        #[arg(long, default_value = "pt-BR")]
+        language: String,
+        /// Content niche (e.g. "Tecnologia").
+        #[arg(long, default_value = "Tecnologia")]
+        niche: String,
+        /// WordPress base URL for publishing.
+        #[arg(long)]
+        wp_url: Option<String>,
+        /// Start enabled (default: true).
+        #[arg(long, default_value = "true")]
+        enabled: bool,
+    },
 }
 
 #[derive(Debug, Args)]
@@ -613,6 +645,69 @@ async fn cmd_pipeline(db: &DaemonDb, args: PipelineArgs) -> Result<()> {
 
             let pipeline = db.create_pipeline(&input).await?;
             println!("Pipeline '{}' created successfully.", pipeline.id.green());
+            Ok(())
+        }
+        PipelineCommand::Create {
+            id,
+            name,
+            strategy,
+            cron,
+            llm_provider,
+            llm_model,
+            language,
+            niche,
+            wp_url,
+            enabled: _,
+        } => {
+            let strategy_enum: Strategy = strategy.parse()?;
+
+            let mut config = serde_json::json!({
+                "id": id,
+                "name": name,
+                "strategy": strategy,
+                "schedule_cron": cron,
+                "llm": {
+                    "provider": llm_provider,
+                    "model": llm_model,
+                    "temperature": 0.8,
+                    "max_tokens": 4000
+                },
+                "content": {
+                    "language": language,
+                    "niche": niche,
+                    "tone": "informativo",
+                    "min_words": 1200,
+                    "max_words": 2500
+                }
+            });
+
+            if let Some(url) = wp_url {
+                config["wordpress"] = serde_json::json!({
+                    "base_url": url,
+                    "status": "draft"
+                });
+            }
+
+            let input = CreatePipeline {
+                id: id.clone(),
+                name,
+                strategy: strategy_enum,
+                config_json: config,
+                schedule_cron: cron,
+                max_retries: Some(3),
+                retry_delay_sec: Some(300),
+            };
+
+            let pipeline = db.create_pipeline(&input).await?;
+            println!("Pipeline '{}' created successfully.", pipeline.id.green());
+            println!(
+                "Strategy: {} | Cron: {} | LLM: {}/{}",
+                pipeline.strategy.yellow(),
+                pipeline.schedule_cron,
+                llm_provider,
+                llm_model
+            );
+            println!("\nTo enable it: jarvis daemon pipeline enable {}", id);
             Ok(())
         }
     }

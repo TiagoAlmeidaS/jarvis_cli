@@ -4,7 +4,11 @@
 # Standalone:  docker compose -f docker-compose.daemon.yml up -d
 # Com VPS:     docker compose -f docker-compose.vps.yml -f docker-compose.daemon.yml up -d
 #
-# Crie .env na raiz com: OPENROUTER_API_KEY, WORDPRESS_APP_PASSWORD, etc.
+# Pré-requisitos:
+#   1. Copie .env.example para .env e preencha com suas credenciais
+#   2. Mínimo: OPENROUTER_API_KEY (ou GOOGLE_API_KEY)
+#   3. Para publicar: DAEMON_WP_BASE_URL + DAEMON_WP_USERNAME + DAEMON_WP_APP_PASSWORD
+#   4. Para notificações: JARVIS_TELEGRAM_BOT_TOKEN + JARVIS_TELEGRAM_CHAT_ID
 # =============================================================================
 
 services:
@@ -22,13 +26,37 @@ services:
     environment:
       - JARVIS_DAEMON_DB=/home/jarvis/.jarvis/daemon.db
       - RUST_LOG=${RUST_LOG:-jarvis_daemon=info}
+      # Telegram notifications (optional — silently skipped if not set)
+      - JARVIS_TELEGRAM_BOT_TOKEN=${JARVIS_TELEGRAM_BOT_TOKEN:-}
+      - JARVIS_TELEGRAM_CHAT_ID=${JARVIS_TELEGRAM_CHAT_ID:-}
+      - JARVIS_NOTIFY_HOUR=${JARVIS_NOTIFY_HOUR:-8}
 
     volumes:
       - jarvis_daemon_data:/home/jarvis/.jarvis
+      # Para usar credenciais Google OAuth (após jarvis-daemon auth google):
+      # - ./credentials/google.json:/home/jarvis/.jarvis/credentials/google.json:ro
 
-    # Credenciais Google (copie google.json para ./credentials/ antes de subir)
-    # volumes:
-    #   - ./credentials:/home/jarvis/.jarvis/credentials:ro
+    healthcheck:
+      # O daemon escreve no SQLite a cada tick; verificamos se o DB existe
+      test: ["CMD-SHELL", "test -f /home/jarvis/.jarvis/daemon.db"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    # Resource limits (ajuste conforme sua VPS)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   jarvis_daemon_data:
