@@ -1,4 +1,4 @@
-﻿use jarvis_protocol::config_types::Verbosity;
+use jarvis_protocol::config_types::Verbosity;
 use jarvis_protocol::openai_models::ApplyPatchToolType;
 use jarvis_protocol::openai_models::ConfigShellToolType;
 use jarvis_protocol::openai_models::ModelInfo;
