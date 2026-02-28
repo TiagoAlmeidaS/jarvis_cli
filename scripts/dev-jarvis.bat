@@ -208,11 +208,15 @@ if defined AGENT_LOOP (
 
 REM Use cargo run for incremental compilation + execution in one step
 REM --cd points Jarvis to the project root (jarvis_cli), not the Rust subfolder
+REM --dangerously-bypass-approvals-and-sandbox (--yolo) is needed on Windows because
+REM without the experimental Windows sandbox enabled, the default WorkspaceWrite policy
+REM gets downgraded to ReadOnly which sets "Network access is restricted" in the system
+REM prompt, causing the LLM to refuse external operations (git clone, gh, curl, etc.).
 cd jarvis-rs
 if defined AGENT_LOOP (
-    cargo run %CARGO_FLAGS% --bin jarvis -- -c "model_provider=\"%PROVIDER%\"" -c "agent_loop.mode=\"text_based\"" -c "agent_loop.base_url=\"https://openrouter.ai/api/v1\"" -c "agent_loop.model=\"%MODEL%\"" -m "%MODEL%" --cd "%~dp0.."
+    cargo run %CARGO_FLAGS% --bin jarvis -- --dangerously-bypass-approvals-and-sandbox -c "model_provider=\"%PROVIDER%\"" -c "agent_loop.mode=\"text_based\"" -c "agent_loop.base_url=\"https://openrouter.ai/api/v1\"" -c "agent_loop.model=\"%MODEL%\"" -m "%MODEL%" --cd "%~dp0.."
 ) else (
-    cargo run %CARGO_FLAGS% --bin jarvis -- -c "model_provider=\"%PROVIDER%\"" -m "%MODEL%" --cd "%~dp0.."
+    cargo run %CARGO_FLAGS% --bin jarvis -- --dangerously-bypass-approvals-and-sandbox -c "model_provider=\"%PROVIDER%\"" -m "%MODEL%" --cd "%~dp0.."
 )
 set "EXIT_CODE=%ERRORLEVEL%"
 cd ..
