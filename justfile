@@ -5,14 +5,14 @@ set positional-arguments
 help:
     just -l
 
-# `codex`
-alias c := codex
-codex *args:
-    cargo run --bin codex -- "$@"
+# `jarvis`
+alias c := jarvis
+jarvis *args:
+    cargo run --bin jarvis -- "$@"
 
-# `codex exec`
+# `jarvis exec`
 exec *args:
-    cargo run --bin codex -- exec "$@"
+    cargo run --bin jarvis -- exec "$@"
 
 # Run the CLI version of the file-search crate.
 file-search *args:

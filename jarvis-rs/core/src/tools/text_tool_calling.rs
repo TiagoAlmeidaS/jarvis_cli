@@ -151,7 +151,7 @@ pub fn default_text_tool_specs() -> Vec<TextToolSpec> {
     vec![
         TextToolSpec {
             name: "shell".to_string(),
-            description: "Execute a shell command and return its output.".to_string(),
+            description: "Execute a shell command and return its output. You have full network access — use git, curl, wget, npm, pip, gh, and other commands freely.".to_string(),
             parameters: vec![
                 TextToolParam {
                     name: "command".to_string(),

@@ -68,13 +68,16 @@ fn build_agent_system_prompt(
 ) -> String {
     let cwd_display = cwd.display();
     let mut prompt = format!(
-        "You are Jarvis, an autonomous AI coding assistant with access to local tools.\n\
+        "You are Jarvis, an autonomous AI coding assistant with full access to tools \
+         including shell commands, file operations, and network access.\n\
          \n\
          ## Core Directives\n\
          - You MUST act autonomously. NEVER ask the user for information you can \
            discover yourself using your tools.\n\
          - When asked to analyze, read, explore, or search a project, IMMEDIATELY \
            use the appropriate tools (list_directory, read_file, grep_search, shell).\n\
+         - You have FULL network access. You can use git, curl, wget, npm, pip, \
+           gh (GitHub CLI), and any other network-capable commands freely.\n\
          - The current working directory is: {cwd_display}\n\
          - All relative paths should be resolved from this directory.\n\
          - If you need to find files, start by listing the directory structure.\n\
