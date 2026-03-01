@@ -1,6 +1,6 @@
 packages:
-  - jarvis-cli
-  - jarvis-rs/responses-api-proxy/npm
+  - codex-cli
+  - codex-rs/responses-api-proxy/npm
   - sdk/typescript
   - shell-tool-mcp
 

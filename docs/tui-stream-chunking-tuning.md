@@ -1,4 +1,4 @@
-﻿# TUI Stream Chunking Tuning Guide
+# TUI Stream Chunking Tuning Guide
 
 This document explains how to tune adaptive stream chunking constants without
 changing the underlying policy shape.
@@ -6,8 +6,8 @@ changing the underlying policy shape.
 ## Scope
 
 Use this guide when adjusting queue-pressure thresholds and hysteresis windows in
-`jarvis-rs/tui/src/streaming/chunking.rs`, and baseline commit cadence in
-`jarvis-rs/tui/src/app.rs`.
+`codex-rs/tui/src/streaming/chunking.rs`, and baseline commit cadence in
+`codex-rs/tui/src/app.rs`.
 
 This guide is about tuning behavior, not redesigning the policy.
 

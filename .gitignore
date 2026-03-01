@@ -1,301 +1,93 @@
-# ═══════════════════════════════════════════════════════════════════
-# Jarvis CLI - .gitignore
-# ═══════════════════════════════════════════════════════════════════
-
-# ═══════════════════════════════════════════════════════════════════
-# Windows artifacts
-# ═══════════════════════════════════════════════════════════════════
-nul
-
-# ═══════════════════════════════════════════════════════════════════
-# Rust / Cargo
-# ═══════════════════════════════════════════════════════════════════
-**/target/
-**/*.rs.bk
-**/Cargo.lock
-*.pdb
-
-# ═══════════════════════════════════════════════════════════════════
-# Credenciais e Segurança
-# ═══════════════════════════════════════════════════════════════════
-.env
-.env.*
-!.env.example
-*.key
-*.pem
-*_rsa
-*_rsa.pub
-secrets/
-credentials/
-*.crt
-auth.json
-*.p12
-
-# Arquivos de configuração com credenciais
-configure-credentials.sh
-configure-credentials.ps1
-appsettings.json
-!appsettings.Example.json
-
-# ═══════════════════════════════════════════════════════════════════
-# Node.js / JavaScript / TypeScript
-# ═══════════════════════════════════════════════════════════════════
-node_modules/
-.pnpm-store/
+# deps
+# Node.js dependencies
+node_modules
+.pnpm-store
 .pnpm-debug.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+
+# Keep pnpm-lock.yaml
+!pnpm-lock.yaml
+
+# build
 dist/
-out/
+bazel-*
 build/
-*.tsbuildinfo
-.turbo/
-.parcel-cache/
-.eslintcache
-.nyc_output/
-.jest/
+out/
+storybook-static/
 
-# Package managers
-.yarn/
-yarn.lock
-package-lock.json
+# ignore README for publishing
+codex-cli/README.md
 
-# ═══════════════════════════════════════════════════════════════════
-# Documentação Temporária / Gerada
-# ═══════════════════════════════════════════════════════════════════
-# Documentos de desenvolvimento/debug (manter apenas os importantes)
-*_SUMMARY.md
-*_PROGRESS.md
-*_IMPLEMENTATION*.md
-*_FIX*.md
-*_COMPLETE.md
-*_SUCCESS*.md
-ANALYTICS_*.md
-BUG_*.md
-COMPILACAO_*.md
-COMO_TESTAR*.md
-CORRECOES_*.md
-DATABRICKS_*.md
-DYNAMIC_*.md
-ERRO_*.md
-ESTRUTURA_*.md
-GUIA_*.md
-IMPLEMENTACAO_*.md
-INDICE_*.md
-PLANO_*.md
-PROBLEMA_*.md
-QDRANT_*.md
-QUICK_START*.md
-RESOLVER_*.md
-RESUMO_*.md
-SOLUCAO_*.md
-TESTING_*.md
-TEST_*.md
-TROUBLESHOOTING.md
+# ignore Nix derivation results
+result
 
-# Scripts de teste temporários
-TEST_*.sh
-test-*.sh
-BUILD_AND_RUN*.sh
-RUN_*.sh
-testar-*.ps1
-adicionar-*.ps1
-configurar-*.ps1
-iniciar-*.ps1
-instalar-*.ps1
-
-# Arquivos de informação da VPS (contem dados sensíveis)
-VPS_INFO.txt
-
-# ═══════════════════════════════════════════════════════════════════
-# Editors e IDEs
-# ═══════════════════════════════════════════════════════════════════
+# editor
 .vscode/
 .idea/
 .history/
 .zed/
 *.swp
-*.swo
 *~
-.project
-.classpath
-.settings/
-*.sublime-*
-.vs/
 
-# CLI tools
+# cli tools
 CLAUDE.md
 .claude/
 AGENTS.override.md
 
-# ═══════════════════════════════════════════════════════════════════
-# Sistema Operacional
-# ═══════════════════════════════════════════════════════════════════
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-Icon?
-.Spotlight-V100/
-.Trashes
-.VolumeIcon.icns
-.com.apple.timemachine.donotpresent
-.fseventsd
-
-# Windows
-Thumbs.db
-ehthumbs.db
-Desktop.ini
-$RECYCLE.BIN/
-*.lnk
-
-# Linux
-.directory
-.Trash-*/
-
-# ═══════════════════════════════════════════════════════════════════
-# Logs e Debug
-# ═══════════════════════════════════════════════════════════════════
-*.log
-logs/
-*.log.*
-log-*.txt
-debug.log
-error.log
-
-# ═══════════════════════════════════════════════════════════════════
-# Backups
-# ═══════════════════════════════════════════════════════════════════
-*.bak
-*.backup
-*.old
-*.orig
-*.tmp
-*~
-*.swp
-*.swo
-.*.swp
-.*.swo
-*.config.backup
-*.toml.backup
-
-# ═══════════════════════════════════════════════════════════════════
-# Build e Compilação
-# ═══════════════════════════════════════════════════════════════════
-bazel-*
-storybook-static/
-result
-coverage/
+# caches
 .cache/
+.turbo/
+.parcel-cache/
+.eslintcache
+.nyc_output/
+.jest/
+*.tsbuildinfo
 
-# ═══════════════════════════════════════════════════════════════════
-# Python
-# ═══════════════════════════════════════════════════════════════════
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-ENV/
-.venv/
-pip-log.txt
-pip-delete-this-directory.txt
-.pytest_cache/
-.mypy_cache/
-.dmypy.json
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# ═══════════════════════════════════════════════════════════════════
-# Docker
-# ═══════════════════════════════════════════════════════════════════
-*.tar
-*.tar.gz
-docker-compose.override.yml
+# env
+.env*
+!.env.example
 
-# ═══════════════════════════════════════════════════════════════════
-# CI/CD
-# ═══════════════════════════════════════════════════════════════════
+# package
+*.tgz
+
+# ci
 .vercel/
 .netlify/
 
-# ═══════════════════════════════════════════════════════════════════
-# Terraform
-# ═══════════════════════════════════════════════════════════════════
-.terraform/
-*.tfstate
-*.tfstate.*
-.terraform.lock.hcl
-terraform.tfvars
-crash.log
-
-# ═══════════════════════════════════════════════════════════════════
-# Arquivos Pessoais
-# ═══════════════════════════════════════════════════════════════════
-personal/
-scratch/
-temp/
-tmp/
-TODO.md
-NOTES.md
-notes.txt
-
-# ═══════════════════════════════════════════════════════════════════
-# Nix
-# ═══════════════════════════════════════════════════════════════════
-.direnv
-.envrc
-
-# ═══════════════════════════════════════════════════════════════════
-# Outros
-# ═══════════════════════════════════════════════════════════════════
-*.tgz
-*.gz
-*.zip
-*.rar
-*.7z
-
-# Patches
+# patches
 apply_patch/
 
-# Release artifacts
+# coverage
+coverage/
+
+# personal files
+personal/
+
+# os
+.DS_Store
+Thumbs.db
+Icon?
+.Spotlight-V100/
+
+# Unwanted package managers
+.yarn/
+yarn.lock
+
+# release
 package.json-e
 session.ts-e
 CHANGELOG.ignore.md
 
-# Temporary build directories
-codex-rs/
-jarvis_cli/
+# nix related
+.direnv
+.envrc
 
-# ═══════════════════════════════════════════════════════════════════
-# EXCEÇÕES - Arquivos que DEVEM ser commitados
-# ═══════════════════════════════════════════════════════════════════
-!.env.example
-!pnpm-lock.yaml
-!README.md
-!CONTRIBUTING.md
-!LICENSE.md
-!CHANGELOG.md
+# Python bytecode files
+__pycache__/
+*.pyc
 
-# Documentação importante (manter)
-!docs/README.md
-!docs/CONFIGURACAO.md
-!docs/features/README.md
-!jarvis-rs/README.md
-!jarvis-cli/README.md
-
-# Scripts de setup importantes (manter)
-!setup-ollama.sh
-!install-vps.sh
-!configure-ollama-remote.sh
-!check-build-status.sh
-!test-databricks-debug.sh
-
-# Guias importantes (manter)
-!MODELOS_DESENVOLVIMENTO.md
-!OLLAMA_VPS_SETUP.md
-!README_VPS_INSTALL.md
-!EXECUTAR_NA_VPS.md
-!DATABRICKS_CHAT_API_ADAPTER.md
-!DATABRICKS_URL_FIX_FINAL.md

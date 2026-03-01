@@ -1,37 +1,37 @@
-set working-directory := "jarvis-rs"
+set working-directory := "codex-rs"
 set positional-arguments
 
 # Display help
 help:
     just -l
 
-# `jarvis`
-alias c := jarvis
-jarvis *args:
-    cargo run --bin jarvis -- "$@"
+# `codex`
+alias c := codex
+codex *args:
+    cargo run --bin codex -- "$@"
 
-# `jarvis exec`
+# `codex exec`
 exec *args:
-    cargo run --bin jarvis -- exec "$@"
+    cargo run --bin codex -- exec "$@"
 
 # Run the CLI version of the file-search crate.
 file-search *args:
-    cargo run --bin jarvis-file-search -- "$@"
+    cargo run --bin codex-file-search -- "$@"
 
 # Build the CLI and run the app-server test client
 app-server-test-client *args:
-    cargo build -p jarvis-cli
-    cargo run -p jarvis-app-server-test-client -- --jarvis-bin ./target/debug/jarvis "$@"
+    cargo build -p codex-cli
+    cargo run -p codex-app-server-test-client -- --codex-bin ./target/debug/codex "$@"
 
 # format code
 fmt:
     cargo fmt -- --config imports_granularity=Item 2>/dev/null
 
 fix *args:
-    cargo clippy --fix --all-features --tests --allow-dirty "$@"
+    cargo clippy --fix --tests --allow-dirty "$@"
 
 clippy:
-    cargo clippy --all-features --tests "$@"
+    cargo clippy --tests "$@"
 
 install:
     rustup show active-toolchain
@@ -41,15 +41,25 @@ install:
 # --no-fail-fast is important to ensure all tests are run.
 #
 # Run `cargo install cargo-nextest` if you don't have it installed.
+# Prefer this for routine local runs; use explicit `cargo test --all-features`
+# only when you specifically need full feature coverage.
 test:
     cargo nextest run --no-fail-fast
 
-# Build and run Jarvis from source using Bazel.
+# Build and run Codex from source using Bazel.
 # Note we have to use the combination of `[no-cd]` and `--run_under="cd $PWD &&"`
 # to ensure that Bazel runs the command in the current working directory.
 [no-cd]
-bazel-jarvis *args:
-    bazel run //jarvis-rs/cli:jarvis --run_under="cd $PWD &&" -- "$@"
+bazel-codex *args:
+    bazel run //codex-rs/cli:codex --run_under="cd $PWD &&" -- "$@"
+
+[no-cd]
+bazel-lock-update:
+    bazel mod deps --lockfile_mode=update
+
+[no-cd]
+bazel-lock-check:
+    ./scripts/check-module-bazel-lock.sh
 
 bazel-test:
     bazel test //... --keep_going
@@ -58,20 +68,20 @@ bazel-remote-test:
     bazel test //... --config=remote --platforms=//:rbe --keep_going
 
 build-for-release:
-    bazel build //jarvis-rs/cli:release_binaries --config=remote
+    bazel build //codex-rs/cli:release_binaries --config=remote
 
 # Run the MCP server
 mcp-server-run *args:
-    cargo run -p jarvis-mcp-server -- "$@"
+    cargo run -p codex-mcp-server -- "$@"
 
 # Regenerate the json schema for config.toml from the current config types.
 write-config-schema:
-    cargo run -p jarvis-core --bin jarvis-write-config-schema
+    cargo run -p codex-core --bin codex-write-config-schema
 
 # Regenerate vendored app-server protocol schema artifacts.
 write-app-server-schema *args:
-    cargo run -p jarvis-app-server-protocol --bin write_schema_fixtures -- "$@"
+    cargo run -p codex-app-server-protocol --bin write_schema_fixtures -- "$@"
 
 # Tail logs from the state SQLite database
 log *args:
-    if [ "${1:-}" = "--" ]; then shift; fi; cargo run -p jarvis-state --bin logs_client -- "$@"
+    if [ "${1:-}" = "--" ]; then shift; fi; cargo run -p codex-state --bin logs_client -- "$@"

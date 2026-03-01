@@ -1,7 +1,7 @@
-﻿# Exit and shutdown flow (tui)
+# Exit and shutdown flow (tui)
 
-This document describes how exit, shutdown, and interruption work in the Rust TUI (`jarvis-rs/tui`).
-It is intended for Jarvis developers and Jarvis itself when reasoning about future exit/shutdown
+This document describes how exit, shutdown, and interruption work in the Rust TUI (`codex-rs/tui`).
+It is intended for Codex developers and Codex itself when reasoning about future exit/shutdown
 changes.
 
 This doc replaces earlier separate history and design notes. High-level history is summarized

@@ -13,7 +13,7 @@ import {
   startResponsesTestProxy,
 } from "./responsesProxy";
 
-const jarvisExecPath = path.join(process.cwd(), "..", "..", "jarvis-rs", "target", "debug", "jarvis");
+const codexExecPath = path.join(process.cwd(), "..", "..", "codex-rs", "target", "debug", "codex");
 
 describe("Codex", () => {
   it("returns thread events", async () => {
@@ -23,7 +23,7 @@ describe("Codex", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: jarvisExecPath, baseUrl: url, apiKey: "test" });
+      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const result = await thread.runStreamed("Hello, world!");
@@ -82,7 +82,7 @@ describe("Codex", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: jarvisExecPath, baseUrl: url, apiKey: "test" });
+      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const first = await thread.runStreamed("first input");
@@ -128,7 +128,7 @@ describe("Codex", () => {
     });
 
     try {
-      const client = new Codex({ codexPathOverride: jarvisExecPath, baseUrl: url, apiKey: "test" });
+      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
 
       const originalThread = client.startThread();
       const first = await originalThread.runStreamed("first input");
@@ -180,7 +180,7 @@ describe("Codex", () => {
     } as const;
 
     try {
-      const client = new Codex({ codexPathOverride: jarvisExecPath, baseUrl: url, apiKey: "test" });
+      const client = new Codex({ codexPathOverride: codexExecPath, baseUrl: url, apiKey: "test" });
 
       const thread = client.startThread();
       const streamed = await thread.runStreamed("structured", { outputSchema: schema });

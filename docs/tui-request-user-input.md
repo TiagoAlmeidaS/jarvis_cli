@@ -1,4 +1,4 @@
-﻿# Request user input overlay (TUI)
+# Request user input overlay (TUI)
 
 This note documents the TUI overlay used to gather answers for
 `RequestUserInputEvent`.

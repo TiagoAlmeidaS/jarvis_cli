@@ -1,4 +1,4 @@
-﻿## Installing & building
+## Installing & building
 
 ### System requirements
 
@@ -16,8 +16,8 @@ The GitHub Release also contains a [DotSlash](https://dotslash-cli.com/) file fo
 
 ```bash
 # Clone the repository and navigate to the root of the Cargo workspace.
-git clone https://github.com/openai/jarvis.git
-cd jarvis/jarvis-rs
+git clone https://github.com/openai/codex.git
+cd codex/codex-rs
 
 # Install the Rust toolchain, if necessary.
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
@@ -27,15 +27,15 @@ rustup component add clippy
 # Install helper tools used by the workspace justfile:
 cargo install just
 # Optional: install nextest for the `just test` helper
-cargo install cargo-nextest
+cargo install --locked cargo-nextest
 
 # Build Codex.
 cargo build
 
 # Launch the TUI with a sample prompt.
-cargo run --bin jarvis -- "explain this codebase to me"
+cargo run --bin codex -- "explain this codebase to me"
 
-# After making changes, use the root justfile helpers (they default to jarvis-rs):
+# After making changes, use the root justfile helpers (they default to codex-rs):
 just fmt
 just fix -p <crate-you-touched>
 
@@ -43,7 +43,9 @@ just fix -p <crate-you-touched>
 cargo test -p codex-tui
 # If you have cargo-nextest installed, `just test` runs the test suite via nextest:
 just test
-# If you specifically want the full `--all-features` matrix, use:
+# Avoid `--all-features` for routine local runs because it increases build
+# time and `target/` disk usage by compiling additional feature combinations.
+# If you specifically want full feature coverage, use:
 cargo test --all-features
 ```
 
@@ -51,7 +53,7 @@ cargo test --all-features
 
 Codex is written in Rust, so it honors the `RUST_LOG` environment variable to configure its logging behavior.
 
-The TUI defaults to `RUST_LOG=codex_core=info,codex_tui=info,codex_rmcp_client=info` and log messages are written to `~/.codex/log/codex-tui.log`, so you can leave the following running in a separate terminal to monitor log messages as they are written:
+The TUI defaults to `RUST_LOG=codex_core=info,codex_tui=info,codex_rmcp_client=info` and log messages are written to `~/.codex/log/codex-tui.log` by default. For a single run, you can override the log directory with `-c log_dir=...` (for example, `-c log_dir=./.codex-log`).
 
 ```bash
 tail -F ~/.codex/log/codex-tui.log

@@ -1,4 +1,4 @@
-﻿# TUI Stream Chunking
+# TUI Stream Chunking
 
 This document explains how stream chunking in the TUI works and why it is
 implemented this way.
@@ -25,13 +25,13 @@ and visible output lags behind received output.
 
 ## Where the logic lives
 
-- `jarvis-rs/tui/src/streaming/chunking.rs`
+- `codex-rs/tui/src/streaming/chunking.rs`
   - Adaptive policy, mode transitions, and drain-plan selection.
-- `jarvis-rs/tui/src/streaming/commit_tick.rs`
+- `codex-rs/tui/src/streaming/commit_tick.rs`
   - Orchestration for each commit tick: snapshot, decide, drain, trace.
-- `jarvis-rs/tui/src/streaming/controller.rs`
+- `codex-rs/tui/src/streaming/controller.rs`
   - Queue/drain primitives used by commit-tick orchestration.
-- `jarvis-rs/tui/src/chatwidget.rs`
+- `codex-rs/tui/src/chatwidget.rs`
   - Integration point that invokes commit-tick orchestration and handles UI
     lifecycle events.
 

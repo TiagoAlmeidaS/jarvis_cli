@@ -1,4 +1,4 @@
-﻿## Codex open source fund
+## Codex open source fund
 
 We're excited to launch a **$1 million initiative** supporting open source projects that use Codex CLI and other OpenAI models.
 

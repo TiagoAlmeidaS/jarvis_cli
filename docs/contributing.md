@@ -1,4 +1,4 @@
-﻿## Contributing
+## Contributing
 
 **External contributions are by invitation only**
 

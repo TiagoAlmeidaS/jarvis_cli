@@ -1,4 +1,4 @@
-﻿# Individual Contributor License Agreement (v1.0, OpenAI)
+# Individual Contributor License Agreement (v1.0, OpenAI)
 
 _Based on the Apache Software Foundation Individual CLA v 2.2._
 
