@@ -1,0 +1,28 @@
+[workspace]
+members = [
+    "messaging",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+# Codex core - points to upstream codex-rs
+codex-core = { path = "../codex-rs/core" }
+
+# External dependencies
+anyhow = "1"
+async-trait = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+uuid = { version = "1", features = ["serde", "v4"] }
+hmac = "0.12"
+sha2 = "0.10"
+hex = "0.4"
+reqwest = { version = "0.12", features = ["json"] }
