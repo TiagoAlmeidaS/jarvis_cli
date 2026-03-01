@@ -1,6 +1,8 @@
 use crate::auth::AuthCredentialsStoreMode;
 use crate::config::edit::ConfigEdit;
 use crate::config::edit::ConfigEditsBuilder;
+use crate::config::types::AutonomousConfigToml;
+use crate::config::types::AutonomousSettings;
 use crate::config::types::DEFAULT_OTEL_ENVIRONMENT;
 use crate::config::types::History;
 use crate::config::types::McpServerConfig;
@@ -383,6 +385,9 @@ pub struct Config {
 
     /// Agent loop configuration for text-based tool calling.
     pub agent_loop: crate::config::types::AgentLoopSettings,
+
+    /// Autonomous mode configuration - allows agent to execute actions without approval.
+    pub autonomous: AutonomousSettings,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1018,6 +1023,10 @@ pub struct ConfigToml {
     /// Agent loop configuration for text-based tool calling with local/cheap models.
     #[serde(default)]
     pub agent_loop: Option<crate::config::types::AgentLoopConfigToml>,
+
+    /// Autonomous mode configuration - allows agent to execute actions without approval.
+    #[serde(default)]
+    pub autonomous: Option<AutonomousConfigToml>,
 
     /// Tracks whether the Windows onboarding screen has been acknowledged.
     pub windows_wsl_setup_acknowledged: Option<bool>,
@@ -1766,6 +1775,7 @@ impl Config {
             knowledge: cfg.knowledge.unwrap_or_default().into(),
             api: cfg.api.map(Into::into),
             agent_loop: cfg.agent_loop.unwrap_or_default().into(),
+            autonomous: cfg.autonomous.unwrap_or_default().into(),
         };
         Ok(config)
     }
@@ -3943,6 +3953,7 @@ model_verbosity = "high"
                 rag: Default::default(),
                 knowledge: Default::default(),
                 agent_loop: Default::default(),
+                autonomous: Default::default(),
                 api: None,
             },
             o3_profile_config
@@ -4034,6 +4045,7 @@ model_verbosity = "high"
             rag: Default::default(),
             knowledge: Default::default(),
             agent_loop: Default::default(),
+            autonomous: Default::default(),
             api: None,
         };
 
@@ -4140,6 +4152,7 @@ model_verbosity = "high"
             rag: Default::default(),
             knowledge: Default::default(),
             agent_loop: Default::default(),
+            autonomous: Default::default(),
             api: None,
         };
 
@@ -4232,6 +4245,7 @@ model_verbosity = "high"
             rag: Default::default(),
             knowledge: Default::default(),
             agent_loop: Default::default(),
+            autonomous: Default::default(),
             api: None,
         };
 

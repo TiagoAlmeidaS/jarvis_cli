@@ -1329,6 +1329,246 @@ impl AgentLoopSettings {
     }
 }
 
+/// Risk level for autonomous actions.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AutonomousRiskLevel {
+    /// Only execute very safe, low-risk actions
+    Low,
+    #[default]
+    /// Execute medium-risk actions (default)
+    Medium,
+    /// Execute high-risk actions (use with caution)
+    High,
+}
+
+impl AutonomousRiskLevel {
+    /// Get threshold value for this risk level.
+    pub fn threshold(&self) -> f32 {
+        match self {
+            AutonomousRiskLevel::Low => 0.3,
+            AutonomousRiskLevel::Medium => 0.6,
+            AutonomousRiskLevel::High => 0.9,
+        }
+    }
+}
+
+/// Configuration for autonomous mode.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default, JsonSchema)]
+#[schemars(deny_unknown_fields)]
+pub struct AutonomousConfigToml {
+    /// Enable autonomous mode - agent executes actions without approval.
+    #[serde(default)]
+    pub enabled: Option<bool>,
+
+    /// Automatically approve whitelisted actions without asking.
+    #[serde(default)]
+    pub auto_approve: Option<bool>,
+
+    /// Maximum risk level for autonomous execution.
+    #[serde(default)]
+    pub max_risk_level: Option<AutonomousRiskLevel>,
+
+    /// List of actions that can be executed autonomously.
+    #[serde(default)]
+    pub whitelist: Option<Vec<String>>,
+
+    /// List of actions that are prohibited from autonomous execution.
+    #[serde(default)]
+    pub blocklist: Option<Vec<String>>,
+
+    /// Run in stealth mode - suppress notifications.
+    #[serde(default)]
+    pub stealth_mode: Option<bool>,
+
+    /// Log all autonomous actions to file.
+    #[serde(default)]
+    pub log_actions: Option<bool>,
+
+    /// Confidence threshold for autonomous decisions (0.0-1.0).
+    #[serde(default)]
+    pub confidence_threshold: Option<f32>,
+}
+
+/// Effective autonomous settings after defaults are applied.
+#[derive(Debug, Clone, PartialEq)]
+pub struct AutonomousSettings {
+    pub enabled: bool,
+    pub auto_approve: bool,
+    pub max_risk_level: AutonomousRiskLevel,
+    pub whitelist: Vec<String>,
+    pub blocklist: Vec<String>,
+    pub stealth_mode: bool,
+    pub log_actions: bool,
+    pub confidence_threshold: f32,
+}
+
+impl Default for AutonomousSettings {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            auto_approve: false,
+            max_risk_level: AutonomousRiskLevel::Medium,
+            whitelist: vec![
+                "fix_test_file".to_string(),
+                "fix_comment".to_string(),
+                "fix_typo_in_docs".to_string(),
+                "update_test_assertion".to_string(),
+                "format_code".to_string(),
+                "add_comment".to_string(),
+                "read_file".to_string(),
+                "read_only_operation".to_string(),
+            ],
+            blocklist: vec![
+                "delete_file".to_string(),
+                "drop_table".to_string(),
+                "change_api_endpoint".to_string(),
+                "modify_authentication".to_string(),
+                "delete_production_data".to_string(),
+                "modify_db_migration".to_string(),
+                "change_security_settings".to_string(),
+            ],
+            stealth_mode: false,
+            log_actions: true,
+            confidence_threshold: 0.85,
+        }
+    }
+}
+
+impl From<AutonomousConfigToml> for AutonomousSettings {
+    fn from(toml: AutonomousConfigToml) -> Self {
+        let default = Self::default();
+        Self {
+            enabled: toml.enabled.unwrap_or(default.enabled),
+            auto_approve: toml.auto_approve.unwrap_or(default.auto_approve),
+            max_risk_level: toml.max_risk_level.unwrap_or(default.max_risk_level),
+            whitelist: toml.whitelist.unwrap_or(default.whitelist),
+            blocklist: toml.blocklist.unwrap_or(default.blocklist),
+            stealth_mode: toml.stealth_mode.unwrap_or(default.stealth_mode),
+            log_actions: toml.log_actions.unwrap_or(default.log_actions),
+            confidence_threshold: toml
+                .confidence_threshold
+                .unwrap_or(default.confidence_threshold),
+        }
+    }
+}
+
+impl AutonomousSettings {
+    /// Check if an action is allowed to run autonomously.
+    pub fn is_action_allowed(&self, action: &str) -> bool {
+        // Check blocklist first
+        if self.blocklist.iter().any(|a| a == action) {
+            return false;
+        }
+        // Then check whitelist
+        self.whitelist.iter().any(|a| a == action)
+    }
+
+    /// Check if autonomous mode is active and ready to execute.
+    pub fn can_execute_autonomously(&self) -> bool {
+        self.enabled && self.auto_approve
+    }
+
+    /// Check if an action meets the risk threshold.
+    pub fn meets_risk_threshold(&self, action_risk: f32) -> bool {
+        action_risk <= self.max_risk_level.threshold()
+    }
+}
+
+#[cfg(test)]
+mod autonomous_tests {
+    use super::*;
+
+    #[test]
+    fn test_autonomous_settings_default() {
+        let settings = AutonomousSettings::default();
+        assert!(!settings.enabled);
+        assert!(!settings.auto_approve);
+        assert_eq!(settings.max_risk_level, AutonomousRiskLevel::Medium);
+        assert!(settings.whitelist.contains(&"format_code".to_string()));
+        assert!(settings.blocklist.contains(&"delete_file".to_string()));
+    }
+
+    #[test]
+    fn test_autonomous_config_from_toml() {
+        let toml = AutonomousConfigToml {
+            enabled: Some(true),
+            auto_approve: Some(true),
+            max_risk_level: Some(AutonomousRiskLevel::Low),
+            whitelist: Some(vec!["custom_action".to_string()]),
+            blocklist: None,
+            stealth_mode: Some(true),
+            log_actions: Some(false),
+            confidence_threshold: Some(0.9),
+        };
+        let settings: AutonomousSettings = toml.into();
+
+        assert!(settings.enabled);
+        assert!(settings.auto_approve);
+        assert_eq!(settings.max_risk_level, AutonomousRiskLevel::Low);
+        assert!(settings.whitelist.contains(&"custom_action".to_string()));
+        assert!(settings.stealth_mode);
+        assert!(!settings.log_actions);
+        assert_eq!(settings.confidence_threshold, 0.9);
+    }
+
+    #[test]
+    fn test_is_action_allowed_whitelist() {
+        let settings = AutonomousSettings::default();
+        assert!(settings.is_action_allowed("format_code"));
+        assert!(settings.is_action_allowed("read_file"));
+    }
+
+    #[test]
+    fn test_is_action_allowed_blocklist() {
+        let settings = AutonomousSettings::default();
+        assert!(!settings.is_action_allowed("delete_file"));
+        assert!(!settings.is_action_allowed("drop_table"));
+    }
+
+    #[test]
+    fn test_can_execute_autonomously() {
+        let mut settings = AutonomousSettings::default();
+        assert!(!settings.can_execute_autonomously());
+
+        settings.enabled = true;
+        assert!(!settings.can_execute_autonomously());
+
+        settings.auto_approve = true;
+        assert!(settings.can_execute_autonomously());
+    }
+
+    #[test]
+    fn test_risk_threshold_levels() {
+        assert_eq!(AutonomousRiskLevel::Low.threshold(), 0.3);
+        assert_eq!(AutonomousRiskLevel::Medium.threshold(), 0.6);
+        assert_eq!(AutonomousRiskLevel::High.threshold(), 0.9);
+    }
+
+    #[test]
+    fn test_meets_risk_threshold() {
+        let settings = AutonomousSettings::default();
+
+        // Medium threshold is 0.6
+        assert!(settings.meets_risk_threshold(0.3));
+        assert!(settings.meets_risk_threshold(0.5));
+        assert!(settings.meets_risk_threshold(0.6));
+        assert!(!settings.meets_risk_threshold(0.7));
+    }
+
+    #[test]
+    fn test_autonomous_risk_level_serialization() {
+        let low: AutonomousRiskLevel = serde_json::from_str(r#""low""#).unwrap();
+        assert_eq!(low, AutonomousRiskLevel::Low);
+
+        let medium: AutonomousRiskLevel = serde_json::from_str(r#""medium""#).unwrap();
+        assert_eq!(medium, AutonomousRiskLevel::Medium);
+
+        let high: AutonomousRiskLevel = serde_json::from_str(r#""high""#).unwrap();
+        assert_eq!(high, AutonomousRiskLevel::High);
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
