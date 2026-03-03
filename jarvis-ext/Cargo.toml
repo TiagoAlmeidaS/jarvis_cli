@@ -1,6 +1,13 @@
 [workspace]
 members = [
+    "daemon-common",
     "messaging",
+    "telegram",
+    "whatsapp",
+    "daemon",
+    "jarvis-client",
+    "jarvis-api",
+    "github",
 ]
 resolver = "2"
 
@@ -13,16 +20,91 @@ license = "Apache-2.0"
 # Codex core - points to upstream codex-rs
 codex-core = { path = "../codex-rs/core" }
 
+# Internal
+jarvis-messaging = { path = "messaging" }
+jarvis-daemon-common = { path = "daemon-common" }
+jarvis-telegram = { path = "telegram" }
+
 # External dependencies
 anyhow = "1"
 async-trait = "0.1"
+assert_matches = "1"
+axum = { version = "0.8", features = ["json", "multipart", "tokio", "http1"] }
+bytes = "1"
 chrono = { version = "0.4", features = ["serde"] }
+eventsource-stream = "0.2"
+futures = "0.3"
+hmac = "0.12"
+hex = "0.4"
+http = "1"
+opentelemetry = "0.31"
+rand = "0.9"
+regex-lite = "0.1"
+reqwest = { version = "0.12", features = ["json", "stream"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-tokio = { version = "1", features = ["full"] }
-tracing = "0.1"
-uuid = { version = "1", features = ["serde", "v4"] }
-hmac = "0.12"
 sha2 = "0.10"
-hex = "0.4"
-reqwest = { version = "0.12", features = ["json"] }
+sqlx = { version = "0.7", default-features = false, features = ["runtime-tokio-rustls", "sqlite", "chrono", "macros", "uuid", "json"] }
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.24"
+tokio-test = "0.4"
+url = "2"
+urlencoding = "2"
+tokio-stream = "0.1"
+tokio-util = "0.7"
+toml = "0.8"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-opentelemetry = "0.32"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+wiremock = "0.6"
+zstd = "0.13"
+
+# Dev dependencies
+pretty_assertions = "1"
+tempfile = "3"
+dirs = "5"
+dotenvy = "0.15"
+clap = { version = "4", features = ["derive", "env"] }
+opentelemetry_sdk = "0.31"
+
+[workspace.lints]
+rust = {}
+
+[workspace.lints.clippy]
+expect_used = "deny"
+identity_op = "deny"
+manual_clamp = "deny"
+manual_filter = "deny"
+manual_find = "deny"
+manual_flatten = "deny"
+manual_map = "deny"
+manual_memcpy = "deny"
+manual_non_exhaustive = "deny"
+manual_ok_or = "deny"
+manual_range_contains = "deny"
+manual_retain = "deny"
+manual_strip = "deny"
+manual_try_fold = "deny"
+manual_unwrap_or = "deny"
+needless_borrow = "deny"
+needless_borrowed_reference = "deny"
+needless_collect = "deny"
+needless_late_init = "deny"
+needless_option_as_deref = "deny"
+needless_question_mark = "deny"
+needless_update = "deny"
+redundant_clone = "deny"
+redundant_closure = "deny"
+redundant_closure_for_method_calls = "deny"
+redundant_static_lifetimes = "deny"
+trivially_copy_pass_by_ref = "deny"
+uninlined_format_args = "deny"
+unnecessary_filter_map = "deny"
+unnecessary_lazy_evaluations = "deny"
+unnecessary_sort_by = "deny"
+unnecessary_to_owned = "deny"
+unwrap_used = "deny"
