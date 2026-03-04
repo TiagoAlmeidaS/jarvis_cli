@@ -1,0 +1,14 @@
+[package]
+name = "jarvis-protocol"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Jarvis wire-protocol types (standalone subset used by jarvis-ext)"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+uuid = { version = "1", features = ["serde", "v4", "v7"] }

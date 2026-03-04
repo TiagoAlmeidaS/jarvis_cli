@@ -1,0 +1,78 @@
+use std::fmt::Display;
+
+use serde::Deserialize;
+use serde::Serialize;
+use uuid::Uuid;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct ThreadId {
+    uuid: Uuid,
+}
+
+impl ThreadId {
+    pub fn new() -> Self {
+        Self {
+            uuid: Uuid::now_v7(),
+        }
+    }
+
+    pub fn from_string(s: &str) -> Result<Self, uuid::Error> {
+        Ok(Self {
+            uuid: Uuid::parse_str(s)?,
+        })
+    }
+}
+
+impl TryFrom<&str> for ThreadId {
+    type Error = uuid::Error;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Self::from_string(value)
+    }
+}
+
+impl TryFrom<String> for ThreadId {
+    type Error = uuid::Error;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        Self::from_string(value.as_str())
+    }
+}
+
+impl From<ThreadId> for String {
+    fn from(value: ThreadId) -> Self {
+        value.to_string()
+    }
+}
+
+impl Default for ThreadId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Display for ThreadId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Display::fmt(&self.uuid, f)
+    }
+}
+
+impl Serialize for ThreadId {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.collect_str(&self.uuid)
+    }
+}
+
+impl<'de> Deserialize<'de> for ThreadId {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let value = String::deserialize(deserializer)?;
+        let uuid = Uuid::parse_str(&value).map_err(serde::de::Error::custom)?;
+        Ok(Self { uuid })
+    }
+}

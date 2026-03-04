@@ -6,6 +6,7 @@ members = [
     "whatsapp",
     "daemon",
     "jarvis-client",
+    "jarvis-protocol",
     "jarvis-api",
     "github",
 ]
@@ -24,6 +25,8 @@ codex-core = { path = "../codex-rs/core" }
 jarvis-messaging = { path = "messaging" }
 jarvis-daemon-common = { path = "daemon-common" }
 jarvis-telegram = { path = "telegram" }
+jarvis-protocol = { path = "jarvis-protocol" }
+jarvis-client = { path = "jarvis-client" }
 
 # External dependencies
 anyhow = "1"
