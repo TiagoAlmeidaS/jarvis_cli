@@ -252,6 +252,90 @@
         }
       ]
     },
+    "AutonomousConfigToml": {
+      "additionalProperties": false,
+      "description": "Configuration for autonomous mode.",
+      "properties": {
+        "auto_approve": {
+          "default": null,
+          "description": "Automatically approve whitelisted actions without asking.",
+          "type": "boolean"
+        },
+        "blocklist": {
+          "default": null,
+          "description": "List of actions that are prohibited from autonomous execution.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "confidence_threshold": {
+          "default": null,
+          "description": "Confidence threshold for autonomous decisions (0.0-1.0).",
+          "format": "float",
+          "type": "number"
+        },
+        "enabled": {
+          "default": null,
+          "description": "Enable autonomous mode - agent executes actions without approval.",
+          "type": "boolean"
+        },
+        "log_actions": {
+          "default": null,
+          "description": "Log all autonomous actions to file.",
+          "type": "boolean"
+        },
+        "max_risk_level": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/AutonomousRiskLevel"
+            }
+          ],
+          "default": null,
+          "description": "Maximum risk level for autonomous execution."
+        },
+        "stealth_mode": {
+          "default": null,
+          "description": "Run in stealth mode - suppress notifications.",
+          "type": "boolean"
+        },
+        "whitelist": {
+          "default": null,
+          "description": "List of actions that can be executed autonomously.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "AutonomousRiskLevel": {
+      "description": "Risk level for autonomous actions.",
+      "oneOf": [
+        {
+          "description": "Only execute very safe, low-risk actions",
+          "enum": [
+            "low"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Execute medium-risk actions (default)",
+          "enum": [
+            "medium"
+          ],
+          "type": "string"
+        },
+        {
+          "description": "Execute high-risk actions (use with caution)",
+          "enum": [
+            "high"
+          ],
+          "type": "string"
+        }
+      ]
+    },
     "ConfigProfile": {
       "additionalProperties": false,
       "description": "Collection of common configuration options that a user can define as a unit in `config.toml`.",
@@ -519,6 +603,40 @@
           "type": "string"
         }
       ]
+    },
+    "KnowledgeConfigToml": {
+      "additionalProperties": false,
+      "description": "Knowledge base settings loaded from config.toml.",
+      "properties": {
+        "auto_learn": {
+          "default": null,
+          "description": "Whether to automatically learn from completed agent loop interactions. Defaults to `true` when knowledge is enabled.",
+          "type": "boolean"
+        },
+        "backend": {
+          "default": null,
+          "description": "Storage backend: `\"memory\"` (in-process only) or `\"persistent\"` (JSON files on disk).  Defaults to `\"persistent\"`.",
+          "type": "string"
+        },
+        "enabled": {
+          "default": null,
+          "description": "When `true`, enables the knowledge base for persistent learning across sessions.  Defaults to `false`.",
+          "type": "boolean"
+        },
+        "max_results": {
+          "default": null,
+          "description": "Maximum number of knowledge items to retrieve per query. Defaults to 5.",
+          "format": "uint",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "storage_dir": {
+          "default": null,
+          "description": "Directory for persistent knowledge storage (relative to jarvis home). Can be overridden via `JARVIS_KNOWLEDGE_DIR`. Defaults to `\"knowledge\"`.",
+          "type": "string"
+        }
+      },
+      "type": "object"
     },
     "LlmConfigToml": {
       "additionalProperties": false,
@@ -1463,6 +1581,15 @@
       ],
       "description": "Default approval policy for executing commands."
     },
+    "autonomous": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/AutonomousConfigToml"
+        }
+      ],
+      "default": null,
+      "description": "Autonomous mode configuration - allows agent to execute actions without approval."
+    },
     "chatgpt_base_url": {
       "description": "Base URL for requests to ChatGPT (as opposed to the OpenAI API).",
       "type": "string"
@@ -1669,6 +1796,14 @@
     "instructions": {
       "description": "System instructions.",
       "type": "string"
+    },
+    "knowledge": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/KnowledgeConfigToml"
+        }
+      ],
+      "description": "Knowledge base configuration for persistent learning."
     },
     "llm": {
       "allOf": [

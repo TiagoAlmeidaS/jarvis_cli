@@ -17,7 +17,7 @@ use crate::state::AppState;
 pub struct StatusResponse {
     pub pipelines: PipelinesStatus,
     pub jobs: JobsStatus,
-    pub content: ContentStatus,
+    pub content: ContentStatusSummary,
     pub proposals: ProposalsStatus,
     pub revenue: RevenueStatus,
     pub goals: GoalsStatus,
@@ -35,7 +35,7 @@ pub struct JobsStatus {
 }
 
 #[derive(Serialize)]
-pub struct ContentStatus {
+pub struct ContentStatusSummary {
     pub published_last_7d: usize,
 }
 
@@ -125,7 +125,7 @@ pub async fn get_status(State(state): State<AppState>) -> Result<Json<StatusResp
         jobs: JobsStatus {
             running: running_jobs,
         },
-        content: ContentStatus {
+        content: ContentStatusSummary {
             published_last_7d: recent_content.len(),
         },
         proposals: ProposalsStatus {

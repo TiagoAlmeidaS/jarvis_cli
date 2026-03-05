@@ -11,6 +11,7 @@ use jarvis_daemon_common::DaemonDb;
 use serde::Deserialize;
 use serde::Serialize;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 
 use crate::state::AppState;
 
@@ -45,22 +46,23 @@ pub async fn websocket_handler(
 }
 
 async fn handle_socket(socket: axum::extract::ws::WebSocket, db: Option<Arc<DaemonDb>>) {
-    let (mut sender, mut receiver) = socket.split();
+    let (sender, mut receiver) = socket.split();
+    let sender = Arc::new(Mutex::new(sender));
 
     // Send initial status
     if let Some(db) = &db {
         if let Ok(status) = get_daemon_status(db).await {
             let msg = axum::extract::ws::Message::Text(
-                serde_json::to_string(&status).unwrap_or_default(),
+                serde_json::to_string(&status).unwrap_or_default().into(),
             );
-            let _ = sender.send(msg).await;
+            let _ = sender.lock().await.send(msg).await;
         }
     }
 
     // Spawn a task to periodically send updates
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
     let db_clone = db.clone();
-    let mut sender_clone = sender.clone();
+    let sender_clone = Arc::clone(&sender);
 
     tokio::spawn(async move {
         loop {
@@ -68,9 +70,9 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, db: Option<Arc<Daem
             if let Some(db) = &db_clone {
                 if let Ok(status) = get_daemon_status(db).await {
                     let msg = axum::extract::ws::Message::Text(
-                        serde_json::to_string(&status).unwrap_or_default(),
+                        serde_json::to_string(&status).unwrap_or_default().into(),
                     );
-                    let _ = sender_clone.send(msg).await;
+                    let _ = sender_clone.lock().await.send(msg).await;
                 }
             }
         }
@@ -83,7 +85,9 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, db: Option<Arc<Daem
                 // Handle client messages if needed
                 if text == "ping" {
                     let _ = sender
-                        .send(axum::extract::ws::Message::Text("pong".to_string()))
+                        .lock()
+                        .await
+                        .send(axum::extract::ws::Message::Text("pong".into()))
                         .await;
                 }
             }
@@ -91,7 +95,7 @@ async fn handle_socket(socket: axum::extract::ws::WebSocket, db: Option<Arc<Daem
                 break;
             }
             Err(e) => {
-                tracing::warn!("WebSocket error: {}", e);
+                tracing::warn!("WebSocket error: {e}");
                 break;
             }
             _ => {}
