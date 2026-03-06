@@ -123,6 +123,9 @@ enum Subcommand {
     /// [experimental] Manage daemon automation pipelines (SEO, YouTube, SaaS).
     Daemon(jarvis_cli::daemon_cmd::DaemonCli),
 
+    /// [experimental] Manage and run agent teams.
+    Teams(jarvis_cli::teams_cmd::TeamsCli),
+
     /// [experimental] Run the app server or related tooling.
     AppServer(AppServerCommand),
 
@@ -672,6 +675,13 @@ async fn cli_main(jarvis_linux_sandbox_exe: Option<PathBuf>) -> anyhow::Result<(
         }
         Some(Subcommand::Daemon(daemon_cli)) => {
             jarvis_cli::daemon_cmd::run_daemon_command(daemon_cli).await?;
+        }
+        Some(Subcommand::Teams(mut teams_cli)) => {
+            prepend_config_flags(
+                &mut teams_cli.config_overrides,
+                root_config_overrides.clone(),
+            );
+            teams_cli.run().await?;
         }
         Some(Subcommand::AppServer(app_server_cli)) => match app_server_cli.subcommand {
             None => {

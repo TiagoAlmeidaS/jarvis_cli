@@ -179,6 +179,8 @@ use crate::skills::SkillsManager;
 use crate::skills::build_skill_injections;
 use crate::skills::collect_env_var_dependencies;
 use crate::skills::collect_explicit_skill_mentions;
+use crate::skills::filter_skills_by_allowed;
+use crate::skills::filter_skills_ref_by_allowed;
 use crate::skills::injection::ToolMentionKind;
 use crate::skills::injection::app_id_from_path;
 use crate::skills::injection::tool_kind_for_path;
@@ -277,7 +279,12 @@ impl Jarvis {
         }
 
         let enabled_skills = loaded_skills.enabled_skills();
-        let user_instructions = get_user_instructions(&config, Some(&enabled_skills)).await;
+        let visible_skills = if let Some(allowed) = &config.allowed_skills {
+            filter_skills_by_allowed(enabled_skills, allowed)
+        } else {
+            enabled_skills
+        };
+        let user_instructions = get_user_instructions(&config, Some(&visible_skills)).await;
 
         let exec_policy = ExecPolicyManager::load(&config.features, &config.config_layer_stack)
             .await
@@ -3502,9 +3509,25 @@ pub async fn run_turn(
             .await,
     );
 
-    let (skill_name_counts, skill_name_counts_lower) = skills_outcome.as_ref().map_or_else(
+    // When allowed_skills is set (e.g. for a teammate), restrict which skills
+    // are visible for name-count building and explicit-mention matching.
+    let allowed_skills = turn_context.config.allowed_skills.as_deref();
+    let filtered_skills: Option<Vec<SkillMetadata>> = skills_outcome.as_ref().map(|outcome| {
+        if let Some(allowed) = allowed_skills {
+            filter_skills_ref_by_allowed(&outcome.skills, allowed)
+        } else {
+            outcome.skills.clone()
+        }
+    });
+
+    let (skill_name_counts, skill_name_counts_lower) = filtered_skills.as_ref().map_or_else(
         || (HashMap::new(), HashMap::new()),
-        |outcome| build_skill_name_counts(&outcome.skills, &outcome.disabled_paths),
+        |skills| {
+            let disabled = skills_outcome
+                .as_ref()
+                .map_or_else(Default::default, |o| o.disabled_paths.clone());
+            build_skill_name_counts(skills, &disabled)
+        },
     );
     let connector_slug_counts = if turn_context.config.features.enabled(Feature::Apps) {
         let mcp_tools = match sess
@@ -3524,11 +3547,14 @@ pub async fn run_turn(
     } else {
         HashMap::new()
     };
-    let mentioned_skills = skills_outcome.as_ref().map_or_else(Vec::new, |outcome| {
+    let mentioned_skills = filtered_skills.as_ref().map_or_else(Vec::new, |skills| {
+        let disabled = skills_outcome
+            .as_ref()
+            .map_or_else(Default::default, |o| o.disabled_paths.clone());
         collect_explicit_skill_mentions(
             &input,
-            &outcome.skills,
-            &outcome.disabled_paths,
+            skills,
+            &disabled,
             &skill_name_counts,
             &connector_slug_counts,
         )

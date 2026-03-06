@@ -466,6 +466,24 @@ fn create_spawn_agent_tool() -> ToolSpec {
             )),
         },
     );
+    properties.insert(
+        "teammate_name".to_string(),
+        JsonSchema::String {
+            description: Some(
+                "Optional teammate name from teams.yaml. When set, the agent inherits the teammate's model, role, skills, and settings. Takes precedence over agent_type."
+                    .to_string(),
+            ),
+        },
+    );
+    properties.insert(
+        "team_name".to_string(),
+        JsonSchema::String {
+            description: Some(
+                "Optional team name to disambiguate teammate_name when the same name exists in multiple teams."
+                    .to_string(),
+            ),
+        },
+    );
 
     ToolSpec::Function(ResponsesApiTool {
         name: "spawn_agent".to_string(),

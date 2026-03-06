@@ -388,6 +388,13 @@ pub struct Config {
 
     /// Autonomous mode configuration - allows agent to execute actions without approval.
     pub autonomous: AutonomousSettings,
+
+    /// Optional allow-list of skill names for this agent session. When `Some`,
+    /// only the listed skills will be visible in the system prompt and eligible
+    /// for `$skill-name` injection. When `None` (the default), all discovered
+    /// skills are available. This is set by the teams system when spawning a
+    /// teammate with a restricted `skills` list.
+    pub allowed_skills: Option<Vec<String>>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -1776,6 +1783,7 @@ impl Config {
             api: cfg.api.map(Into::into),
             agent_loop: cfg.agent_loop.unwrap_or_default().into(),
             autonomous: cfg.autonomous.unwrap_or_default().into(),
+            allowed_skills: None,
         };
         Ok(config)
     }
@@ -3954,6 +3962,7 @@ model_verbosity = "high"
                 knowledge: Default::default(),
                 agent_loop: Default::default(),
                 autonomous: Default::default(),
+                allowed_skills: None,
                 api: None,
             },
             o3_profile_config
@@ -4046,6 +4055,7 @@ model_verbosity = "high"
             knowledge: Default::default(),
             agent_loop: Default::default(),
             autonomous: Default::default(),
+            allowed_skills: None,
             api: None,
         };
 
@@ -4153,6 +4163,7 @@ model_verbosity = "high"
             knowledge: Default::default(),
             agent_loop: Default::default(),
             autonomous: Default::default(),
+            allowed_skills: None,
             api: None,
         };
 
@@ -4246,6 +4257,7 @@ model_verbosity = "high"
             knowledge: Default::default(),
             agent_loop: Default::default(),
             autonomous: Default::default(),
+            allowed_skills: None,
             api: None,
         };
 

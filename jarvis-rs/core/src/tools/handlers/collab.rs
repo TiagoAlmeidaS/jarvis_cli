@@ -85,6 +85,8 @@ mod spawn {
 
     use crate::agent::exceeds_thread_spawn_depth_limit;
     use crate::agent::next_thread_spawn_depth;
+    use crate::teams::TeammateDefinition;
+    use crate::teams::load_teams;
     use jarvis_protocol::protocol::SessionSource;
     use jarvis_protocol::protocol::SubAgentSource;
     use std::sync::Arc;
@@ -93,11 +95,99 @@ mod spawn {
     struct SpawnAgentArgs {
         message: String,
         agent_type: Option<AgentRole>,
+        teammate_name: Option<String>,
+        team_name: Option<String>,
     }
 
     #[derive(Debug, Serialize)]
     struct SpawnAgentResult {
         agent_id: String,
+    }
+
+    /// Look up a teammate definition from the teams config loaded from disk.
+    fn find_teammate(
+        jarvis_home: &std::path::Path,
+        cwd: &std::path::Path,
+        teammate_name: &str,
+        team_name: Option<&str>,
+    ) -> Result<TeammateDefinition, FunctionCallError> {
+        let outcome = load_teams(jarvis_home, cwd);
+
+        if let Some(team_name) = team_name {
+            // Look in the specified team only.
+            let team = outcome.config.teams.get(team_name).ok_or_else(|| {
+                FunctionCallError::RespondToModel(format!(
+                    "Team '{team_name}' not found in teams.yaml"
+                ))
+            })?;
+            team.teammates.get(teammate_name).cloned().ok_or_else(|| {
+                FunctionCallError::RespondToModel(format!(
+                    "Teammate '{teammate_name}' not found in team '{team_name}'"
+                ))
+            })
+        } else {
+            // Search across all teams for the teammate name.
+            let mut found: Vec<(String, TeammateDefinition)> = Vec::new();
+            for (t_name, team) in &outcome.config.teams {
+                if let Some(def) = team.teammates.get(teammate_name) {
+                    found.push((t_name.clone(), def.clone()));
+                }
+            }
+            match found.len() {
+                0 => Err(FunctionCallError::RespondToModel(format!(
+                    "Teammate '{teammate_name}' not found in any team in teams.yaml"
+                ))),
+                1 => Ok(found.into_iter().next().unwrap().1),
+                _ => {
+                    let team_names: Vec<String> = found.iter().map(|(n, _)| n.clone()).collect();
+                    Err(FunctionCallError::RespondToModel(format!(
+                        "Teammate '{teammate_name}' is ambiguous \u{2014} found in teams: {}. Use team_name to disambiguate.",
+                        team_names.join(", ")
+                    )))
+                }
+            }
+        }
+    }
+
+    /// Apply a teammate definition's settings to a Config.
+    fn apply_teammate_to_config(config: &mut Config, teammate: &TeammateDefinition) {
+        // Override base instructions with the teammate's role prompt.
+        config.base_instructions = Some(teammate.role.clone());
+
+        // Override model — we set the model slug; the provider is parsed from
+        // the "provider/model" format.
+        let parts: Vec<&str> = teammate.model.splitn(2, '/').collect();
+        if parts.len() == 2 {
+            config.model_provider_id = parts[0].to_string();
+            if let Some(provider) = config.model_providers.get(parts[0]) {
+                config.model_provider = provider.clone();
+            }
+            config.model = Some(parts[1].to_string());
+        } else {
+            config.model = Some(teammate.model.clone());
+        }
+
+        // Override reasoning effort if specified.
+        if let Some(ref effort) = teammate.reasoning_effort {
+            config.model_reasoning_effort = match effort.to_ascii_lowercase().as_str() {
+                "low" => Some(jarvis_protocol::openai_models::ReasoningEffort::Low),
+                "medium" => Some(jarvis_protocol::openai_models::ReasoningEffort::Medium),
+                "high" => Some(jarvis_protocol::openai_models::ReasoningEffort::High),
+                _ => config.model_reasoning_effort,
+            };
+        }
+
+        // Set read-only sandbox if teammate is read_only.
+        if teammate.read_only {
+            let _ = config
+                .sandbox_policy
+                .set(jarvis_protocol::protocol::SandboxPolicy::ReadOnly);
+        }
+
+        // Set allowed skills if the teammate has a non-empty skills list.
+        if !teammate.skills.is_empty() {
+            config.allowed_skills = Some(teammate.skills.clone());
+        }
     }
 
     pub async fn handle(
@@ -137,9 +227,22 @@ mod spawn {
             turn.as_ref(),
             child_depth,
         )?;
-        agent_role
-            .apply_to_config(&mut config)
-            .map_err(FunctionCallError::RespondToModel)?;
+
+        // When teammate_name is provided, look up the teammate definition and
+        // apply its settings. This takes precedence over agent_type.
+        if let Some(ref teammate_name) = args.teammate_name {
+            let teammate = find_teammate(
+                &turn.config.jarvis_home,
+                &turn.cwd,
+                teammate_name,
+                args.team_name.as_deref(),
+            )?;
+            apply_teammate_to_config(&mut config, &teammate);
+        } else {
+            agent_role
+                .apply_to_config(&mut config)
+                .map_err(FunctionCallError::RespondToModel)?;
+        }
 
         let result = session
             .services

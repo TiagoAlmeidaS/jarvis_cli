@@ -1,0 +1,106 @@
+# Jarvis Agent Teams Configuration
+# =================================
+#
+# This file defines teams of AI agents that work together on tasks.
+# Each team has a lead (orchestrator) and one or more teammates (workers),
+# each with their own model, role/instructions, and skill restrictions.
+#
+# File locations (highest precedence first):
+#   1. <project>/.jarvis/teams.yaml   (project-level)
+#   2. ~/.jarvis/teams.yaml            (user-level)
+#
+# Project-level teams override user-level teams with the same name.
+# Teams with different names are merged from both levels.
+
+teams:
+  # ------------------------------------------------------------------
+  # Development Team
+  # ------------------------------------------------------------------
+  dev_squad:
+    description: "Full-stack development team with architect, coder, and reviewer"
+    lead: architect
+    shared_memory: false  # Reserved for future use (Phase 4)
+
+    teammates:
+      architect:
+        model: "anthropic/claude-3.5-sonnet"
+        role: |
+          You are the Lead Architect. When you receive a request:
+          1. Analyze the requirements and break them into discrete tasks.
+          2. Delegate implementation tasks to the 'coder' teammate.
+          3. Delegate review tasks to the 'reviewer' teammate.
+          4. Synthesize results and present a unified response.
+        skills: []           # Empty = access to all available skills
+        read_only: false
+        reasoning_effort: "high"
+
+      coder:
+        model: "openrouter/deepseek/deepseek-r1:free"
+        role: |
+          You are a code implementation specialist. You receive specific
+          coding tasks from the architect. Write clean, testable code
+          with proper error handling. Always include unit tests.
+        skills:
+          - file_writer
+          - git_commit
+          - shell
+        read_only: false
+        reasoning_effort: "medium"
+
+      reviewer:
+        model: "google/gemini-2.0-flash"
+        role: |
+          You are a code reviewer. Analyze code for:
+          - Security vulnerabilities (injection, XSS, CSRF, etc.)
+          - Performance issues
+          - Logic errors
+          - Missing edge cases
+          Report findings with severity levels and suggestions.
+        skills:
+          - read_file
+          - grep_files
+        read_only: true    # Reviewer should not modify files
+
+  # ------------------------------------------------------------------
+  # Content Factory Team
+  # ------------------------------------------------------------------
+  content_factory:
+    description: "Content creation team for SEO and social media"
+    lead: strategist
+
+    teammates:
+      strategist:
+        model: "anthropic/claude-3.5-sonnet"
+        role: |
+          You are a content strategy expert. Plan content calendars,
+          define target keywords, and delegate writing tasks.
+        skills: []
+
+      writer:
+        model: "openrouter/deepseek/deepseek-r1:free"
+        role: |
+          You write engaging, SEO-optimized articles and blog posts.
+          Follow the keyword strategy provided by the strategist.
+        skills:
+          - file_writer
+
+      seo_analyst:
+        model: "google/gemini-2.0-flash"
+        role: |
+          You analyze content for SEO effectiveness. Check keyword
+          density, meta descriptions, heading structure, and
+          readability scores.
+        skills:
+          - read_file
+          - web_search
+        read_only: true
+
+  # ------------------------------------------------------------------
+  # Minimal Team (simplest possible configuration)
+  # ------------------------------------------------------------------
+  solo:
+    lead: worker
+    teammates:
+      worker:
+        model: "ollama/llama3"
+        role: "You are a general-purpose assistant."

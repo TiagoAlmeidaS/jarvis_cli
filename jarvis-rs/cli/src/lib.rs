@@ -9,6 +9,7 @@ pub mod intent_cmd;
 pub mod login;
 pub mod safety_cmd;
 pub mod skills_cmd;
+pub mod teams_cmd;
 
 use clap::Parser;
 use jarvis_common::CliConfigOverrides;

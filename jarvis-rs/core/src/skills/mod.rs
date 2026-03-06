@@ -1,6 +1,7 @@
 pub mod development;
 mod env_var_dependencies;
 pub mod evaluator;
+pub(crate) mod filter;
 pub mod injection;
 pub mod loader;
 pub mod manager;
@@ -19,6 +20,8 @@ pub use evaluator::RuleBasedSkillEvaluator;
 pub use evaluator::SkillEvaluationResult;
 pub use evaluator::SkillEvaluator;
 pub use evaluator::SkillQualityMetrics;
+pub(crate) use filter::filter_skills_by_allowed;
+pub(crate) use filter::filter_skills_ref_by_allowed;
 pub(crate) use injection::SkillInjections;
 pub(crate) use injection::build_skill_injections;
 pub(crate) use injection::collect_explicit_skill_mentions;
