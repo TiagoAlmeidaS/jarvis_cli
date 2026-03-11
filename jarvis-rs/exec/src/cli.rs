@@ -108,6 +108,20 @@ pub enum Command {
 
     /// Run a code review against the current repository.
     Review(ReviewArgs),
+
+    /// Resolve GitHub issues autonomously.
+    Resolve(ResolveArgs),
+}
+
+#[derive(Parser, Debug)]
+pub struct ResolveArgs {
+    /// Repository owner/name (e.g., "owner/repo" or just "repo" for current user).
+    #[arg(value_name = "REPO")]
+    pub repo: String,
+
+    /// Specific issue number to resolve. If not provided, will scan for issues.
+    #[arg(long = "issue", short = 'i')]
+    pub issue: Option<u64>,
 }
 
 #[derive(Args, Debug)]

@@ -5,6 +5,7 @@ use crate::errors::GitHubError;
 use crate::models::PRComment;
 use crate::models::PRCommentCreate;
 use crate::models::PullRequest;
+use crate::models::PullRequestCreateRequest;
 
 /// Get a pull request by number.
 pub async fn get_pr(
@@ -14,6 +15,31 @@ pub async fn get_pr(
     pr_number: u64,
 ) -> Result<PullRequest, GitHubError> {
     let path = format!("/repos/{owner}/{repo}/pulls/{pr_number}");
+    client.get(&path).await
+}
+
+/// Create a new pull request.
+pub async fn create_pr(
+    client: &GitHubClient,
+    owner: &str,
+    repo: &str,
+    pr: PullRequestCreateRequest,
+) -> Result<PullRequest, GitHubError> {
+    let path = format!("/repos/{owner}/{repo}/pulls");
+    client.post(&path, &pr).await
+}
+
+/// List pull requests in a repository.
+pub async fn list_prs(
+    client: &GitHubClient,
+    owner: &str,
+    repo: &str,
+    state: Option<&str>,
+) -> Result<Vec<PullRequest>, GitHubError> {
+    let mut path = format!("/repos/{owner}/{repo}/pulls");
+    if let Some(state) = state {
+        path.push_str(&format!("?state={}", urlencoding::encode(state)));
+    }
     client.get(&path).await
 }
 

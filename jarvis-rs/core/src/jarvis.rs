@@ -2625,6 +2625,9 @@ async fn submission_loop(sess: Arc<Session>, config: Arc<Config>, rx_sub: Receiv
             Op::Review { review_request } => {
                 handlers::review(&sess, &config, sub.id.clone(), review_request).await;
             }
+            Op::Resolve { issue_resolver_request } => {
+                handlers::resolve(&sess, &config, sub.id.clone(), issue_resolver_request).await;
+            }
             _ => {} // Ignore unknown ops; enum is non_exhaustive to allow extensions.
         }
     }
@@ -2635,6 +2638,7 @@ async fn submission_loop(sess: Arc<Session>, config: Arc<Config>, rx_sub: Receiv
 mod handlers {
     use super::SessionSettingsUpdate;
     use super::spawn_review_thread;
+    use crate::features::Feature;
     use crate::Session;
     use crate::TurnContext;
     use crate::config::Config;
@@ -2660,6 +2664,7 @@ mod handlers {
     use jarvis_protocol::protocol::Op;
     use jarvis_protocol::protocol::RemoteSkillDownloadedEvent;
     use jarvis_protocol::protocol::RemoteSkillSummary;
+    use jarvis_protocol::protocol::IssueResolverRequest;
     use jarvis_protocol::protocol::ReviewDecision;
     use jarvis_protocol::protocol::ReviewRequest;
     use jarvis_protocol::protocol::SkillsListEntry;
@@ -3215,6 +3220,28 @@ mod handlers {
         .await;
     }
 
+    pub async fn resolve(
+        sess: &Arc<Session>,
+        config: &Arc<Config>,
+        sub_id: String,
+        issue_resolver_request: IssueResolverRequest,
+    ) {
+        if !config.features.enabled(Feature::AutonomousIssueResolver) {
+            let turn_context = sess.new_default_turn_with_sub_id(sub_id.clone()).await;
+            let event = Event {
+                id: sub_id,
+                msg: EventMsg::Error(ErrorEvent {
+                    message: "Autonomous issue resolver is disabled. Enable it with `[features].autonomous_issue_resolver = true` in config.toml or `--enable autonomous_issue_resolver`."
+                        .to_string(),
+                    jarvis_error_info: Some(JarvisErrorInfo::Other),
+                }),
+            };
+            sess.send_event_raw(event).await;
+            return;
+        }
+        super::do_resolve_issue(sess, config, sub_id, issue_resolver_request).await;
+    }
+
     pub async fn shutdown(sess: &Arc<Session>, sub_id: String) -> bool {
         sess.abort_all_tasks(TurnAbortReason::Interrupted).await;
         sess.services
@@ -3293,6 +3320,199 @@ mod handlers {
             }
         }
     }
+
+}
+
+/// Spawn an issue-resolver thread with the given resolved request.
+pub(crate) async fn spawn_issue_resolver_thread(
+    sess: Arc<Session>,
+    config: Arc<Config>,
+    _parent_turn_context: Arc<TurnContext>,
+    sub_id: String,
+    resolved: crate::issue_resolver_prompts::ResolvedIssueResolver,
+) {
+    use crate::issue_resolver::IssueResolverParams;
+    use crate::issue_resolver::IssueResolverTask;
+
+    let turn_context = sess.new_default_turn_with_sub_id(sub_id.clone()).await;
+    sess.refresh_mcp_servers_if_requested(&turn_context).await;
+
+    let params = IssueResolverParams {
+        github_pat: resolved.github_pat.clone(),
+        owner: resolved.owner.clone(),
+        repo: resolved.repo.clone(),
+        issue_number: resolved.issue_number.unwrap_or(0),
+    };
+
+    let task = IssueResolverTask::new(params);
+
+    let prompt = resolved.prompt.clone();
+    let owner = resolved.owner.clone();
+    let repo = resolved.repo.clone();
+    let issue_number = resolved.issue_number;
+
+    let input: Vec<UserInput> = vec![UserInput::Text {
+        text: prompt,
+        text_elements: Vec::new(),
+    }];
+
+    sess.spawn_task(turn_context.clone(), input, task).await;
+
+    sess.send_event(
+        &turn_context,
+        EventMsg::EnteredIssueResolverMode(jarvis_protocol::protocol::IssueResolverRequest {
+            owner,
+            repo,
+            issue_number,
+        }),
+    )
+    .await;
+}
+
+/// Internal implementation of issue resolution (used by resolve handler).
+async fn do_resolve_issue(
+    sess: &Arc<Session>,
+    config: &Arc<Config>,
+    sub_id: String,
+    resolve_request: jarvis_protocol::protocol::IssueResolverRequest,
+) {
+    use crate::issue_resolver_prompts::resolve_issue_resolver_request;
+
+        let github_pat =
+            match std::env::var("GITHUB_TOKEN").or_else(|_| std::env::var("GITHUB_PAT")) {
+                Ok(token) => token,
+                Err(_) => {
+                    let event = jarvis_protocol::protocol::Event {
+                        id: sub_id.clone(),
+                        msg: jarvis_protocol::protocol::EventMsg::Error(
+                            jarvis_protocol::protocol::ErrorEvent {
+                                message: "GITHUB_TOKEN or GITHUB_PAT environment variable not set"
+                                    .to_string(),
+                                jarvis_error_info: Some(
+                                    jarvis_protocol::protocol::JarvisErrorInfo::Other,
+                                ),
+                            },
+                        ),
+                    };
+                    let turn_context = sess.new_default_turn_with_sub_id(sub_id.clone()).await;
+                    sess.send_event(&turn_context, event.msg).await;
+                    return;
+                }
+            };
+
+        let turn_context = sess.new_default_turn_with_sub_id(sub_id.clone()).await;
+        sess.refresh_mcp_servers_if_requested(&turn_context).await;
+
+        match resolve_issue_resolver_request(resolve_request, github_pat.clone()) {
+            Ok(mut resolved) => {
+                // When issue_number is None (scan mode), scan for the first eligible issue.
+                if resolved.issue_number.is_none() {
+                    use crate::issue_resolver::scanner::IssueScanner;
+                    use crate::issue_resolver::scanner::ScannerConfig;
+
+                    let gh_client = match jarvis_github::GitHubClient::new(github_pat.clone()) {
+                        Ok(c) => c,
+                        Err(e) => {
+                            let event = jarvis_protocol::protocol::Event {
+                                id: sub_id.clone(),
+                                msg: jarvis_protocol::protocol::EventMsg::Error(
+                                    jarvis_protocol::protocol::ErrorEvent {
+                                        message: format!("Failed to create GitHub client: {e}"),
+                                        jarvis_error_info: Some(
+                                            jarvis_protocol::protocol::JarvisErrorInfo::Other,
+                                        ),
+                                    },
+                                ),
+                            };
+                            sess.send_event(&turn_context, event.msg).await;
+                            return;
+                        }
+                    };
+                    let scanner_config = ScannerConfig {
+                        owner: resolved.owner.clone(),
+                        repo: resolved.repo.clone(),
+                        ..ScannerConfig::default()
+                    };
+                    let scanner = IssueScanner::new(&gh_client, scanner_config);
+                    match scanner.scan().await {
+                        Ok(issues) => {
+                            let first = issues.into_iter().next();
+                            match first {
+                                Some(issue) => {
+                                    resolved.issue_number = Some(issue.number);
+                                    resolved.prompt = format!(
+                                        "Resolve GitHub issue #{} in the repository {}/{}.\n\n\
+                                        Use the autonomous issue resolver to:\n\
+                                        1. Analyze the issue using LLM\n\
+                                        2. Create an implementation plan\n\
+                                        3. Execute the implementation\n\
+                                        4. Create a pull request with the fix",
+                                        issue.number, resolved.owner, resolved.repo
+                                    );
+                                }
+                                None => {
+                                    let event = jarvis_protocol::protocol::Event {
+                                        id: sub_id,
+                                        msg: jarvis_protocol::protocol::EventMsg::Error(
+                                            jarvis_protocol::protocol::ErrorEvent {
+                                                message: format!(
+                                                    "No issues found with labels {:?} in {}/{}",
+                                                    ScannerConfig::default().required_labels,
+                                                    resolved.owner,
+                                                    resolved.repo
+                                                ),
+                                                jarvis_error_info: Some(
+                                                    jarvis_protocol::protocol::JarvisErrorInfo::Other,
+                                                ),
+                                            },
+                                        ),
+                                    };
+                                    sess.send_event(&turn_context, event.msg).await;
+                                    return;
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            let event = jarvis_protocol::protocol::Event {
+                                id: sub_id,
+                                msg: jarvis_protocol::protocol::EventMsg::Error(
+                                    jarvis_protocol::protocol::ErrorEvent {
+                                        message: format!("Failed to scan for issues: {e}"),
+                                        jarvis_error_info: Some(
+                                            jarvis_protocol::protocol::JarvisErrorInfo::Other,
+                                        ),
+                                    },
+                                ),
+                            };
+                            sess.send_event(&turn_context, event.msg).await;
+                            return;
+                        }
+                    }
+                }
+                spawn_issue_resolver_thread(
+                    Arc::clone(sess),
+                    Arc::clone(config),
+                    turn_context.clone(),
+                    sub_id,
+                    resolved,
+                )
+                .await;
+            }
+            Err(err) => {
+                let event = jarvis_protocol::protocol::Event {
+                    id: sub_id,
+                    msg: jarvis_protocol::protocol::EventMsg::Error(
+                        jarvis_protocol::protocol::ErrorEvent {
+                            message: err.to_string(),
+                            jarvis_error_info: Some(
+                                jarvis_protocol::protocol::JarvisErrorInfo::Other,
+                            ),
+                        },
+                    ),
+                };
+                sess.send_event(&turn_context, event.msg).await;
+            }
+        }
 }
 
 /// Spawn a review thread using the given prompt.

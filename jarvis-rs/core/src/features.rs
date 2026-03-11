@@ -127,6 +127,8 @@ pub enum Feature {
     Personality,
     /// Use the Responses API WebSocket transport for OpenAI by default.
     ResponsesWebsockets,
+    /// Enable the autonomous issue resolver pipeline.
+    AutonomousIssueResolver,
 }
 
 impl Feature {
@@ -570,6 +572,12 @@ pub const FEATURES: &[FeatureSpec] = &[
     FeatureSpec {
         id: Feature::ResponsesWebsockets,
         key: "responses_websockets",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
+        id: Feature::AutonomousIssueResolver,
+        key: "autonomous_issue_resolver",
         stage: Stage::UnderDevelopment,
         default_enabled: false,
     },

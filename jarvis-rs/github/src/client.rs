@@ -1,18 +1,32 @@
 //! GitHub API client implementation.
 
 use crate::errors::GitHubError;
+use crate::git::create_ref;
+use crate::git::get_branch_sha;
+use crate::git::get_file_content;
+use crate::git::get_tree;
+use crate::issues::close_issue;
 use crate::issues::create_issue;
+use crate::issues::get_issue;
+use crate::issues::list_issue_comments;
 use crate::issues::list_issues;
 use crate::issues::update_issue;
+use crate::models::FileContent;
+use crate::models::GitRef;
+use crate::models::GitTree;
 use crate::models::Issue;
+use crate::models::IssueComment;
 use crate::models::IssueCreateRequest;
 use crate::models::IssueUpdateRequest;
 use crate::models::PRComment;
 use crate::models::PullRequest;
+use crate::models::PullRequestCreateRequest;
 use crate::models::Repository;
 use crate::pull_requests::comment_pr;
+use crate::pull_requests::create_pr;
 use crate::pull_requests::get_pr;
 use crate::pull_requests::list_pr_comments;
+use crate::pull_requests::list_prs;
 use crate::repositories::clone_repo;
 use crate::repositories::get_repo;
 use crate::repositories::list_repositories;
@@ -25,6 +39,7 @@ const DEFAULT_API_BASE_URL: &str = "https://api.github.com";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Client for interacting with the GitHub API.
+#[derive(Debug)]
 pub struct GitHubClient {
     client: Client,
     base_url: String,
@@ -259,6 +274,98 @@ impl GitHubClient {
         use_ssh: bool,
     ) -> Result<String, GitHubError> {
         clone_repo(self, owner, repo, use_ssh).await
+    }
+
+    /// Get a single issue by number.
+    pub async fn get_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        issue_number: u64,
+    ) -> Result<Issue, GitHubError> {
+        get_issue(self, owner, repo, issue_number).await
+    }
+
+    /// Close an issue.
+    pub async fn close_issue(
+        &self,
+        owner: &str,
+        repo: &str,
+        issue_number: u64,
+    ) -> Result<Issue, GitHubError> {
+        close_issue(self, owner, repo, issue_number).await
+    }
+
+    /// List comments on an issue.
+    pub async fn list_issue_comments(
+        &self,
+        owner: &str,
+        repo: &str,
+        issue_number: u64,
+    ) -> Result<Vec<IssueComment>, GitHubError> {
+        list_issue_comments(self, owner, repo, issue_number).await
+    }
+
+    /// Create a new pull request.
+    pub async fn create_pr(
+        &self,
+        owner: &str,
+        repo: &str,
+        pr: PullRequestCreateRequest,
+    ) -> Result<PullRequest, GitHubError> {
+        create_pr(self, owner, repo, pr).await
+    }
+
+    /// List pull requests in a repository.
+    pub async fn list_prs(
+        &self,
+        owner: &str,
+        repo: &str,
+        state: Option<&str>,
+    ) -> Result<Vec<PullRequest>, GitHubError> {
+        list_prs(self, owner, repo, state).await
+    }
+
+    /// Create a new Git reference (branch).
+    pub async fn create_branch(
+        &self,
+        owner: &str,
+        repo: &str,
+        branch_name: &str,
+        from_sha: &str,
+    ) -> Result<GitRef, GitHubError> {
+        create_ref(self, owner, repo, branch_name, from_sha).await
+    }
+
+    /// Get the SHA of a branch.
+    pub async fn get_branch_sha(
+        &self,
+        owner: &str,
+        repo: &str,
+        branch: &str,
+    ) -> Result<String, GitHubError> {
+        get_branch_sha(self, owner, repo, branch).await
+    }
+
+    /// Get the tree of a repository (recursive).
+    pub async fn get_tree(
+        &self,
+        owner: &str,
+        repo: &str,
+        tree_sha: &str,
+    ) -> Result<GitTree, GitHubError> {
+        get_tree(self, owner, repo, tree_sha).await
+    }
+
+    /// Get file content from a repository.
+    pub async fn get_file_content(
+        &self,
+        owner: &str,
+        repo: &str,
+        file_path: &str,
+        git_ref: Option<&str>,
+    ) -> Result<FileContent, GitHubError> {
+        get_file_content(self, owner, repo, file_path, git_ref).await
     }
 }
 

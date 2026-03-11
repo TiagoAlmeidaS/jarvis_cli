@@ -62,6 +62,62 @@ struct ListIssuesParams {
     labels: Option<Vec<String>>,
 }
 
+#[derive(Debug, Deserialize)]
+struct GetIssueParams {
+    owner: String,
+    repo: String,
+    issue_number: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct CloseIssueParams {
+    owner: String,
+    repo: String,
+    issue_number: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct ListIssueCommentsParams {
+    owner: String,
+    repo: String,
+    issue_number: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreatePRParams {
+    owner: String,
+    repo: String,
+    title: String,
+    body: Option<String>,
+    head: String,
+    base: String,
+    draft: Option<bool>,
+}
+
+#[derive(Debug, Deserialize)]
+struct CreateBranchParams {
+    owner: String,
+    repo: String,
+    branch: String,
+    from_branch: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GetFileContentParams {
+    owner: String,
+    repo: String,
+    path: String,
+    #[serde(rename = "ref")]
+    git_ref: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GetRepoTreeParams {
+    owner: String,
+    repo: String,
+    branch: Option<String>,
+}
+
 #[derive(Debug, Serialize)]
 struct GitHubToolOutput {
     success: bool,
@@ -268,6 +324,253 @@ impl GitHubHandler {
         })
     }
 
+    async fn handle_get_issue(
+        params: GetIssueParams,
+        config: &Config,
+        secrets_manager: &SecretsManager,
+    ) -> Result<ToolOutput, FunctionCallError> {
+        let client = Self::get_client(config, secrets_manager).await?;
+
+        let issue = client
+            .get_issue(&params.owner, &params.repo, params.issue_number)
+            .await
+            .map_err(|e| Self::format_error("get_issue", e))?;
+
+        let output = GitHubToolOutput {
+            success: true,
+            message: format!("Retrieved issue #{}: {}", issue.number, issue.title),
+            data: Some(serde_json::to_value(&issue).unwrap()),
+        };
+        Ok(ToolOutput::Function {
+            content: serde_json::to_string(&output).unwrap(),
+            content_items: None,
+            success: Some(true),
+        })
+    }
+
+    async fn handle_close_issue(
+        params: CloseIssueParams,
+        config: &Config,
+        secrets_manager: &SecretsManager,
+    ) -> Result<ToolOutput, FunctionCallError> {
+        let client = Self::get_client(config, secrets_manager).await?;
+
+        let issue = client
+            .close_issue(&params.owner, &params.repo, params.issue_number)
+            .await
+            .map_err(|e| Self::format_error("close_issue", e))?;
+
+        let output = GitHubToolOutput {
+            success: true,
+            message: format!("Closed issue #{}: {}", issue.number, issue.title),
+            data: Some(serde_json::to_value(&issue).unwrap()),
+        };
+        Ok(ToolOutput::Function {
+            content: serde_json::to_string(&output).unwrap(),
+            content_items: None,
+            success: Some(true),
+        })
+    }
+
+    async fn handle_list_issue_comments(
+        params: ListIssueCommentsParams,
+        config: &Config,
+        secrets_manager: &SecretsManager,
+    ) -> Result<ToolOutput, FunctionCallError> {
+        let client = Self::get_client(config, secrets_manager).await?;
+
+        let comments = client
+            .list_issue_comments(&params.owner, &params.repo, params.issue_number)
+            .await
+            .map_err(|e| Self::format_error("list_issue_comments", e))?;
+
+        let output = GitHubToolOutput {
+            success: true,
+            message: format!(
+                "Found {} comments on issue #{}",
+                comments.len(),
+                params.issue_number
+            ),
+            data: Some(serde_json::to_value(&comments).unwrap()),
+        };
+        Ok(ToolOutput::Function {
+            content: serde_json::to_string(&output).unwrap(),
+            content_items: None,
+            success: Some(true),
+        })
+    }
+
+    async fn handle_create_pr(
+        params: CreatePRParams,
+        config: &Config,
+        secrets_manager: &SecretsManager,
+    ) -> Result<ToolOutput, FunctionCallError> {
+        let client = Self::get_client(config, secrets_manager).await?;
+
+        let pr_request = jarvis_github::models::PullRequestCreateRequest {
+            title: params.title,
+            body: params.body,
+            head: params.head,
+            base: params.base,
+            draft: params.draft,
+        };
+
+        let pr = client
+            .create_pr(&params.owner, &params.repo, pr_request)
+            .await
+            .map_err(|e| Self::format_error("create_pr", e))?;
+
+        let output = GitHubToolOutput {
+            success: true,
+            message: format!("Created PR #{}: {}", pr.number, pr.title),
+            data: Some(serde_json::to_value(&pr).unwrap()),
+        };
+        Ok(ToolOutput::Function {
+            content: serde_json::to_string(&output).unwrap(),
+            content_items: None,
+            success: Some(true),
+        })
+    }
+
+    async fn handle_create_branch(
+        params: CreateBranchParams,
+        config: &Config,
+        secrets_manager: &SecretsManager,
+    ) -> Result<ToolOutput, FunctionCallError> {
+        let client = Self::get_client(config, secrets_manager).await?;
+
+        // Get the SHA to branch from
+        let from_branch = params.from_branch.unwrap_or_else(|| {
+            // Will be resolved below via get_repo
+            String::new()
+        });
+
+        let from_branch = if from_branch.is_empty() {
+            // Get default branch from repo
+            let repo = client
+                .get_repo(&params.owner, &params.repo)
+                .await
+                .map_err(|e| Self::format_error("create_branch (get_repo)", e))?;
+            repo.default_branch
+        } else {
+            from_branch
+        };
+
+        let sha = client
+            .get_branch_sha(&params.owner, &params.repo, &from_branch)
+            .await
+            .map_err(|e| Self::format_error("create_branch (get_sha)", e))?;
+
+        let git_ref = client
+            .create_branch(&params.owner, &params.repo, &params.branch, &sha)
+            .await
+            .map_err(|e| Self::format_error("create_branch", e))?;
+
+        let output = GitHubToolOutput {
+            success: true,
+            message: format!(
+                "Created branch '{}' from '{}' (SHA: {})",
+                params.branch,
+                from_branch,
+                &git_ref.object.sha[..7]
+            ),
+            data: Some(serde_json::to_value(&git_ref).unwrap()),
+        };
+        Ok(ToolOutput::Function {
+            content: serde_json::to_string(&output).unwrap(),
+            content_items: None,
+            success: Some(true),
+        })
+    }
+
+    async fn handle_get_file_content(
+        params: GetFileContentParams,
+        config: &Config,
+        secrets_manager: &SecretsManager,
+    ) -> Result<ToolOutput, FunctionCallError> {
+        let client = Self::get_client(config, secrets_manager).await?;
+
+        let file = client
+            .get_file_content(
+                &params.owner,
+                &params.repo,
+                &params.path,
+                params.git_ref.as_deref(),
+            )
+            .await
+            .map_err(|e| Self::format_error("get_file_content", e))?;
+
+        let decoded = file.decoded_content();
+        let output = GitHubToolOutput {
+            success: true,
+            message: format!("Retrieved file: {} ({} bytes)", file.path, file.size),
+            data: Some(serde_json::json!({
+                "path": file.path,
+                "size": file.size,
+                "sha": file.sha,
+                "content": decoded,
+                "html_url": file.html_url,
+            })),
+        };
+        Ok(ToolOutput::Function {
+            content: serde_json::to_string(&output).unwrap(),
+            content_items: None,
+            success: Some(true),
+        })
+    }
+
+    async fn handle_get_repo_tree(
+        params: GetRepoTreeParams,
+        config: &Config,
+        secrets_manager: &SecretsManager,
+    ) -> Result<ToolOutput, FunctionCallError> {
+        let client = Self::get_client(config, secrets_manager).await?;
+
+        // Get the branch to use
+        let branch = if let Some(branch) = params.branch {
+            branch
+        } else {
+            let repo = client
+                .get_repo(&params.owner, &params.repo)
+                .await
+                .map_err(|e| Self::format_error("get_repo_tree (get_repo)", e))?;
+            repo.default_branch
+        };
+
+        let sha = client
+            .get_branch_sha(&params.owner, &params.repo, &branch)
+            .await
+            .map_err(|e| Self::format_error("get_repo_tree (get_sha)", e))?;
+
+        let tree = client
+            .get_tree(&params.owner, &params.repo, &sha)
+            .await
+            .map_err(|e| Self::format_error("get_repo_tree", e))?;
+
+        let file_paths: Vec<&str> = tree.tree.iter().map(|entry| entry.path.as_str()).collect();
+
+        let output = GitHubToolOutput {
+            success: true,
+            message: format!(
+                "Repository tree for branch '{}': {} entries{}",
+                branch,
+                tree.tree.len(),
+                if tree.truncated { " (truncated)" } else { "" }
+            ),
+            data: Some(serde_json::json!({
+                "branch": branch,
+                "sha": tree.sha,
+                "truncated": tree.truncated,
+                "files": file_paths,
+            })),
+        };
+        Ok(ToolOutput::Function {
+            content: serde_json::to_string(&output).unwrap(),
+            content_items: None,
+            success: Some(true),
+        })
+    }
+
     fn format_error(operation: &str, error: GitHubError) -> FunctionCallError {
         let message = match error {
             GitHubError::Authentication(msg) => {
@@ -347,6 +650,34 @@ impl ToolHandler for GitHubHandler {
             "github_list_issues" => {
                 let params: ListIssuesParams = parse_arguments(&arguments)?;
                 Self::handle_list_issues(params, config, &secrets_manager).await
+            }
+            "github_get_issue" => {
+                let params: GetIssueParams = parse_arguments(&arguments)?;
+                Self::handle_get_issue(params, config, &secrets_manager).await
+            }
+            "github_close_issue" => {
+                let params: CloseIssueParams = parse_arguments(&arguments)?;
+                Self::handle_close_issue(params, config, &secrets_manager).await
+            }
+            "github_list_issue_comments" => {
+                let params: ListIssueCommentsParams = parse_arguments(&arguments)?;
+                Self::handle_list_issue_comments(params, config, &secrets_manager).await
+            }
+            "github_create_pr" => {
+                let params: CreatePRParams = parse_arguments(&arguments)?;
+                Self::handle_create_pr(params, config, &secrets_manager).await
+            }
+            "github_create_branch" => {
+                let params: CreateBranchParams = parse_arguments(&arguments)?;
+                Self::handle_create_branch(params, config, &secrets_manager).await
+            }
+            "github_get_file_content" => {
+                let params: GetFileContentParams = parse_arguments(&arguments)?;
+                Self::handle_get_file_content(params, config, &secrets_manager).await
+            }
+            "github_get_repo_tree" => {
+                let params: GetRepoTreeParams = parse_arguments(&arguments)?;
+                Self::handle_get_repo_tree(params, config, &secrets_manager).await
             }
             _ => Err(FunctionCallError::RespondToModel(format!(
                 "Unknown GitHub tool: {tool_name}"

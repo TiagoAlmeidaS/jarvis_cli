@@ -4490,6 +4490,7 @@ dependencies = [
  "supports-color 3.0.2",
  "tempfile",
  "tokio",
+ "toml 0.9.11+spec-1.1.0",
  "tracing",
  "tracing-subscriber",
  "ts-rs",
@@ -4619,6 +4620,7 @@ name = "jarvis-github"
 version = "0.0.0"
 dependencies = [
  "anyhow",
+ "base64 0.22.1",
  "http 1.4.0",
  "pretty_assertions",
  "reqwest",

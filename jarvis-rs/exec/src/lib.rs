@@ -12,6 +12,7 @@ pub mod exec_events;
 
 pub use cli::Cli;
 pub use cli::Command;
+pub use cli::ResolveArgs;
 pub use cli::ReviewArgs;
 use event_processor_with_human_output::EventProcessorWithHumanOutput;
 use event_processor_with_jsonl_output::EventProcessorWithJsonOutput;
@@ -41,6 +42,7 @@ use jarvis_core::protocol::Op;
 use jarvis_core::protocol::ReviewRequest;
 use jarvis_core::protocol::ReviewTarget;
 use jarvis_core::protocol::SessionSource;
+use jarvis_protocol::protocol::IssueResolverRequest;
 use jarvis_protocol::approvals::ElicitationAction;
 use jarvis_protocol::config_types::SandboxMode;
 use jarvis_protocol::user_input::UserInput;
@@ -82,6 +84,9 @@ enum InitialOperation {
     },
     Review {
         review_request: ReviewRequest,
+    },
+    Resolve {
+        issue_resolver_request: IssueResolverRequest,
     },
 }
 
@@ -152,7 +157,7 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
     };
 
     // Parse `-c` overrides from the CLI.
-    let cli_kv_overrides = match config_overrides.parse_overrides() {
+    let mut cli_kv_overrides = match config_overrides.parse_overrides() {
         Ok(v) => v,
         #[allow(clippy::print_stderr)]
         Err(e) => {
@@ -160,6 +165,14 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
             std::process::exit(1);
         }
     };
+
+    // When running resolve command, enable the autonomous_issue_resolver feature.
+    if matches!(command, Some(ExecCommand::Resolve(_))) {
+        cli_kv_overrides.push((
+            "features.autonomous_issue_resolver".to_string(),
+            toml::Value::Boolean(true),
+        ));
+    }
 
     let resolved_cwd = cwd.clone();
     let config_cwd = match resolved_cwd.as_deref() {
@@ -401,6 +414,26 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
             let summary = jarvis_core::review_prompts::user_facing_hint(&review_request.target);
             (InitialOperation::Review { review_request }, summary)
         }
+        (Some(ExecCommand::Resolve(resolve_cli)), _, _) => {
+            let issue_resolver_request = build_issue_resolver_request(resolve_cli)?;
+            let summary = if let Some(num) = issue_resolver_request.issue_number {
+                format!(
+                    "issue #{} in {}/{}",
+                    num, issue_resolver_request.owner, issue_resolver_request.repo
+                )
+            } else {
+                format!(
+                    "issues in {}/{}",
+                    issue_resolver_request.owner, issue_resolver_request.repo
+                )
+            };
+            (
+                InitialOperation::Resolve {
+                    issue_resolver_request,
+                },
+                summary,
+            )
+        }
         (Some(ExecCommand::Resume(args)), root_prompt, imgs) => {
             let prompt_arg = args
                 .prompt
@@ -558,6 +591,17 @@ pub async fn run_main(cli: Cli, jarvis_linux_sandbox_exe: Option<PathBuf>) -> an
         InitialOperation::Review { review_request } => {
             let task_id = thread.submit(Op::Review { review_request }).await?;
             info!("Sent review request with event ID: {task_id}");
+            task_id
+        }
+        InitialOperation::Resolve {
+            issue_resolver_request,
+        } => {
+            let task_id = thread
+                .submit(Op::Resolve {
+                    issue_resolver_request,
+                })
+                .await?;
+            info!("Sent resolve request with event ID: {task_id}");
             task_id
         }
     };
@@ -824,6 +868,25 @@ fn resolve_prompt(prompt_arg: Option<String>) -> String {
             buffer
         }
     }
+}
+
+fn build_issue_resolver_request(args: ResolveArgs) -> anyhow::Result<IssueResolverRequest> {
+    let (owner, repo) = if let Some((o, r)) = args.repo.split_once('/') {
+        (o.trim().to_string(), r.trim().to_string())
+    } else {
+        anyhow::bail!(
+            "Repository must be in owner/repo format (e.g., octocat/hello-world). Got: {}",
+            args.repo
+        );
+    };
+    if owner.is_empty() || repo.is_empty() {
+        anyhow::bail!("Owner and repo cannot be empty. Use owner/repo format.");
+    }
+    Ok(IssueResolverRequest {
+        owner,
+        repo,
+        issue_number: args.issue,
+    })
 }
 
 fn build_review_request(args: ReviewArgs) -> anyhow::Result<ReviewRequest> {

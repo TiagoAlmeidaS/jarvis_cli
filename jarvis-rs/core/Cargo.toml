@@ -125,7 +125,7 @@ wildmatch = { workspace = true }
 zip = { workspace = true }
 
 [features]
-state = ["dep:jarvis-state"]
+state = ["dep:jarvis-state", "jarvis-state/otel"]
 deterministic_process_ids = []
 test-support = []
 qdrant = ["dep:qdrant-client"]

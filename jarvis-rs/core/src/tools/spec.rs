@@ -1214,6 +1214,309 @@ fn create_github_list_issues_tool() -> ToolSpec {
     })
 }
 
+fn create_github_get_issue_tool() -> ToolSpec {
+    let properties = BTreeMap::from([
+        (
+            "owner".to_string(),
+            JsonSchema::String {
+                description: Some("Repository owner (username or organization)".to_string()),
+            },
+        ),
+        (
+            "repo".to_string(),
+            JsonSchema::String {
+                description: Some("Repository name".to_string()),
+            },
+        ),
+        (
+            "issue_number".to_string(),
+            JsonSchema::Number {
+                description: Some("Issue number".to_string()),
+            },
+        ),
+    ]);
+
+    ToolSpec::Function(ResponsesApiTool {
+        name: "github_get_issue".to_string(),
+        description: "Get a single GitHub issue by number, including full body and metadata. Requires a GitHub PAT token to be configured.".to_string(),
+        strict: false,
+        parameters: JsonSchema::Object {
+            properties,
+            required: Some(vec!["owner".to_string(), "repo".to_string(), "issue_number".to_string()]),
+            additional_properties: Some(false.into()),
+        },
+    })
+}
+
+fn create_github_close_issue_tool() -> ToolSpec {
+    let properties = BTreeMap::from([
+        (
+            "owner".to_string(),
+            JsonSchema::String {
+                description: Some("Repository owner (username or organization)".to_string()),
+            },
+        ),
+        (
+            "repo".to_string(),
+            JsonSchema::String {
+                description: Some("Repository name".to_string()),
+            },
+        ),
+        (
+            "issue_number".to_string(),
+            JsonSchema::Number {
+                description: Some("Issue number to close".to_string()),
+            },
+        ),
+    ]);
+
+    ToolSpec::Function(ResponsesApiTool {
+        name: "github_close_issue".to_string(),
+        description: "Close a GitHub issue. Requires a GitHub PAT token to be configured."
+            .to_string(),
+        strict: false,
+        parameters: JsonSchema::Object {
+            properties,
+            required: Some(vec![
+                "owner".to_string(),
+                "repo".to_string(),
+                "issue_number".to_string(),
+            ]),
+            additional_properties: Some(false.into()),
+        },
+    })
+}
+
+fn create_github_list_issue_comments_tool() -> ToolSpec {
+    let properties = BTreeMap::from([
+        (
+            "owner".to_string(),
+            JsonSchema::String {
+                description: Some("Repository owner (username or organization)".to_string()),
+            },
+        ),
+        (
+            "repo".to_string(),
+            JsonSchema::String {
+                description: Some("Repository name".to_string()),
+            },
+        ),
+        (
+            "issue_number".to_string(),
+            JsonSchema::Number {
+                description: Some("Issue number".to_string()),
+            },
+        ),
+    ]);
+
+    ToolSpec::Function(ResponsesApiTool {
+        name: "github_list_issue_comments".to_string(),
+        description:
+            "List all comments on a GitHub issue. Requires a GitHub PAT token to be configured."
+                .to_string(),
+        strict: false,
+        parameters: JsonSchema::Object {
+            properties,
+            required: Some(vec![
+                "owner".to_string(),
+                "repo".to_string(),
+                "issue_number".to_string(),
+            ]),
+            additional_properties: Some(false.into()),
+        },
+    })
+}
+
+fn create_github_create_pr_tool() -> ToolSpec {
+    let properties = BTreeMap::from([
+        (
+            "owner".to_string(),
+            JsonSchema::String {
+                description: Some("Repository owner (username or organization)".to_string()),
+            },
+        ),
+        (
+            "repo".to_string(),
+            JsonSchema::String {
+                description: Some("Repository name".to_string()),
+            },
+        ),
+        (
+            "title".to_string(),
+            JsonSchema::String {
+                description: Some("Pull request title".to_string()),
+            },
+        ),
+        (
+            "body".to_string(),
+            JsonSchema::String {
+                description: Some("Pull request body/description (supports Markdown)".to_string()),
+            },
+        ),
+        (
+            "head".to_string(),
+            JsonSchema::String {
+                description: Some(
+                    "The name of the branch where your changes are implemented".to_string(),
+                ),
+            },
+        ),
+        (
+            "base".to_string(),
+            JsonSchema::String {
+                description: Some(
+                    "The name of the branch you want the changes pulled into (e.g. 'main')"
+                        .to_string(),
+                ),
+            },
+        ),
+        (
+            "draft".to_string(),
+            JsonSchema::Boolean {
+                description: Some(
+                    "If true, create the PR as a draft. Defaults to false.".to_string(),
+                ),
+            },
+        ),
+    ]);
+
+    ToolSpec::Function(ResponsesApiTool {
+        name: "github_create_pr".to_string(),
+        description:
+            "Create a new pull request on GitHub. Requires a GitHub PAT token to be configured."
+                .to_string(),
+        strict: false,
+        parameters: JsonSchema::Object {
+            properties,
+            required: Some(vec![
+                "owner".to_string(),
+                "repo".to_string(),
+                "title".to_string(),
+                "head".to_string(),
+                "base".to_string(),
+            ]),
+            additional_properties: Some(false.into()),
+        },
+    })
+}
+
+fn create_github_create_branch_tool() -> ToolSpec {
+    let properties = BTreeMap::from([
+        (
+            "owner".to_string(),
+            JsonSchema::String {
+                description: Some("Repository owner (username or organization)".to_string()),
+            },
+        ),
+        (
+            "repo".to_string(),
+            JsonSchema::String {
+                description: Some("Repository name".to_string()),
+            },
+        ),
+        (
+            "branch".to_string(),
+            JsonSchema::String {
+                description: Some("Name for the new branch".to_string()),
+            },
+        ),
+        (
+            "from_branch".to_string(),
+            JsonSchema::String {
+                description: Some("Name of the branch to create from (e.g. 'main'). Defaults to the repo's default branch.".to_string()),
+            },
+        ),
+    ]);
+
+    ToolSpec::Function(ResponsesApiTool {
+        name: "github_create_branch".to_string(),
+        description: "Create a new branch in a GitHub repository. Requires a GitHub PAT token to be configured.".to_string(),
+        strict: false,
+        parameters: JsonSchema::Object {
+            properties,
+            required: Some(vec!["owner".to_string(), "repo".to_string(), "branch".to_string()]),
+            additional_properties: Some(false.into()),
+        },
+    })
+}
+
+fn create_github_get_file_content_tool() -> ToolSpec {
+    let properties = BTreeMap::from([
+        (
+            "owner".to_string(),
+            JsonSchema::String {
+                description: Some("Repository owner (username or organization)".to_string()),
+            },
+        ),
+        (
+            "repo".to_string(),
+            JsonSchema::String {
+                description: Some("Repository name".to_string()),
+            },
+        ),
+        (
+            "path".to_string(),
+            JsonSchema::String {
+                description: Some("Path to the file in the repository".to_string()),
+            },
+        ),
+        (
+            "ref".to_string(),
+            JsonSchema::String {
+                description: Some("Optional git ref (branch, tag, or commit SHA). Defaults to the repo's default branch.".to_string()),
+            },
+        ),
+    ]);
+
+    ToolSpec::Function(ResponsesApiTool {
+        name: "github_get_file_content".to_string(),
+        description: "Get the content of a file from a GitHub repository. Returns the decoded file content. Requires a GitHub PAT token to be configured.".to_string(),
+        strict: false,
+        parameters: JsonSchema::Object {
+            properties,
+            required: Some(vec!["owner".to_string(), "repo".to_string(), "path".to_string()]),
+            additional_properties: Some(false.into()),
+        },
+    })
+}
+
+fn create_github_get_repo_tree_tool() -> ToolSpec {
+    let properties = BTreeMap::from([
+        (
+            "owner".to_string(),
+            JsonSchema::String {
+                description: Some("Repository owner (username or organization)".to_string()),
+            },
+        ),
+        (
+            "repo".to_string(),
+            JsonSchema::String {
+                description: Some("Repository name".to_string()),
+            },
+        ),
+        (
+            "branch".to_string(),
+            JsonSchema::String {
+                description: Some(
+                    "Branch name to get the tree for. Defaults to the repo's default branch."
+                        .to_string(),
+                ),
+            },
+        ),
+    ]);
+
+    ToolSpec::Function(ResponsesApiTool {
+        name: "github_get_repo_tree".to_string(),
+        description: "Get the full file tree of a GitHub repository. Returns all file and directory paths recursively. Requires a GitHub PAT token to be configured.".to_string(),
+        strict: false,
+        parameters: JsonSchema::Object {
+            properties,
+            required: Some(vec!["owner".to_string(), "repo".to_string()]),
+            additional_properties: Some(false.into()),
+        },
+    })
+}
+
 fn create_read_mcp_resource_tool() -> ToolSpec {
     let properties = BTreeMap::from([
         (
@@ -1605,11 +1908,25 @@ pub(crate) fn build_specs(
     builder.push_spec_with_parallel_support(create_github_list_repos_tool(), true);
     builder.push_spec_with_parallel_support(create_github_clone_repo_tool(), true);
     builder.push_spec_with_parallel_support(create_github_list_issues_tool(), true);
+    builder.push_spec_with_parallel_support(create_github_get_issue_tool(), true);
+    builder.push_spec_with_parallel_support(create_github_close_issue_tool(), true);
+    builder.push_spec_with_parallel_support(create_github_list_issue_comments_tool(), true);
+    builder.push_spec_with_parallel_support(create_github_create_pr_tool(), true);
+    builder.push_spec_with_parallel_support(create_github_create_branch_tool(), true);
+    builder.push_spec_with_parallel_support(create_github_get_file_content_tool(), true);
+    builder.push_spec_with_parallel_support(create_github_get_repo_tree_tool(), true);
     builder.register_handler("github_create_issue", github_handler.clone());
     builder.register_handler("github_comment_pr", github_handler.clone());
     builder.register_handler("github_list_repos", github_handler.clone());
     builder.register_handler("github_clone_repo", github_handler.clone());
-    builder.register_handler("github_list_issues", github_handler);
+    builder.register_handler("github_list_issues", github_handler.clone());
+    builder.register_handler("github_get_issue", github_handler.clone());
+    builder.register_handler("github_close_issue", github_handler.clone());
+    builder.register_handler("github_list_issue_comments", github_handler.clone());
+    builder.register_handler("github_create_pr", github_handler.clone());
+    builder.register_handler("github_create_branch", github_handler.clone());
+    builder.register_handler("github_get_file_content", github_handler.clone());
+    builder.register_handler("github_get_repo_tree", github_handler);
 
     if config.collab_tools {
         let collab_handler = Arc::new(CollabHandler);
@@ -1842,6 +2159,13 @@ mod tests {
             create_github_list_repos_tool(),
             create_github_clone_repo_tool(),
             create_github_list_issues_tool(),
+            create_github_get_issue_tool(),
+            create_github_close_issue_tool(),
+            create_github_list_issue_comments_tool(),
+            create_github_create_pr_tool(),
+            create_github_create_branch_tool(),
+            create_github_get_file_content_tool(),
+            create_github_get_repo_tree_tool(),
             ToolSpec::WebSearch {
                 external_web_access: Some(true),
             },
@@ -2012,6 +2336,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2039,6 +2370,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2068,6 +2406,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2097,6 +2442,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2123,6 +2475,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2150,6 +2509,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2176,6 +2542,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2203,6 +2576,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2231,6 +2611,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }
@@ -2259,6 +2646,13 @@ mod tests {
                 "github_list_repos",
                 "github_clone_repo",
                 "github_list_issues",
+                "github_get_issue",
+                "github_close_issue",
+                "github_list_issue_comments",
+                "github_create_pr",
+                "github_create_branch",
+                "github_get_file_content",
+                "github_get_repo_tree",
             ],
         );
     }

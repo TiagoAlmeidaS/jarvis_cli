@@ -1,4 +1,4 @@
-﻿//! Defines the protocol for a Jarvis session between a client and an agent.
+//! Defines the protocol for a Jarvis session between a client and an agent.
 //!
 //! Uses a SQ (Submission Queue) / EQ (Event Queue) pattern to asynchronously communicate
 //! between user and agent.
@@ -299,6 +299,11 @@ pub enum Op {
 
     /// Request a code review from the agent.
     Review { review_request: ReviewRequest },
+
+    /// Request to resolve GitHub issues autonomously.
+    Resolve {
+        issue_resolver_request: IssueResolverRequest,
+    },
 
     /// Request to shut down Jarvis instance.
     Shutdown,
@@ -849,6 +854,9 @@ pub enum EventMsg {
 
     /// Entered review mode.
     EnteredReviewMode(ReviewRequest),
+
+    /// Entered issue resolver mode.
+    EnteredIssueResolverMode(IssueResolverRequest),
 
     /// Exited review mode with an optional final result to apply.
     ExitedReviewMode(ExitedReviewModeEvent),
@@ -1827,6 +1835,30 @@ impl Default for ReviewOutputEvent {
             overall_confidence_score: 0.0,
         }
     }
+}
+
+/// Request to resolve GitHub issues autonomously.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueResolverRequest {
+    /// Repository owner (e.g., "octocat").
+    pub owner: String,
+    /// Repository name (e.g., "hello-world").
+    pub repo: String,
+    /// Specific issue number to resolve. If None, will scan for issues.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub issue_number: Option<u64>,
+}
+
+/// Structured output from the issue resolver.
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, JsonSchema, TS)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueResolverOutputEvent {
+    pub issue_number: u64,
+    pub repo_full_name: String,
+    pub success: bool,
+    pub pr_url: Option<String>,
+    pub summary: String,
 }
 
 /// A single review finding describing an observed issue or recommendation.

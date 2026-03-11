@@ -1,4 +1,4 @@
-﻿use jarvis_common::elapsed::format_duration;
+use jarvis_common::elapsed::format_duration;
 use jarvis_common::elapsed::format_elapsed;
 use jarvis_core::config::Config;
 use jarvis_core::protocol::AgentMessageEvent;
@@ -781,6 +781,7 @@ impl EventProcessor for EventProcessorWithHumanOutput {
             | EventMsg::RawResponseItem(_)
             | EventMsg::UserMessage(_)
             | EventMsg::EnteredReviewMode(_)
+            | EventMsg::EnteredIssueResolverMode(_)
             | EventMsg::ExitedReviewMode(_)
             | EventMsg::AgentMessageDelta(_)
             | EventMsg::AgentReasoningDelta(_)

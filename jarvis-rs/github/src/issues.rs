@@ -3,6 +3,7 @@
 use crate::client::GitHubClient;
 use crate::errors::GitHubError;
 use crate::models::Issue;
+use crate::models::IssueComment;
 use crate::models::IssueCreateRequest;
 use crate::models::IssueUpdateRequest;
 
@@ -58,5 +59,44 @@ pub async fn list_issues(
         path.push_str(&query_params.join("&"));
     }
 
+    client.get(&path).await
+}
+
+/// Get a single issue by number.
+pub async fn get_issue(
+    client: &GitHubClient,
+    owner: &str,
+    repo: &str,
+    issue_number: u64,
+) -> Result<Issue, GitHubError> {
+    let path = format!("/repos/{owner}/{repo}/issues/{issue_number}");
+    client.get(&path).await
+}
+
+/// Close an issue.
+pub async fn close_issue(
+    client: &GitHubClient,
+    owner: &str,
+    repo: &str,
+    issue_number: u64,
+) -> Result<Issue, GitHubError> {
+    let update = IssueUpdateRequest {
+        title: None,
+        body: None,
+        state: Some("closed".to_string()),
+        labels: None,
+        assignees: None,
+    };
+    update_issue(client, owner, repo, issue_number, update).await
+}
+
+/// List comments on an issue.
+pub async fn list_issue_comments(
+    client: &GitHubClient,
+    owner: &str,
+    repo: &str,
+    issue_number: u64,
+) -> Result<Vec<IssueComment>, GitHubError> {
+    let path = format!("/repos/{owner}/{repo}/issues/{issue_number}/comments");
     client.get(&path).await
 }
