@@ -1,21 +1,23 @@
 use async_trait::async_trait;
-use codex_protocol::models::FunctionCallOutputBody;
+use codex_protocol::models::ContentItem;
 use codex_protocol::models::FunctionCallOutputContentItem;
+use codex_protocol::models::ImageDetail;
+use codex_protocol::models::local_image_content_items_with_label_number;
 use codex_protocol::openai_models::InputModality;
+use codex_utils_image::PromptImageMode;
 use serde::Deserialize;
 use tokio::fs;
 
+use crate::features::Feature;
 use crate::function_tool::FunctionCallError;
 use crate::protocol::EventMsg;
 use crate::protocol::ViewImageToolCallEvent;
+use crate::tools::context::FunctionToolOutput;
 use crate::tools::context::ToolInvocation;
-use crate::tools::context::ToolOutput;
 use crate::tools::context::ToolPayload;
 use crate::tools::handlers::parse_arguments;
 use crate::tools::registry::ToolHandler;
 use crate::tools::registry::ToolKind;
-use codex_protocol::models::ContentItem;
-use codex_protocol::models::local_image_content_items_with_label_number;
 
 pub struct ViewImageHandler;
 
@@ -29,11 +31,13 @@ struct ViewImageArgs {
 
 #[async_trait]
 impl ToolHandler for ViewImageHandler {
+    type Output = FunctionToolOutput;
+
     fn kind(&self) -> ToolKind {
         ToolKind::Function
     }
 
-    async fn handle(&self, invocation: ToolInvocation) -> Result<ToolOutput, FunctionCallError> {
+    async fn handle(&self, invocation: ToolInvocation) -> Result<Self::Output, FunctionCallError> {
         if !invocation
             .turn
             .model_info
@@ -81,15 +85,26 @@ impl ToolHandler for ViewImageHandler {
         }
         let event_path = abs_path.clone();
 
-        let content = local_image_content_items_with_label_number(&abs_path, None);
-        let content = content
+        let use_original_detail = turn.config.features.enabled(Feature::ImageDetailOriginal)
+            && turn.model_info.supports_image_detail_original;
+        let image_mode = if use_original_detail {
+            PromptImageMode::Original
+        } else {
+            PromptImageMode::ResizeToFit
+        };
+        let image_detail = use_original_detail.then_some(ImageDetail::Original);
+
+        let content = local_image_content_items_with_label_number(&abs_path, None, image_mode)
             .into_iter()
             .map(|item| match item {
                 ContentItem::InputText { text } => {
                     FunctionCallOutputContentItem::InputText { text }
                 }
                 ContentItem::InputImage { image_url } => {
-                    FunctionCallOutputContentItem::InputImage { image_url }
+                    FunctionCallOutputContentItem::InputImage {
+                        image_url,
+                        detail: image_detail,
+                    }
                 }
                 ContentItem::OutputText { text } => {
                     FunctionCallOutputContentItem::InputText { text }
@@ -107,9 +122,6 @@ impl ToolHandler for ViewImageHandler {
             )
             .await;
 
-        Ok(ToolOutput::Function {
-            body: FunctionCallOutputBody::ContentItems(content),
-            success: Some(true),
-        })
+        Ok(FunctionToolOutput::from_content(content, Some(true)))
     }
 }

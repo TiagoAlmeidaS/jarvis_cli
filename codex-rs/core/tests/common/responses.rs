@@ -390,10 +390,15 @@ impl WebSocketRequest {
 
 #[derive(Debug, Clone)]
 pub struct WebSocketHandshake {
+    uri: String,
     headers: Vec<(String, String)>,
 }
 
 impl WebSocketHandshake {
+    pub fn uri(&self) -> &str {
+        &self.uri
+    }
+
     pub fn header(&self, name: &str) -> Option<String> {
         self.headers
             .iter()
@@ -411,6 +416,11 @@ pub struct WebSocketConnectionConfig {
     /// Tests use this to force websocket setup into an in-flight state so first-turn warmup paths
     /// can be exercised deterministically.
     pub accept_delay: Option<Duration>,
+    /// Whether the server should send a websocket close frame after all scripted responses.
+    ///
+    /// Tests can disable this to simulate a peer that surfaces a terminal event but never
+    /// completes the close handshake.
+    pub close_after_requests: bool,
 }
 
 pub struct WebSocketTestServer {
@@ -577,25 +587,6 @@ pub fn ev_completed(id: &str) -> Value {
     })
 }
 
-pub fn ev_done() -> Value {
-    serde_json::json!({
-        "type": "response.done",
-        "response": {
-            "usage": {"input_tokens":0,"input_tokens_details":null,"output_tokens":0,"output_tokens_details":null,"total_tokens":0}
-        }
-    })
-}
-
-pub fn ev_done_with_id(id: &str) -> Value {
-    serde_json::json!({
-        "type": "response.done",
-        "response": {
-            "id": id,
-            "usage": {"input_tokens":0,"input_tokens_details":null,"output_tokens":0,"output_tokens_details":null,"total_tokens":0}
-        }
-    })
-}
-
 /// Convenience: SSE event for a created response with a specific id.
 pub fn ev_response_created(id: &str) -> Value {
     serde_json::json!({
@@ -749,6 +740,24 @@ pub fn ev_web_search_call_done(id: &str, status: &str, query: &str) -> Value {
             "id": id,
             "status": status,
             "action": {"type": "search", "query": query}
+        }
+    })
+}
+
+pub fn ev_image_generation_call(
+    id: &str,
+    status: &str,
+    revised_prompt: &str,
+    result: &str,
+) -> Value {
+    serde_json::json!({
+        "type": "response.output_item.done",
+        "item": {
+            "type": "image_generation_call",
+            "id": id,
+            "status": status,
+            "revised_prompt": revised_prompt,
+            "result": result,
         }
     })
 }
@@ -1164,6 +1173,7 @@ pub async fn start_websocket_server(connections: Vec<Vec<Vec<Value>>>) -> WebSoc
             requests,
             response_headers: Vec::new(),
             accept_delay: None,
+            close_after_requests: true,
         })
         .collect();
     start_websocket_server_with_headers(connections).await
@@ -1223,10 +1233,10 @@ pub async fn start_websocket_server_with_headers(
                             .map(|value| (name.as_str().to_string(), value.to_string()))
                     })
                     .collect();
-                handshake_log
-                    .lock()
-                    .unwrap()
-                    .push(WebSocketHandshake { headers });
+                handshake_log.lock().unwrap().push(WebSocketHandshake {
+                    uri: req.uri().to_string(),
+                    headers,
+                });
 
                 let headers_mut = response.headers_mut();
                 for (name, value) in &response_headers {
@@ -1257,6 +1267,7 @@ pub async fn start_websocket_server_with_headers(
                 log.push(Vec::new());
                 log.len() - 1
             };
+            let close_after_requests = connection.close_after_requests;
             for request_events in connection.requests {
                 let Some(Ok(message)) = ws_stream.next().await else {
                     break;
@@ -1320,7 +1331,12 @@ pub async fn start_websocket_server_with_headers(
                 }
             }
 
-            let _ = ws_stream.close(None).await;
+            if close_after_requests {
+                let _ = ws_stream.close(None).await;
+            } else {
+                let _ = shutdown_rx.await;
+                return;
+            }
 
             if connections.lock().unwrap().is_empty() {
                 return;
