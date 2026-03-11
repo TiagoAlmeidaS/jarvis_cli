@@ -1,0 +1,59 @@
+# =============================================================================
+# Jarvis — Servidor em casa (Docker Compose) — OpenRouter, LLM de baixo custo
+# =============================================================================
+# Uso:  docker compose -f docker-compose.homeserver.yml up -d
+#
+# Foco: rodar o daemon no seu servidor doméstico usando OpenRouter com
+# modelos baratos (ex.: mistral-nemo, llama 3.2). Um único container;
+# o .env deve ter OPENROUTER_API_KEY.
+#
+# No pipeline, use provider "openrouter" e um modelo de baixo custo, por exemplo:
+#   "provider": "openrouter", "model": "mistralai/mistral-nemo"
+# Ver: https://openrouter.ai/models (filtrar por preço) e docs/deploy-servidor-casa.md
+# =============================================================================
+
+services:
+  jarvis-daemon:
+    build:
+      context: ./jarvis-rs
+      dockerfile: daemon/Dockerfile
+    image: jarvis-daemon:latest
+    container_name: jarvis-daemon
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    environment:
+      - JARVIS_DAEMON_DB=/home/jarvis/.jarvis/daemon.db
+      - RUST_LOG=${RUST_LOG:-jarvis_daemon=info}
+      - JARVIS_TELEGRAM_BOT_TOKEN=${JARVIS_TELEGRAM_BOT_TOKEN:-}
+      - JARVIS_TELEGRAM_CHAT_ID=${JARVIS_TELEGRAM_CHAT_ID:-}
+      - JARVIS_NOTIFY_HOUR=${JARVIS_NOTIFY_HOUR:-8}
+
+    volumes:
+      - jarvis_daemon_data:/home/jarvis/.jarvis
+
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /home/jarvis/.jarvis/daemon.db"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  jarvis_daemon_data:
+    driver: local

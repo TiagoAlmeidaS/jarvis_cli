@@ -1,7 +1,16 @@
+# =============================================================================
+# Jarvis — Infra VPS (Qdrant, Redis, Postgres, Adminer, Daemon)
+# =============================================================================
+# Uso:  docker compose -f docker-compose.vps.yml up -d
+#
+# Serviços: Qdrant (vetores), Redis (cache), Postgres (dados), Adminer (UI).
+# Daemon: use docker-compose.homeserver.yml separadamente.
+# =============================================================================
+
 version: '3.8'
 
 services:
-  # Qdrant Vector Database para RAG
+  # Qdrant — vetores para RAG
   qdrant:
     image: qdrant/qdrant:latest
     container_name: jarvis-qdrant
@@ -20,22 +29,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # Ollama (já existente - mantido para referência)
-  ollama:
-    image: ollama/ollama:latest
-    container_name: jarvis-ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-  # Redis (para cache e sessões)
+  # Redis — cache e sessões
   redis:
     image: redis:7-alpine
     container_name: jarvis-redis
@@ -51,8 +45,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # PostgreSQL (para dados persistentes - alternativa ao SQLite)
-  # Mais adequado que SQLite para acesso remoto
+  # PostgreSQL — dados persistentes
   postgres:
     image: postgres:15-alpine
     container_name: jarvis-postgres
@@ -71,7 +64,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # Adminer (UI para gerenciar PostgreSQL)
+  # Adminer — UI para Postgres (porta 8080)
   adminer:
     image: adminer:latest
     container_name: jarvis-adminer
@@ -81,35 +74,12 @@ services:
     environment:
       ADMINER_DEFAULT_SERVER: postgres
 
-  # Jarvis Daemon - automação autônoma (SEO, métricas, propostas)
-  jarvis-daemon:
-    build:
-      context: ./jarvis-rs
-      dockerfile: daemon/Dockerfile
-    image: jarvis-daemon:latest
-    container_name: jarvis-daemon
-    restart: unless-stopped
-    env_file:
-      - .env
-    environment:
-      - JARVIS_DAEMON_DB=/home/jarvis/.jarvis/daemon.db
-      - RUST_LOG=${RUST_LOG:-jarvis_daemon=info}
-    volumes:
-      - jarvis_daemon_data:/home/jarvis/.jarvis
-    # Monte credentials/ se tiver google.json (OAuth)
-    # volumes:
-    #   - ./credentials:/home/jarvis/.jarvis/credentials:ro
-
 volumes:
   qdrant_storage:
-    driver: local
-  ollama_data:
     driver: local
   redis_data:
     driver: local
   postgres_data:
-    driver: local
-  jarvis_daemon_data:
     driver: local
 
 networks:
