@@ -1,3 +1,10 @@
+//! Implements the collaboration tool surface for spawning and managing sub-agents.
+//!
+//! This handler translates model tool calls into `AgentControl` operations and keeps spawned
+//! agents aligned with the live turn that created them. Sub-agents start from the turn's effective
+//! config, inherit runtime-only state such as provider, approval policy, sandbox, and cwd, and
+//! then optionally layer role-specific config on top.
+
 use crate::agent::AgentStatus;
 use crate::agent::exceeds_thread_spawn_depth_limit;
 use crate::codex::Session;
@@ -6,8 +13,9 @@ use crate::config::Config;
 use crate::error::CodexErr;
 use crate::features::Feature;
 use crate::function_tool::FunctionCallError;
+use crate::models_manager::manager::RefreshStrategy;
+use crate::tools::context::FunctionToolOutput;
 use crate::tools::context::ToolInvocation;
-use crate::tools::context::ToolOutput;
 use crate::tools::context::ToolPayload;
 use crate::tools::handlers::parse_arguments;
 use crate::tools::registry::ToolHandler;
@@ -15,7 +23,8 @@ use crate::tools::registry::ToolKind;
 use async_trait::async_trait;
 use codex_protocol::ThreadId;
 use codex_protocol::models::BaseInstructions;
-use codex_protocol::models::FunctionCallOutputBody;
+use codex_protocol::openai_models::ReasoningEffort;
+use codex_protocol::openai_models::ReasoningEffortPreset;
 use codex_protocol::protocol::CollabAgentInteractionBeginEvent;
 use codex_protocol::protocol::CollabAgentInteractionEndEvent;
 use codex_protocol::protocol::CollabAgentRef;
@@ -35,6 +44,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use std::collections::HashMap;
 
+/// Function-tool handler for the multi-agent collaboration API.
 pub struct MultiAgentHandler;
 
 /// Minimum wait timeout to prevent tight polling loops from burning CPU.
@@ -49,6 +59,8 @@ struct CloseAgentArgs {
 
 #[async_trait]
 impl ToolHandler for MultiAgentHandler {
+    type Output = FunctionToolOutput;
+
     fn kind(&self) -> ToolKind {
         ToolKind::Function
     }
@@ -57,7 +69,7 @@ impl ToolHandler for MultiAgentHandler {
         matches!(payload, ToolPayload::Function { .. })
     }
 
-    async fn handle(&self, invocation: ToolInvocation) -> Result<ToolOutput, FunctionCallError> {
+    async fn handle(&self, invocation: ToolInvocation) -> Result<Self::Output, FunctionCallError> {
         let ToolInvocation {
             session,
             turn,
@@ -104,6 +116,8 @@ mod spawn {
         message: Option<String>,
         items: Option<Vec<UserInput>>,
         agent_type: Option<String>,
+        model: Option<String>,
+        reasoning_effort: Option<ReasoningEffort>,
         #[serde(default)]
         fork_context: bool,
     }
@@ -119,7 +133,7 @@ mod spawn {
         turn: Arc<TurnContext>,
         call_id: String,
         arguments: String,
-    ) -> Result<ToolOutput, FunctionCallError> {
+    ) -> Result<FunctionToolOutput, FunctionCallError> {
         let args: SpawnAgentArgs = parse_arguments(&arguments)?;
         let role_name = args
             .agent_type
@@ -143,12 +157,22 @@ mod spawn {
                     call_id: call_id.clone(),
                     sender_thread_id: session.conversation_id,
                     prompt: prompt.clone(),
+                    model: args.model.clone().unwrap_or_default(),
+                    reasoning_effort: args.reasoning_effort.unwrap_or_default(),
                 }
                 .into(),
             )
             .await;
         let mut config =
             build_agent_spawn_config(&session.get_base_instructions().await, turn.as_ref())?;
+        apply_requested_spawn_agent_model_overrides(
+            &session,
+            turn.as_ref(),
+            &mut config,
+            args.model.as_deref(),
+            args.reasoning_effort,
+        )
+        .await?;
         apply_role_to_config(&mut config, role_name)
             .await
             .map_err(FunctionCallError::RespondToModel)?;
@@ -206,7 +230,7 @@ mod spawn {
             .await;
         let new_thread_id = result?;
         let role_tag = role_name.unwrap_or(DEFAULT_ROLE_NAME);
-        turn.otel_manager
+        turn.session_telemetry
             .counter("codex.multi_agent.spawn", 1, &[("role", role_tag)]);
 
         let content = serde_json::to_string(&SpawnAgentResult {
@@ -217,10 +241,7 @@ mod spawn {
             FunctionCallError::Fatal(format!("failed to serialize spawn_agent result: {err}"))
         })?;
 
-        Ok(ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success: Some(true),
-        })
+        Ok(FunctionToolOutput::from_text(content, Some(true)))
     }
 }
 
@@ -247,7 +268,7 @@ mod send_input {
         turn: Arc<TurnContext>,
         call_id: String,
         arguments: String,
-    ) -> Result<ToolOutput, FunctionCallError> {
+    ) -> Result<FunctionToolOutput, FunctionCallError> {
         let args: SendInputArgs = parse_arguments(&arguments)?;
         let receiver_thread_id = agent_id(&args.id)?;
         let input_items = parse_collab_input(args.message, args.items)?;
@@ -310,10 +331,7 @@ mod send_input {
             FunctionCallError::Fatal(format!("failed to serialize send_input result: {err}"))
         })?;
 
-        Ok(ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success: Some(true),
-        })
+        Ok(FunctionToolOutput::from_text(content, Some(true)))
     }
 }
 
@@ -337,7 +355,7 @@ mod resume_agent {
         turn: Arc<TurnContext>,
         call_id: String,
         arguments: String,
-    ) -> Result<ToolOutput, FunctionCallError> {
+    ) -> Result<FunctionToolOutput, FunctionCallError> {
         let args: ResumeAgentArgs = parse_arguments(&arguments)?;
         let receiver_thread_id = agent_id(&args.id)?;
         let (receiver_agent_nickname, receiver_agent_role) = session
@@ -417,17 +435,14 @@ mod resume_agent {
         if let Some(err) = error {
             return Err(err);
         }
-        turn.otel_manager
+        turn.session_telemetry
             .counter("codex.multi_agent.resume", 1, &[]);
 
         let content = serde_json::to_string(&ResumeAgentResult { status }).map_err(|err| {
             FunctionCallError::Fatal(format!("failed to serialize resume_agent result: {err}"))
         })?;
 
-        Ok(ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success: Some(true),
-        })
+        Ok(FunctionToolOutput::from_text(content, Some(true)))
     }
 
     async fn try_resume_closed_agent(
@@ -487,7 +502,7 @@ pub(crate) mod wait {
         turn: Arc<TurnContext>,
         call_id: String,
         arguments: String,
-    ) -> Result<ToolOutput, FunctionCallError> {
+    ) -> Result<FunctionToolOutput, FunctionCallError> {
         let args: WaitArgs = parse_arguments(&arguments)?;
         if args.ids.is_empty() {
             return Err(FunctionCallError::RespondToModel(
@@ -637,10 +652,7 @@ pub(crate) mod wait {
             FunctionCallError::Fatal(format!("failed to serialize wait result: {err}"))
         })?;
 
-        Ok(ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success: None,
-        })
+        Ok(FunctionToolOutput::from_text(content, None))
     }
 
     async fn wait_for_final_status(
@@ -680,7 +692,7 @@ pub mod close_agent {
         turn: Arc<TurnContext>,
         call_id: String,
         arguments: String,
-    ) -> Result<ToolOutput, FunctionCallError> {
+    ) -> Result<FunctionToolOutput, FunctionCallError> {
         let args: CloseAgentArgs = parse_arguments(&arguments)?;
         let agent_id = agent_id(&args.id)?;
         let (receiver_agent_nickname, receiver_agent_role) = session
@@ -757,10 +769,7 @@ pub mod close_agent {
             FunctionCallError::Fatal(format!("failed to serialize close_agent result: {err}"))
         })?;
 
-        Ok(ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success: Some(true),
-        })
+        Ok(FunctionToolOutput::from_text(content, Some(true)))
     }
 }
 
@@ -894,6 +903,13 @@ fn input_preview(items: &[UserInput]) -> String {
     parts.join("\n")
 }
 
+/// Builds the base config snapshot for a newly spawned sub-agent.
+///
+/// The returned config starts from the parent's effective config and then refreshes the
+/// runtime-owned fields carried on `turn`, including model selection, reasoning settings,
+/// approval policy, sandbox, and cwd. Role-specific overrides are layered after this step;
+/// skipping this helper and cloning stale config state directly can send the child agent out with
+/// the wrong provider or runtime policy.
 pub(crate) fn build_agent_spawn_config(
     base_instructions: &BaseInstructions,
     turn: &TurnContext,
@@ -928,6 +944,10 @@ fn build_agent_shared_config(turn: &TurnContext) -> Result<Config, FunctionCallE
     Ok(config)
 }
 
+/// Copies runtime-only turn state onto a child config before it is handed to `AgentControl`.
+///
+/// These values are chosen by the live turn rather than persisted config, so leaving them stale
+/// can make a child agent disagree with its parent about approval policy, cwd, or sandboxing.
 fn apply_spawn_agent_runtime_overrides(
     config: &mut Config,
     turn: &TurnContext,
@@ -954,8 +974,102 @@ fn apply_spawn_agent_runtime_overrides(
 
 fn apply_spawn_agent_overrides(config: &mut Config, child_depth: i32) {
     if child_depth >= config.agent_max_depth {
-        config.features.disable(Feature::Collab);
+        let _ = config.features.disable(Feature::SpawnCsv);
+        let _ = config.features.disable(Feature::Collab);
     }
+}
+
+async fn apply_requested_spawn_agent_model_overrides(
+    session: &Session,
+    turn: &TurnContext,
+    config: &mut Config,
+    requested_model: Option<&str>,
+    requested_reasoning_effort: Option<ReasoningEffort>,
+) -> Result<(), FunctionCallError> {
+    if requested_model.is_none() && requested_reasoning_effort.is_none() {
+        return Ok(());
+    }
+
+    if let Some(requested_model) = requested_model {
+        let available_models = session
+            .services
+            .models_manager
+            .list_models(RefreshStrategy::Offline)
+            .await;
+        let selected_model_name = find_spawn_agent_model_name(&available_models, requested_model)?;
+        let selected_model_info = session
+            .services
+            .models_manager
+            .get_model_info(&selected_model_name, config)
+            .await;
+
+        config.model = Some(selected_model_name.clone());
+        if let Some(reasoning_effort) = requested_reasoning_effort {
+            validate_spawn_agent_reasoning_effort(
+                &selected_model_name,
+                &selected_model_info.supported_reasoning_levels,
+                reasoning_effort,
+            )?;
+            config.model_reasoning_effort = Some(reasoning_effort);
+        } else {
+            config.model_reasoning_effort = selected_model_info.default_reasoning_level;
+        }
+
+        return Ok(());
+    }
+
+    if let Some(reasoning_effort) = requested_reasoning_effort {
+        validate_spawn_agent_reasoning_effort(
+            &turn.model_info.slug,
+            &turn.model_info.supported_reasoning_levels,
+            reasoning_effort,
+        )?;
+        config.model_reasoning_effort = Some(reasoning_effort);
+    }
+
+    Ok(())
+}
+
+fn find_spawn_agent_model_name(
+    available_models: &[codex_protocol::openai_models::ModelPreset],
+    requested_model: &str,
+) -> Result<String, FunctionCallError> {
+    available_models
+        .iter()
+        .find(|model| model.model == requested_model)
+        .map(|model| model.model.clone())
+        .ok_or_else(|| {
+            let available = available_models
+                .iter()
+                .map(|model| model.model.as_str())
+                .collect::<Vec<_>>()
+                .join(", ");
+            FunctionCallError::RespondToModel(format!(
+                "Unknown model `{requested_model}` for spawn_agent. Available models: {available}"
+            ))
+        })
+}
+
+fn validate_spawn_agent_reasoning_effort(
+    model: &str,
+    supported_reasoning_levels: &[ReasoningEffortPreset],
+    requested_reasoning_effort: ReasoningEffort,
+) -> Result<(), FunctionCallError> {
+    if supported_reasoning_levels
+        .iter()
+        .any(|preset| preset.effort == requested_reasoning_effort)
+    {
+        return Ok(());
+    }
+
+    let supported = supported_reasoning_levels
+        .iter()
+        .map(|preset| preset.effort.to_string())
+        .collect::<Vec<_>>()
+        .join(", ");
+    Err(FunctionCallError::RespondToModel(format!(
+        "Reasoning effort `{requested_reasoning_effort}` is not supported for model `{model}`. Supported reasoning efforts: {supported}"
+    )))
 }
 
 #[cfg(test)]
@@ -974,6 +1088,7 @@ mod tests {
     use crate::protocol::SandboxPolicy;
     use crate::protocol::SessionSource;
     use crate::protocol::SubAgentSource;
+    use crate::tools::context::FunctionToolOutput;
     use crate::turn_diff_tracker::TurnDiffTracker;
     use codex_protocol::ThreadId;
     use codex_protocol::models::ContentItem;
@@ -1016,6 +1131,14 @@ mod tests {
         ThreadManager::with_models_provider_for_tests(
             CodexAuth::from_api_key("dummy"),
             built_in_model_providers()["openai"].clone(),
+        )
+    }
+
+    fn expect_text_output(output: FunctionToolOutput) -> (String, Option<bool>) {
+        (
+            codex_protocol::models::function_call_output_content_items_to_text(&output.body)
+                .unwrap_or_default(),
+            output.success,
         )
     }
 
@@ -1114,6 +1237,9 @@ mod tests {
         let manager = thread_manager();
         session.services.agent_control = manager.agent_control();
         let mut config = (*turn.config).clone();
+        let provider = built_in_model_providers()["ollama"].clone();
+        config.model_provider_id = "ollama".to_string();
+        config.model_provider = provider.clone();
         config
             .permissions
             .approval_policy
@@ -1122,6 +1248,7 @@ mod tests {
         turn.approval_policy
             .set(AskForApproval::OnRequest)
             .expect("approval policy should be set");
+        turn.provider = provider;
         turn.config = Arc::new(config);
 
         let invocation = invocation(
@@ -1137,13 +1264,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("spawn_agent should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, _) = expect_text_output(output);
         let result: SpawnAgentResult =
             serde_json::from_str(&content).expect("spawn_agent result should be json");
         let agent_id = agent_id(&result.agent_id).expect("agent_id should be valid");
@@ -1160,6 +1281,7 @@ mod tests {
             .config_snapshot()
             .await;
         assert_eq!(snapshot.approval_policy, AskForApproval::OnRequest);
+        assert_eq!(snapshot.model_provider_id, "ollama");
     }
 
     #[tokio::test]
@@ -1235,13 +1357,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("spawn_agent should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, _) = expect_text_output(output);
         let result: SpawnAgentResult =
             serde_json::from_str(&content).expect("spawn_agent result should be json");
         let agent_id = agent_id(&result.agent_id).expect("agent_id should be valid");
@@ -1325,14 +1441,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("spawn should succeed within configured depth");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: SpawnAgentResult =
             serde_json::from_str(&content).expect("spawn_agent result should be json");
         assert!(!result.agent_id.is_empty());
@@ -1577,14 +1686,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("resume_agent should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: resume_agent::ResumeAgentResult =
             serde_json::from_str(&content).expect("resume_agent result should be json");
         assert_eq!(result.status, status_before);
@@ -1646,14 +1748,7 @@ mod tests {
             .handle(resume_invocation)
             .await
             .expect("resume_agent should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: resume_agent::ResumeAgentResult =
             serde_json::from_str(&content).expect("resume_agent result should be json");
         assert_ne!(result.status, AgentStatus::NotFound);
@@ -1669,14 +1764,7 @@ mod tests {
             .handle(send_invocation)
             .await
             .expect("send_input should succeed after resume");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: serde_json::Value =
             serde_json::from_str(&content).expect("send_input result should be json");
         let submission_id = result
@@ -1801,14 +1889,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("wait should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: wait::WaitResult =
             serde_json::from_str(&content).expect("wait result should be json");
         assert_eq!(
@@ -1845,14 +1926,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("wait should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: wait::WaitResult =
             serde_json::from_str(&content).expect("wait result should be json");
         assert_eq!(
@@ -1942,14 +2016,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("wait should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: wait::WaitResult =
             serde_json::from_str(&content).expect("wait result should be json");
         assert_eq!(
@@ -1982,14 +2049,7 @@ mod tests {
             .handle(invocation)
             .await
             .expect("close_agent should succeed");
-        let ToolOutput::Function {
-            body: FunctionCallOutputBody::Text(content),
-            success,
-            ..
-        } = output
-        else {
-            panic!("expected function output");
-        };
+        let (content, success) = expect_text_output(output);
         let result: close_agent::CloseAgentResult =
             serde_json::from_str(&content).expect("close_agent result should be json");
         assert_eq!(result.status, status_before);

@@ -21,6 +21,12 @@ pub struct CompactionInput<'a> {
     pub model: &'a str,
     pub input: &'a [ResponseItem],
     pub instructions: &'a str,
+    pub tools: Vec<Value>,
+    pub parallel_tool_calls: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning: Option<Reasoning>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<TextControls>,
 }
 
 /// Canonical input payload for the memory summarize endpoint.
@@ -67,8 +73,6 @@ pub enum ResponseEvent {
     Completed {
         response_id: String,
         token_usage: Option<TokenUsage>,
-        /// Whether the client can append more items to a long-running websocket response.
-        can_append: bool,
     },
     OutputTextDelta(String),
     ReasoningSummaryDelta {
@@ -155,6 +159,8 @@ pub struct ResponsesApiRequest {
     pub stream: bool,
     pub include: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_tier: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_cache_key: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<TextControls>,
@@ -174,6 +180,7 @@ impl From<&ResponsesApiRequest> for ResponseCreateWsRequest {
             store: request.store,
             stream: request.stream,
             include: request.include.clone(),
+            service_tier: request.service_tier.clone(),
             prompt_cache_key: request.prompt_cache_key.clone(),
             text: request.text.clone(),
             generate: None,
@@ -197,6 +204,8 @@ pub struct ResponseCreateWsRequest {
     pub stream: bool,
     pub include: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub service_tier: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub prompt_cache_key: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<TextControls>,
@@ -207,19 +216,11 @@ pub struct ResponseCreateWsRequest {
 }
 
 #[derive(Debug, Serialize)]
-pub struct ResponseAppendWsRequest {
-    pub input: Vec<ResponseItem>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub client_metadata: Option<HashMap<String, String>>,
-}
-#[derive(Debug, Serialize)]
 #[serde(tag = "type")]
 #[allow(clippy::large_enum_variant)]
 pub enum ResponsesWsRequest {
     #[serde(rename = "response.create")]
     ResponseCreate(ResponseCreateWsRequest),
-    #[serde(rename = "response.append")]
-    ResponseAppend(ResponseAppendWsRequest),
 }
 
 pub fn create_text_param_for_request(

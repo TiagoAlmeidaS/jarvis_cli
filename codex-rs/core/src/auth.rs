@@ -212,6 +212,10 @@ impl CodexAuth {
         }
     }
 
+    pub fn is_api_key_auth(&self) -> bool {
+        self.auth_mode() == AuthMode::ApiKey
+    }
+
     pub fn is_chatgpt_auth(&self) -> bool {
         self.auth_mode() == AuthMode::Chatgpt
     }
@@ -260,6 +264,12 @@ impl CodexAuth {
     /// Returns `None` if `is_chatgpt_auth()` is false.
     pub fn get_account_email(&self) -> Option<String> {
         self.get_current_token_data().and_then(|t| t.id_token.email)
+    }
+
+    /// Returns `None` if `is_chatgpt_auth()` is false.
+    pub fn get_chatgpt_user_id(&self) -> Option<String> {
+        self.get_current_token_data()
+            .and_then(|t| t.id_token.chatgpt_user_id)
     }
 
     /// Account-facing plan classification derived from the current token.
@@ -626,7 +636,6 @@ async fn request_chatgpt_token_refresh(
         client_id: CLIENT_ID,
         grant_type: "refresh_token",
         refresh_token,
-        scope: "openid profile email",
     };
 
     let endpoint = refresh_token_endpoint();
@@ -722,7 +731,6 @@ struct RefreshRequest {
     client_id: &'static str,
     grant_type: &'static str,
     refresh_token: String,
-    scope: &'static str,
 }
 
 #[derive(Deserialize, Clone)]
@@ -1464,6 +1472,7 @@ mod tests {
             .unwrap();
         assert_eq!(None, auth.api_key());
         assert_eq!(AuthMode::Chatgpt, auth.auth_mode());
+        assert_eq!(auth.get_chatgpt_user_id().as_deref(), Some("user-12345"));
 
         let auth_dot_json = auth
             .get_current_auth_json()
