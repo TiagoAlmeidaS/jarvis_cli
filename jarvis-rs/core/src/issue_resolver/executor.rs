@@ -199,9 +199,31 @@ impl ImplementationExecutor {
                 .map_err(|e| anyhow::anyhow!("failed to submit fix prompt: {e}"))?;
         }
 
-        if matches!(final_status, ExecutionStatus::Success) {
+        let pr_url = if matches!(final_status, ExecutionStatus::Success) {
             Self::git_commit_and_push(repo_clone_path, &branch_name, &plan.commit_message).await?;
-        }
+            let pr_request = jarvis_github::models::PullRequestCreateRequest {
+                title: plan.pr_title.clone(),
+                body: Some(plan.pr_body.clone()),
+                head: branch_name.clone(),
+                base: repo_context.default_branch.clone(),
+                draft: None,
+            };
+            match github_client
+                .create_pr(&repo_context.owner, &repo_context.repo, pr_request)
+                .await
+            {
+                Ok(pr) => {
+                    info!("created PR: {}", pr.html_url);
+                    Some(pr.html_url)
+                }
+                Err(e) => {
+                    warn!("push succeeded but create_pr failed: {e}");
+                    None
+                }
+            }
+        } else {
+            None
+        };
 
         Ok(ExecutionResult {
             status: final_status,
@@ -209,7 +231,7 @@ impl ImplementationExecutor {
             iterations,
             test_results,
             agent_summary: last_agent_summary,
-            pr_url: None,
+            pr_url,
             error: None,
         })
     }

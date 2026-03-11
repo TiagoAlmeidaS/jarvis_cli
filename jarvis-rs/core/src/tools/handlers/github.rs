@@ -125,6 +125,42 @@ struct GitHubToolOutput {
     data: Option<serde_json::Value>,
 }
 
+/// Resolve GitHub PAT from environment or secrets (same order as Agent GitHub tools).
+///
+/// Priority: (1) env `GITHUB_PAT` or `jarvis_GITHUB_PAT`, (2) secrets via `config.github.pat_secret_name`.
+/// Returns a user-facing error message string when no valid PAT is found.
+pub fn resolve_github_pat(
+    config: &Config,
+    secrets_manager: &SecretsManager,
+) -> Result<String, String> {
+    let pat = std::env::var("GITHUB_PAT")
+        .or_else(|_| std::env::var("jarvis_GITHUB_PAT"))
+        .ok()
+        .filter(|pat| !pat.trim().is_empty())
+        .map(Ok)
+        .unwrap_or_else(|| get_pat_from_secrets(config, secrets_manager))?;
+    Ok(pat)
+}
+
+fn get_pat_from_secrets(
+    config: &Config,
+    secrets_manager: &SecretsManager,
+) -> Result<String, String> {
+    let secret_name = SecretName::new(&config.github.pat_secret_name)
+        .map_err(|e| format!("Invalid secret name: {e}"))?;
+
+    let scope = SecretScope::Global;
+    secrets_manager
+        .get(&scope, &secret_name)
+        .map_err(|e| format!("Failed to retrieve GitHub PAT: {e}"))?
+        .ok_or_else(|| {
+            format!(
+                "GitHub PAT not found. Please set it using:\n  - Environment variable: GITHUB_PAT or jarvis_GITHUB_PAT\n  - Or secrets: jarvis secrets set {} <token>",
+                config.github.pat_secret_name
+            )
+        })
+}
+
 impl GitHubHandler {
     /// Get or create a GitHub client using PAT from environment variable or secrets.
     ///
@@ -135,16 +171,8 @@ impl GitHubHandler {
         config: &Config,
         secrets_manager: &SecretsManager,
     ) -> Result<GitHubClient, FunctionCallError> {
-        // Try environment variables first (GITHUB_PAT takes precedence over jarvis_GITHUB_PAT)
-        let pat = std::env::var("GITHUB_PAT")
-            .or_else(|_| std::env::var("jarvis_GITHUB_PAT"))
-            .ok()
-            .filter(|pat| !pat.trim().is_empty())
-            .map(Ok)
-            .unwrap_or_else(|| {
-                // Fall back to secrets manager if no valid env var found
-                Self::get_pat_from_secrets(config, secrets_manager)
-            })?;
+        let pat = resolve_github_pat(config, secrets_manager)
+            .map_err(FunctionCallError::RespondToModel)?;
 
         // Try environment variable for API base URL, fall back to config
         let api_base_url = std::env::var("GITHUB_API_BASE_URL")
@@ -154,28 +182,6 @@ impl GitHubHandler {
         GitHubClient::with_base_url(pat, api_base_url).map_err(|e| {
             FunctionCallError::RespondToModel(format!("Failed to create GitHub client: {e}"))
         })
-    }
-
-    /// Get PAT from secrets manager.
-    fn get_pat_from_secrets(
-        config: &Config,
-        secrets_manager: &SecretsManager,
-    ) -> Result<String, FunctionCallError> {
-        let secret_name = SecretName::new(&config.github.pat_secret_name)
-            .map_err(|e| FunctionCallError::RespondToModel(format!("Invalid secret name: {e}")))?;
-
-        let scope = SecretScope::Global;
-        secrets_manager
-            .get(&scope, &secret_name)
-            .map_err(|e| {
-                FunctionCallError::RespondToModel(format!("Failed to retrieve GitHub PAT: {e}"))
-            })?
-            .ok_or_else(|| {
-                FunctionCallError::RespondToModel(format!(
-                    "GitHub PAT not found. Please set it using:\n  - Environment variable: GITHUB_PAT or jarvis_GITHUB_PAT\n  - Or secrets: jarvis secrets set {} <token>",
-                    config.github.pat_secret_name
-                ))
-            })
     }
 
     async fn handle_create_issue(

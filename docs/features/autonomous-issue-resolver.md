@@ -41,7 +41,7 @@ O Autonomous Issue Resolver é um pipeline multi-estágio que resolve automatica
 | **Analyzer** | Usa sub-agente LLM para produzir análise estruturada da issue |
 | **Planner** | Usa sub-agente LLM para produzir plano de implementação |
 | **Safety Gate** | Avalia o plano contra o classificador de segurança |
-| **Executor** | Executa o plano (edits, shell, etc.) e cria PR |
+| **Executor** | Executa o plano (edits, shell, etc.), faz commit+push e cria o PR via API do GitHub (título e corpo do plano); preenche `pr_url` no resultado |
 
 ## Comandos CLI
 
@@ -56,7 +56,7 @@ jarvis resolve owner/repo
 ```
 
 **Requisitos**:
-- `GITHUB_TOKEN` ou `GITHUB_PAT` definido no ambiente
+- **Token GitHub**: a mesma fonte usada pelas ferramentas GitHub do Agent. Ordem de resolução: (1) variável de ambiente `GITHUB_PAT` ou `jarvis_GITHUB_PAT`; (2) secrets do Jarvis, ex.: `jarvis secrets set GITHUB_PAT <token>`. O nome do secret pode ser configurado em `[github] pat_secret_name` no `config.toml` (default: `GITHUB_PAT`). Opcionalmente, `GITHUB_API_BASE_URL` ou `jarvis_GITHUB_API_BASE_URL` (ou `[github] api_base_url`) para GitHub Enterprise.
 - Feature `autonomous_issue_resolver` habilitada (habilitada automaticamente ao usar `resolve`)
 - Formato do repositório: `owner/repo`
 
@@ -101,7 +101,7 @@ pub struct IssueResolverRequest {
 2. **Resolução**: `resolve_issue_resolver_request` valida e monta prompt
 3. **Spawn**: `spawn_issue_resolver_thread` cria thread com `IssueResolverTask`
 4. **Task**: `IssueResolverTask` orquestra Scanner → Context → Analyzer → Planner → Safety Gate → Executor
-5. **Output**: PR criado, issue comentada, eventos `EnteredIssueResolverMode` / `IssueResolverOutputEvent`
+5. **Output**: branch criada, commit+push, PR criado via API (com `pr_title` e `pr_body` do plano); eventos `EnteredIssueResolverMode` / `IssueResolverOutputEvent`; o resultado da execução inclui `pr_url` quando o PR for criado com sucesso
 
 ## Eventos de Rollout
 
@@ -116,4 +116,4 @@ pub struct IssueResolverRequest {
 
 ---
 
-**Última atualização**: 2026-03-10
+**Última atualização**: 2026-03-11
