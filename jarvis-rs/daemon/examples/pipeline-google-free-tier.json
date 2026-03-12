@@ -1,0 +1,27 @@
+{
+  "id": "seo-google-free",
+  "name": "SEO Blog (Google free tier)",
+  "strategy": "seo_blog",
+  "schedule_cron": "0 */6 * * *",
+  "max_retries": 2,
+  "retry_delay_sec": 300,
+  "llm": {
+    "provider": "google",
+    "model": "gemini-2.0-flash",
+    "temperature": 0.8,
+    "max_tokens": 4000
+  },
+  "content": {
+    "language": "pt-BR",
+    "niche": "Tecnologia",
+    "audience": "Desenvolvedores e profissionais de TI",
+    "tone": "informativo",
+    "min_words": 800,
+    "max_words": 2000
+  },
+  "wordpress": {
+    "base_url": "https://your-blog.com",
+    "username": "admin",
+    "status": "draft"
+  }
+}

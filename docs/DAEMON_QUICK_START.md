@@ -60,6 +60,8 @@ docker compose -f docker-compose.vps.yml up -d
 For **home server** deploy with OpenRouter (low-cost LLM), see [Deploy no servidor em casa](deploy-servidor-casa.md).  
 For **Google only (free tier)**, see the one-page checklist: [Runbook: daemon somente com Google](RUNBOOK-DAEMON-GOOGLE.md).
 
+**Pipeline de exemplo só Google:** use [docs/examples/daemon-pipeline-google.json](examples/daemon-pipeline-google.json) ou `jarvis-rs/daemon/examples/pipeline-google-free-tier.json`. Adicione com: `jarvis daemon pipeline add docs/examples/daemon-pipeline-google.json` e depois `jarvis daemon pipeline enable seo-google-free`.
+
 ### 3. Check status
 
 ```bash
@@ -109,7 +111,9 @@ The daemon starts but does nothing until you create pipelines. Use the Jarvis CL
 
 ### Quick: Create an SEO Blog pipeline
 
-Create a file `seo-pipeline.json`:
+**Google free tier:** use the ready-made pipeline [docs/examples/daemon-pipeline-google.json](examples/daemon-pipeline-google.json) (provider: `google`, model: `gemini-2.0-flash`). Run: `jarvis daemon pipeline add docs/examples/daemon-pipeline-google.json` then `jarvis daemon pipeline enable seo-google-free`.
+
+**OpenRouter (or other provider):** create a file `seo-pipeline.json`:
 
 ```json
 {

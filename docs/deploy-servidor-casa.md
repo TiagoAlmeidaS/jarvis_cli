@@ -126,14 +126,10 @@ O daemon já suporta o provedor **Google** (Gemini). Cota gratuita generosa no [
    GOOGLE_API_KEY=suachave
    ```
    O daemon aceita também `GEMINI_API_KEY` (mesma chave).  
-3. **No pipeline** (JSON): use `"provider": "google"` e um modelo Gemini, por exemplo o free tier:
-   ```json
-   "llm": {
-     "provider": "google",
-     "model": "gemini-2.0-flash",
-     "temperature": 0.8,
-     "max_tokens": 4000
-   }
+3. **Pipeline de exemplo só Google:** use o arquivo pronto [docs/examples/daemon-pipeline-google.json](examples/daemon-pipeline-google.json) (ou `jarvis-rs/daemon/examples/pipeline-google-free-tier.json`). Já vem com `"provider": "google"` e `"model": "gemini-2.0-flash"`. Adicione e ative:
+   ```bash
+   jarvis daemon pipeline add docs/examples/daemon-pipeline-google.json
+   jarvis daemon pipeline enable seo-google-free
    ```
 4. **Compose**: nenhuma mudança. Sobe com o mesmo comando:
    ```bash

@@ -205,7 +205,7 @@ Ou defina como variável de ambiente (ver seção acima).
 }
 ```
 
-Veja o exemplo completo em `jarvis-rs/daemon/examples/pipeline-google-gemini.json`.
+Veja o exemplo completo em `jarvis-rs/daemon/examples/pipeline-google-gemini.json`. Para um pipeline pronto para `jarvis daemon pipeline add` (com id, name, strategy, schedule_cron), use [docs/examples/daemon-pipeline-google.json](examples/daemon-pipeline-google.json) ou `jarvis-rs/daemon/examples/pipeline-google-free-tier.json`.
 
 ### Provedores suportados pelo daemon
 

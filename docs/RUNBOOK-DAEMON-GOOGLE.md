@@ -51,27 +51,15 @@ Isso sobe apenas o container do daemon. Ele lê `GOOGLE_API_KEY` do ambiente e u
 
 ### 5. Adicionar pipeline Google
 
-Exemplo mínimo de pipeline (salve como `pipeline-google.json`):
+Use o pipeline de exemplo pronto (provider `google`, model `gemini-2.0-flash`):
 
-```json
-{
-  "id": "seo-google-free",
-  "name": "SEO (Google free tier)",
-  "strategy": "seo_blog",
-  "schedule_cron": "0 */6 * * *",
-  "llm": {
-    "provider": "google",
-    "model": "gemini-2.0-flash",
-    "temperature": 0.8,
-    "max_tokens": 4000
-  }
-}
-```
+- **[docs/examples/daemon-pipeline-google.json](examples/daemon-pipeline-google.json)** (na raiz do repo: `docs/examples/daemon-pipeline-google.json`)
+- Ou **jarvis-rs/daemon/examples/pipeline-google-free-tier.json**
 
 Adicione e ative (via CLI no mesmo host ou onde o Jarvis CLI aponte para o daemon):
 
 ```bash
-jarvis daemon pipeline add pipeline-google.json
+jarvis daemon pipeline add docs/examples/daemon-pipeline-google.json
 jarvis daemon pipeline enable seo-google-free
 ```
 
