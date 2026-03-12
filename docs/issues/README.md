@@ -20,6 +20,8 @@ Esta pasta concentra **issues sugeridas** para o projeto, em formato de document
 | [board-renda-phases.md](board-renda-phases.md) | Fases Board e Renda | 4 fases: Board configurável, loop autônomo, métricas/custo, porta para renda. Daemon orquestra; core executa. |
 | [autonomy-growth-self-learning.md](autonomy-growth-self-learning.md) | Crescimento e auto-aprendizado | Dados reais no metrics/goals, A/B e prompt_optimizer, integração core/autonomous ao daemon, doc do feedback loop. |
 | [operacao-observabilidade.md](operacao-observabilidade.md) | Operação e observabilidade | Health check, logs e correlação job/pipeline, métricas e alertas para o daemon em produção. |
+| [daemon-telegram-notifications.md](daemon-telegram-notifications.md) | Notificações Telegram do daemon | Documentar e configurar resumo diário e alertas via Telegram (JARVIS_TELEGRAM_*). |
+| [jarvis-wallet-revenue.md](jarvis-wallet-revenue.md) | Carteira do Jarvis (fundo de receita) | Ledger/atribuição de receita gerada pelo sistema (AdSense, afiliados); doc de direção futura. |
 
 ---
 
@@ -46,4 +48,4 @@ Referências de arquitetura: [autonomy-roadmap](../architecture/autonomy-roadmap
 
 ---
 
-**Última atualização:** 2026-03-11
+**Última atualização:** 2026-03-12

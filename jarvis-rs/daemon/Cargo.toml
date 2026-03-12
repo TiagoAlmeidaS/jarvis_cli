@@ -36,6 +36,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter"] }
 uuid = { workspace = true, features = ["v4"] }
 
 [dev-dependencies]
+assert_cmd = { workspace = true }
 jarvis-daemon-common = { path = "../daemon-common", features = ["test-support"] }
 pretty_assertions = { workspace = true }
 tempfile = { workspace = true }

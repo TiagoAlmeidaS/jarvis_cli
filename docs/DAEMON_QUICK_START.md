@@ -68,6 +68,17 @@ For **Google only (free tier)**, see the one-page checklist: [Runbook: daemon so
 docker logs -f jarvis-daemon
 ```
 
+### 4. Run integration tests (daemon + Google)
+
+From the repo root (or `jarvis-rs`):
+
+```bash
+cd jarvis-rs
+cargo test -p jarvis-daemon --test integration_google
+```
+
+This runs: (1) daemon startup with only `GOOGLE_API_KEY`; (2) pipeline execution with provider Google against a mocked Gemini endpoint. No real API key needed for the pipeline test. See [RUNBOOK-DAEMON-GOOGLE.md](RUNBOOK-DAEMON-GOOGLE.md) § 9 and [issues/daemon-integration-tests-google.md](issues/daemon-integration-tests-google.md).
+
 ## Option B: Run Locally (No Docker)
 
 ### 1. Build
