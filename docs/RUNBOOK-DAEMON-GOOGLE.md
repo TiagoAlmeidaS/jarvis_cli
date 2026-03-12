@@ -146,6 +146,7 @@ Não é necessário `GOOGLE_API_KEY` real; o teste do pipeline usa mock. Ver [da
 - [Deploy no servidor em casa](deploy-servidor-casa.md) — Deploy com OpenRouter; seção “Como usar Google” complementa este runbook.
 - [daemon-google-free-tier.md](issues/daemon-google-free-tier.md) — Conjunto de issues para o modo só Google.
 - [daemon-telegram-notifications.md](issues/daemon-telegram-notifications.md) — Issue/doc para notificações Telegram do daemon.
+- [RUNBOOK-PROPOSAL-EXECUTOR.md](RUNBOOK-PROPOSAL-EXECUTOR.md) — Validar que propostas aprovadas são executadas (issue #34).
 - [docker-compose.homeserver.yml](../docker-compose.homeserver.yml) — Compose usado neste runbook.
 
 ---

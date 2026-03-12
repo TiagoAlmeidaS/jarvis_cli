@@ -79,6 +79,8 @@ cargo test -p jarvis-daemon --test integration_google
 
 This runs: (1) daemon startup with only `GOOGLE_API_KEY`; (2) pipeline execution with provider Google against a mocked Gemini endpoint. No real API key needed for the pipeline test. See [RUNBOOK-DAEMON-GOOGLE.md](RUNBOOK-DAEMON-GOOGLE.md) § 9 and [issues/daemon-integration-tests-google.md](issues/daemon-integration-tests-google.md).
 
+To validate that approved proposals are executed (Strategy Analyzer → Executor → action): run `cargo test -p jarvis-daemon --test proposal_executor_e2e` or follow [RUNBOOK-PROPOSAL-EXECUTOR.md](RUNBOOK-PROPOSAL-EXECUTOR.md).
+
 ## Option B: Run Locally (No Docker)
 
 ### 1. Build
