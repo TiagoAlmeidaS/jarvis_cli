@@ -21,65 +21,79 @@ que:
 
 ### Modelo Mental: O Loop Autonomo
 
-```
-                    ┌──────────────────────────────────┐
-                    │         GOAL SYSTEM               │
-                    │  "Gerar $200/mes de revenue"      │
-                    │  "Publicar 90 artigos/mes"        │
-                    └──────────┬───────────────────────┘
-                               │
-                    ┌──────────▼───────────────────────┐
-        ┌──────────│         AGENTIC LOOP              │◄──────────┐
-        │          │                                    │           │
-        │          │  1. OBSERVE  ─── Coletar dados     │           │
-        │          │       │                            │           │
-        │          │  2. ORIENT   ─── Analisar contexto │           │
-        │          │       │                            │           │
-        │          │  3. DECIDE   ─── Gerar propostas   │           │
-        │          │       │                            │           │
-        │          │  4. ACT      ─── Executar acoes    │           │
-        │          │                                    │           │
-        │          └────────────────────────────────────┘           │
-        │                                                          │
-        │   ┌────────────────────┐     ┌────────────────────────┐  │
-        │   │   TOOL CALLING     │     │   SANDBOX EXECUTION    │  │
-        │   │                    │     │                        │  │
-        │   │ - Shell commands   │     │ - Isolamento seguro    │  │
-        │   │ - File operations  │     │ - Rollback on failure  │  │
-        │   │ - HTTP requests    │     │ - Resource limits      │  │
-        │   │ - DB operations    │     │ - Audit trail          │  │
-        │   └────────┬───────────┘     └───────────┬────────────┘  │
-        │            │                             │               │
-        │            └──────────┬──────────────────┘               │
-        │                       │                                  │
-        │            ┌──────────▼──────────────────┐               │
-        │            │      REAL DATA              │               │
-        │            │                             │               │
-        │            │ WordPress API  → pageviews  │               │
-        │            │ Search Console → CTR, clicks│               │
-        │            │ AdSense API    → revenue    │               │
-        │            │ Stripe API     → sales      │               │
-        └────────────│ Internal       → costs, logs│───────────────┘
-                     └─────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph GOAL["GOAL SYSTEM"]
+        G1["Gerar $200/mes de revenue"]
+        G2["Publicar 90 artigos/mes"]
+    end
+
+    subgraph LOOP["AGENTIC LOOP"]
+        direction TB
+        OBS["1. OBSERVE - Coletar dados"]
+        ORI["2. ORIENT - Analisar contexto"]
+        DEC["3. DECIDE - Gerar propostas"]
+        ACT["4. ACT - Executar acoes"]
+        OBS --> ORI --> DEC --> ACT
+        ACT -.->|feedback| OBS
+    end
+
+    subgraph TOOLS["TOOL CALLING"]
+        T1["Shell commands"]
+        T2["File operations"]
+        T3["HTTP requests"]
+        T4["DB operations"]
+    end
+
+    subgraph SANDBOX["SANDBOX EXECUTION"]
+        S1["Isolamento seguro"]
+        S2["Rollback on failure"]
+        S3["Resource limits"]
+        S4["Audit trail"]
+    end
+
+    subgraph DATA["REAL DATA"]
+        D1["WordPress API -> pageviews"]
+        D2["Search Console -> CTR, clicks"]
+        D3["AdSense API -> revenue"]
+        D4["Stripe API -> sales"]
+        D5["Internal -> costs, logs"]
+    end
+
+    GOAL --> LOOP
+    LOOP --> TOOLS
+    LOOP --> SANDBOX
+    TOOLS --> DATA
+    SANDBOX --> DATA
+    DATA -.->|observacao| LOOP
 ```
 
 ---
 
 ## 2. Diagnostico Atual — Gap Analysis
 
-### O que JA funciona
+
+### Estado do Daemon (deploy)
+
+O daemon est� **implementado no c�digo** (scheduler, pipelines, executor, goals, etc.), mas **n�o est� em execu��o** no ambiente atual. A estrutura existe no reposit�rio e pode ser compilada e configurada; o que impede o deploy em uso cont�nuo � a **limita��o de cr�ditos no OpenRouter** (ou outro provedor de LLM configurado), j� que os pipelines do daemon consomem chamadas de API para gera��o de conte�do e an�lise.
+
+- **Em c�digo**: Scheduler, PipelineRunner, pipelines (SEO, metrics, strategy_analyzer), ProposalExecutor, Goals, SQLite � tudo implementado.
+- **Em execu��o**: N�o; o daemon n�o est� rodando de forma cont�nua por limite de cr�ditos/API.
+- **Alternativas**: Ver [Alternativas para rodar o daemon](./daemon-deploy-alternatives.md) (modelos locais, free tiers, outros provedores).
+
+### O que JA funciona (codigo vs deploy)
 
 | Camada | Componente | Status | Localizacao |
 |--------|-----------|--------|-------------|
-| Infraestrutura Daemon | Scheduler cron-like | Funcional | `daemon/src/scheduler.rs` |
-| Infraestrutura Daemon | Pipeline runner + registry | Funcional | `daemon/src/runner.rs`, `pipeline.rs` |
-| Infraestrutura Daemon | SQLite persistence (8 tabelas) | Funcional | `daemon-common/src/db.rs` |
-| Pipeline SEO | Scraper RSS + Web | Funcional | `daemon/src/scraper/` |
-| Pipeline SEO | LLM content generation | Funcional | `daemon/src/pipelines/seo_blog.rs` |
-| Pipeline SEO | WordPress publisher | Funcional | `daemon/src/publisher/wordpress.rs` |
-| Feedback Loop | Metrics collector | Funcional | `daemon/src/pipelines/metrics_collector.rs` |
-| Feedback Loop | Strategy analyzer (LLM) | Funcional | `daemon/src/pipelines/strategy_analyzer.rs` |
-| Feedback Loop | Proposals + approval workflow | Funcional | `daemon-common/`, `cli/src/daemon_cmd.rs` |
+| Infraestrutura Daemon | Scheduler cron-like | Implementado (nao em deploy) | `daemon/src/scheduler.rs` |
+| Infraestrutura Daemon | Pipeline runner + registry | Implementado (nao em deploy) | `daemon/src/runner.rs`, `pipeline.rs` |
+| Infraestrutura Daemon | SQLite persistence (8 tabelas) | Implementado (nao em deploy) | `daemon-common/src/db.rs` |
+| Pipeline SEO | Scraper RSS + Web | Implementado (nao em deploy) | `daemon/src/scraper/` |
+| Pipeline SEO | LLM content generation | Implementado (nao em deploy) | `daemon/src/pipelines/seo_blog.rs` |
+| Pipeline SEO | WordPress publisher | Implementado (nao em deploy) | `daemon/src/publisher/wordpress.rs` |
+| Feedback Loop | Metrics collector | Implementado (nao em deploy) | `daemon/src/pipelines/metrics_collector.rs` |
+| Feedback Loop | Strategy analyzer (LLM) | Implementado (nao em deploy) | `daemon/src/pipelines/strategy_analyzer.rs` |
+| Feedback Loop | Proposals + approval workflow | Implementado (nao em deploy) | `daemon-common/`, `cli/src/daemon_cmd.rs` |
 | TUI | Yolo mode (auto-approve) | Funcional | `tui/src/bottom_pane/approval_overlay.rs` |
 | Core | Autonomous decision engine (skeleton) | Esqueleto | `core/src/autonomous/` |
 
@@ -108,8 +122,7 @@ que:
 | Real metrics | N/A | Estimado, nao real | G3 | CRITICA |
 | Persistent memory | Context window only | **SIM** (SQLite) | — | Vantagem Jarvis |
 
-**Insight**: O Jarvis ja tem vantagens unicas (daemon, revenue, memory). O foco deve ser
-**fechar os gaps G1-G6** em vez de adicionar features novas.
+**Insight**: O Jarvis ja tem vantagens unicas em codigo (daemon, revenue, memory). Hoje o daemon nao esta em deploy por limite de creditos LLM (ex.: OpenRouter). Para colocar o daemon em execucao, ver [Alternativas para rodar o daemon](./daemon-deploy-alternatives.md). O foco deve ser **fechar os gaps G1-G6** e, quando possivel, **subir o daemon** com provedor/creditos viaveis.
 
 ---
 
@@ -210,6 +223,11 @@ Objetivo: Jarvis aprende e melhora com o tempo.
 - [Daemon Automation](../features/daemon-automation.md) — Plano original do daemon
 - [Daemon Feedback Loop](../features/daemon-feedback-loop.md) — Metricas + proposals
 - [Yolo Mode](../features/yolo-mode.md) — Auto-approve no TUI
+
+
+### Ver tambem
+
+- [Evolu��o Board e Renda � Levantamento](./evolucao-board-e-renda-levantamento.md) � Invent�rio de capacidades (core, daemon, CLI, config), matriz de responsabilidades, camadas reutiliz�veis e fases (board configur�vel, loop aut�nomo, m�tricas/custo, renda).
 
 ### Codigo-fonte principal
 

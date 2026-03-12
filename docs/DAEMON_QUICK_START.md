@@ -20,6 +20,8 @@ The daemon runs in background, executing 5 pipelines on cron schedules:
 
 - 1 LLM API key: `OPENROUTER_API_KEY` (cheapest) or `GOOGLE_API_KEY` (free tier)
 
+If you hit **OpenRouter credit limits** and cannot run the daemon continuously, see [Alternativas para rodar o daemon](architecture/daemon-deploy-alternatives.md) (local models, free tiers, other providers).
+
 **For publishing (the daemon actually earns revenue):**
 
 - WordPress site with Application Password enabled
@@ -48,9 +50,15 @@ cp .env.example .env
 # Standalone (daemon only)
 docker compose -f docker-compose.daemon.yml up -d
 
+# Home server: daemon only, OpenRouter low-cost LLM
+docker compose -f docker-compose.homeserver.yml up -d
+
 # With full infra (Qdrant, Redis, Ollama, Postgres)
 docker compose -f docker-compose.vps.yml up -d
 ```
+
+For **home server** deploy with OpenRouter (low-cost LLM), see [Deploy no servidor em casa](deploy-servidor-casa.md).  
+For **Google only (free tier)**, see the one-page checklist: [Runbook: daemon somente com Google](RUNBOOK-DAEMON-GOOGLE.md).
 
 ### 3. Check status
 

@@ -1,0 +1,14 @@
+# Edição pendente para índice (Board e Renda)
+
+O documento docs/architecture/evolucao-board-e-renda-levantamento.md foi criado.
+O docs/architecture/autonomy-roadmap.md já foi atualizado com a seção "Ver também" (se aparecer "â€"" no lugar de "—" em vários pontos, substitua globalmente por "—" para corrigir encoding).
+
+Falta apenas: docs/README.md (acesso negado ao escrever no ambiente).
+
+--- 
+Em docs/README.md — Na seção "5. Autonomia", após a linha:
+   - [Autonomy Roadmap](./architecture/autonomy-roadmap.md) — Visão estratégica, gap analysis, 3 fases
+INSERIR esta linha:
+   - [Evolução Board e Renda – Levantamento](./architecture/evolucao-board-e-renda-levantamento.md) — Inventário por camada, fases (board configurável → loop autônomo → métricas → renda), responsabilidades e camadas reutilizáveis
+
+Após aplicar, pode remover este arquivo (APPLY_INDEX_EDIT.txt).
